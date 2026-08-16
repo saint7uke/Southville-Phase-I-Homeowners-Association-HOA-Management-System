@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\AuthenticatedActor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -33,7 +34,7 @@ final class Announcement extends Model
 
     protected static function booted(): void
     {
-        self::creating(fn (Announcement $announcement) => $announcement->created_by ??= auth()->id());
+        self::creating(fn (Announcement $announcement) => $announcement->created_by ??= app(AuthenticatedActor::class)->id());
         self::saving(function (Announcement $announcement): void {
             if ($announcement->status === 'Published') {
                 $announcement->published_at ??= now();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\AuthenticatedActor;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -40,7 +41,7 @@ final class Payment extends Model
     {
         self::creating(function (Payment $payment): void {
             $payment->or_number ??= 'OR-'.now()->format('Ymd').'-'.Str::upper(Str::random(6));
-            $payment->recorded_by ??= auth()->id();
+            $payment->recorded_by ??= app(AuthenticatedActor::class)->id();
             $dues = DuesSetting::query()->find($payment->dues_setting_id);
             $payment->balance = max(0, (float) ($dues?->amount ?? 0) + (float) $payment->penalty - (float) $payment->amount_paid);
             $payment->status = $payment->balance > 0 ? 'Partial' : 'Paid';

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Notifications\HomeownerAccountStatusChanged;
+use App\Support\AuthenticatedActor;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -21,6 +22,8 @@ final class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable, SoftDeletes;
+
+    protected string $guard_name = 'web';
 
     protected $fillable = [
         'first_name', 'middle_name', 'last_name', 'suffix', 'sex', 'contact_number',
@@ -73,6 +76,7 @@ final class User extends Authenticatable implements FilamentUser
         return match ($panel->getId()) {
             'admin' => $this->hasRole('hoa_admin'),
             'staff' => $this->hasRole('hoa_staff'),
+            'homeowner' => $this->hasRole('homeowner'),
             default => false,
         };
     }
@@ -88,7 +92,7 @@ final class User extends Authenticatable implements FilamentUser
             $user->normalizeIdentity();
             if ($user->isDirty('account_status') && $user->account_status === 'Active') {
                 $user->approved_at ??= now();
-                $user->approved_by ??= auth()->id();
+                $user->approved_by ??= app(AuthenticatedActor::class)->id();
                 $user->rejection_reason = null;
             }
         });

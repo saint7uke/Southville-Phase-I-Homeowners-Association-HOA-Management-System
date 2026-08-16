@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\AuthenticatedActor;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -47,7 +48,7 @@ final class Complaint extends Model
                 throw ValidationException::withMessages(['status' => "Status cannot move from {$from} to {$complaint->status}."]);
             }
 
-            $complaint->handled_by ??= auth()->id();
+            $complaint->handled_by ??= app(AuthenticatedActor::class)->id();
             if ($complaint->status === 'Resolved') {
                 $complaint->resolved_at ??= now();
             }

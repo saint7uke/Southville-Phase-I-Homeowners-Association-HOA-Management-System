@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\AuthenticatedActor;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -47,7 +48,7 @@ final class ServiceRequest extends Model
                 throw ValidationException::withMessages(['status' => "Status cannot move from {$from} to {$request->status}."]);
             }
 
-            $request->handled_by ??= auth()->id();
+            $request->handled_by ??= app(AuthenticatedActor::class)->id();
             if ($request->status === 'Completed') {
                 $request->completed_at ??= now();
             }

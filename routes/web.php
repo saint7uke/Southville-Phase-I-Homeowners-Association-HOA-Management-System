@@ -36,5 +36,5 @@ Route::middleware('auth')->prefix('portal')->name('portal.')->group(function ():
     });
 });
 
-Route::get('/admin/reports/payments.xlsx', PaymentExportController::class)->middleware(['auth', 'role:hoa_admin', 'permission:export_reports', 'throttle:5,1'])->name('admin.reports.payments');
-Route::get('/staff/reports/payments.xlsx', PaymentExportController::class)->middleware(['auth', 'role:hoa_staff', 'permission:export_reports', 'throttle:5,1'])->name('staff.reports.payments');
+Route::get('/admin/reports/payments.xlsx', PaymentExportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:5,1'])->name('admin.reports.payments');
+Route::get('/staff/reports/payments.xlsx', PaymentExportController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:5,1'])->name('staff.reports.payments');
