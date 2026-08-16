@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "project_id": "southville-hoa-is-v1.2",
+  "enabled": false,
+  "trigger": {
+    "type": "goal",
+    "manual_only": true
+  },
+  "source": {
+    "document": "F:/Downloads/HOA_Full_Project_Brief_v1.2.docx",
+    "snapshot": "automation/hoa-loop/spec/brief-extract.txt",
+    "normalized_spec": "automation/hoa-loop/spec/PROJECT_SPEC.md"
+  },
+  "limits": {
+    "max_total_iterations": 32,
+    "max_iterations_per_phase": 5,
+    "max_consecutive_no_progress": 2,
+    "max_wall_clock_minutes": 240,
+    "per_iteration_timeout_minutes": 35,
+    "max_parallel_workers": 3
+  },
+  "codex": {
+    "command": "codex",
+    "sandbox": "workspace-write",
+    "approval_policy": "approve-for-me",
+    "web_search": false,
+    "ephemeral": true
+  },
+  "verification": {
+    "quick": "automation/hoa-loop/verifiers/verify.ps1 -Level quick",
+    "full": "automation/hoa-loop/verifiers/verify.ps1 -Level full",
+    "terminal": "automation/hoa-loop/verifiers/verify.ps1 -Level terminal",
+    "minimum_existing_test_count": 13
+  },
+  "protected_paths": [
+    "automation/hoa-loop/loop.config.json",
+    "automation/hoa-loop/baseline.json",
+    "automation/hoa-loop/acceptance.json",
+    "automation/hoa-loop/gitconfig",
+    "automation/hoa-loop/prompts/controller.md",
+    "automation/hoa-loop/schemas/agent-result.schema.json",
+    "automation/hoa-loop/scripts/run-loop.ps1",
+    "automation/hoa-loop/scripts/validate-loop.ps1",
+    "automation/hoa-loop/verifiers/verify.ps1",
+    "automation/hoa-loop/agents/controller-architect.md",
+    "automation/hoa-loop/agents/laravel-domain.md",
+    "automation/hoa-loop/agents/filament-panels.md",
+    "automation/hoa-loop/agents/landing-frontend.md",
+    "automation/hoa-loop/agents/qa-security.md",
+    "automation/hoa-loop/agents/release-docs.md"
+  ],
+  "human_gates": [
+    "architecture_reconciliation",
+    "protected_test_or_verifier_change",
+    "destructive_database_operation",
+    "major_dependency_downgrade",
+    "secret_or_credential_change",
+    "external_email_or_notification",
+    "deployment_or_publish",
+    "merge_release_or_tag",
+    "final_uat"
+  ]
+}

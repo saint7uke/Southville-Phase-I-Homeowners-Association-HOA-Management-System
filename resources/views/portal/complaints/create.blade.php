@@ -1,0 +1,12 @@
+@extends('layouts.portal')
+@section('title', 'Submit complaint')
+@section('content')
+<header class="page-header"><h1>Submit a complaint</h1><p>Give the HOA team enough detail to understand and review your concern.</p></header>
+@if($errors->any())<div class="error-summary" role="alert" tabindex="-1"><strong>Please correct the form errors.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+<form class="form-card" method="POST" action="{{ route('portal.complaints.store') }}" enctype="multipart/form-data">@csrf<div class="form-grid">
+    <div class="field"><label for="subject">Subject</label><input id="subject" name="subject" value="{{ old('subject') }}" maxlength="160" required>@error('subject')<p class="error">{{ $message }}</p>@enderror</div>
+    <div class="form-grid two"><div class="field"><label for="category">Category</label><select id="category" name="category" required>@foreach(['Noise','Property Damage','Neighbor Dispute','Common Area','Security','Others'] as $value)<option @selected(old('category') === $value)>{{ $value }}</option>@endforeach</select></div><div class="field"><label for="priority">Priority</label><select id="priority" name="priority" required>@foreach(['Low','Medium','High'] as $value)<option @selected(old('priority', 'Medium') === $value)>{{ $value }}</option>@endforeach</select></div></div>
+    <div class="field"><label for="description">Description</label><textarea id="description" name="description" required maxlength="5000" aria-describedby="description-hint">{{ old('description') }}</textarea><p id="description-hint" class="hint">Include what happened, where, and when. Minimum 20 characters.</p>@error('description')<p class="error">{{ $message }}</p>@enderror</div>
+    <div class="field"><label for="attachment">Supporting attachment</label><input id="attachment" name="attachment" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" aria-describedby="attachment-hint"><p id="attachment-hint" class="hint">PDF, image, or Word document up to 5 MB.</p>@error('attachment')<p class="error">{{ $message }}</p>@enderror</div>
+</div><div class="form-actions"><button class="button button-primary" type="submit">Submit complaint</button><a href="{{ route('portal.complaints.index') }}">Cancel</a></div></form>
+@endsection

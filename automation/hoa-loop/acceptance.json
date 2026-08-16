@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "terminal_requirements": {
+    "all_phases_complete": true,
+    "no_pending_human_decisions": true,
+    "minimum_tests": 13,
+    "required_builds": ["composer qa", "npm run build"],
+    "required_route_prefixes": ["admin", "staff", "homeowner"],
+    "required_roles": ["hoa_admin", "hoa_staff", "homeowner"],
+    "required_security_scenarios": [
+      "admin_cannot_use_staff_or_homeowner_panel_without_assignment",
+      "staff_cannot_use_admin_or_homeowner_panel",
+      "homeowner_cannot_use_admin_or_staff_panel",
+      "homeowner_records_are_owner_scoped",
+      "private_uploads_require_authorization",
+      "destructive_actions_are_authorized"
+    ],
+    "required_workflows": [
+      "homeowner_account_and_profile",
+      "dues_generation_and_payment_recording",
+      "payment_proof_review",
+      "complaint_status_flow",
+      "request_and_certificate_flow",
+      "published_announcement_visibility",
+      "reports_and_exports",
+      "audit_log_visibility",
+      "landing_contact_submission"
+    ],
+    "final_human_gates": ["uat", "production_secrets", "deployment"]
+  }
+}

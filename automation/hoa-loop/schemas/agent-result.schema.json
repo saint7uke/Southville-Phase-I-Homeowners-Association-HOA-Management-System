@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcome", "phase", "task", "changed_files", "verification", "state", "next_action"],
+  "properties": {
+    "outcome": { "type": "string", "enum": ["progress", "verified", "awaiting_human", "blocked", "complete", "no_op"] },
+    "phase": { "type": "string", "minLength": 1 },
+    "task": { "type": "string", "minLength": 1 },
+    "changed_files": { "type": "array", "items": { "type": "string" } },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "exit_code", "summary"],
+      "properties": {
+        "command": { "type": "string" },
+        "exit_code": { "type": ["integer", "null"] },
+        "summary": { "type": "string" }
+      }
+    },
+    "state": { "type": "string", "enum": ["dormant", "ready", "running", "awaiting_human", "blocked", "budget_exhausted", "complete"] },
+    "next_action": { "type": "string" },
+    "human_decision": { "type": ["string", "null"] }
+  }
+}

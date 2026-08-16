@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "project_id": "southville-hoa-is-v1.2",
+  "status": "dormant",
+  "armed": false,
+  "current_phase": "00-spec-reconciliation",
+  "total_iterations": 0,
+  "phase_iterations": 0,
+  "consecutive_no_progress": 0,
+  "started_at": null,
+  "updated_at": null,
+  "last_fingerprint": null,
+  "last_verification": null,
+  "blocked_reason": "Loop setup complete but intentionally not armed or started.",
+  "pending_human_decisions": [
+    "Approve the reconciled architecture after the research-only first cycle.",
+    "Initialize Git or explicitly approve an alternative recoverability mechanism before implementation."
+  ],
+  "phases": [
+    { "id": "00-spec-reconciliation", "owner": "controller-architect", "status": "pending", "requires_human_after": true },
+    { "id": "01-foundation-tri-panel", "owner": "filament-panels", "status": "pending", "requires_human_after": false },
+    { "id": "02-auth-account-lifecycle", "owner": "laravel-domain", "status": "pending", "requires_human_after": false },
+    { "id": "03-homeowners-profile", "owner": "laravel-domain", "status": "pending", "requires_human_after": false },
+    { "id": "04-dues-payments-delinquency", "owner": "laravel-domain", "status": "pending", "requires_human_after": false },
+    { "id": "05-complaints-requests-uploads", "owner": "laravel-domain", "status": "pending", "requires_human_after": false },
+    { "id": "06-announcements-contact", "owner": "landing-frontend", "status": "pending", "requires_human_after": false },
+    { "id": "07-certificates", "owner": "laravel-domain", "status": "pending", "requires_human_after": false },
+    { "id": "08-reports-exports", "owner": "filament-panels", "status": "pending", "requires_human_after": false },
+    { "id": "09-audit-security", "owner": "qa-security", "status": "pending", "requires_human_after": false },
+    { "id": "10-dashboards", "owner": "filament-panels", "status": "pending", "requires_human_after": false },
+    { "id": "11-landing-alignment", "owner": "landing-frontend", "status": "pending", "requires_human_after": false },
+    { "id": "12-integration-qa", "owner": "qa-security", "status": "pending", "requires_human_after": true },
+    { "id": "13-deployment-documentation", "owner": "release-docs", "status": "pending", "requires_human_after": true }
+  ]
+}

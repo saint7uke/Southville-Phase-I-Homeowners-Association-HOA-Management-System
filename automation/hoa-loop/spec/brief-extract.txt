@@ -1,0 +1,798 @@
+﻿HOMEOWNERS ASSOCIATION INFORMATION SYSTEM
+Southville Phase I, Brgy. Inocencio, Trece Martires City, Cavite
+Full Detailed Project Brief
+Version 1.2 — Reconciled with tri-panel Filament architecture (Admin / Staff / Homeowner)
+Prepared for: BSIT Capstone Project
+Cavite State University — Trece Martires City Campus
+Tech Lead Reference: Laravel 12 + Filament v3 (multi-panel: Admin, Staff, Homeowner) + React.js + Vite + Tailwind CSS (Landing Page only)
+Table of Contents
+1. Project Overview
+Project Name: Homeowners Association Information System (HOA IS)
+Client: Southville Phase I Homeowners Association
+Location: Brgy. Inocencio, Trece Martires City, Cavite
+Type: Web-Based Information System
+Duration: March 2026 – December 2026
+Problem Statement
+The HOA of Southville Phase I currently operates using manual, paper-based processes for managing homeowner records, collecting association dues, handling complaints and requests, and issuing community certificates. This results in slow data retrieval, high risk of financial recording errors, difficulty tracking payment statuses, inefficient complaint/request resolution tracking, no centralized platform for community announcements, and no audit trail for administrative actions.
+Proposed Solution
+A centralized, web-based Homeowners Association Information System built entirely on Laravel 12 with a multi-panel Filament v3 architecture. Every authenticated role — HOA Admin, HOA Staff, and Homeowner — gets its own dedicated Filament panel with its own dashboard, navigation, and scoped resources. Only the public-facing Landing Page remains a separate React application.
+Landing Page — public-facing, GSAP-animated marketing page (React.js + Vite)
+Admin Panel (/admin) — Filament panel for HOA Admin, full system oversight
+Staff Panel (/staff) — Filament panel for HOA Staff, operational tasks only
+Homeowner Panel (/homeowner) — Filament panel for the Homeowner role, self-service records, scoped strictly to the logged-in homeowner's own data
+All three back-office panels are separate Filament Panel Provider instances sharing one Laravel codebase, one database, and one set of models — but each with its own route prefix, its own login screen, its own navigation menu, and its own dashboard widgets, filtered by Filament Shield permissions and Eloquent-level scoping.
+Payment handling covers recording and monitoring of dues by HOA Admin/Staff; homeowners may upload proof of payment for staff verification, but the system does not process real-time transactions through a third-party payment gateway at this stage.
+2. Technology Stack
+Backend
+Technology
+Purpose
+Laravel 12
+Core backend framework, routing, business logic, APIs
+PHP 8.3+
+Server-side language
+MySQL 8.0+
+Primary relational database
+Laravel Queues + Jobs
+Background processing (email notifications, report generation)
+Google SMTP
+Transactional email via Gmail
+Laravel Policies & Gates
+Authorization layer for RBAC across all three panels
+Laravel Form Requests
+Structured backend validation
+Laravel Observers
+Model event hooks for audit logging
+Spatie Laravel Permission
+Role and permission management
+Spatie Laravel Activity Log
+Audit trail logging
+Laravel Excel (Maatwebsite)
+CSV and Excel export
+DomPDF / Barryvdh
+PDF generation for reports and certificates
+Laravel Soft Deletes
+Safe record deletion with restore capability
+Laravel Sanctum has been removed from the stack — it is no longer required now that the Homeowner surface is a session-authenticated Filament panel rather than a React SPA.
+Admin / Staff / Homeowner Panels (Filament v3 — shared across all three)
+Technology
+Purpose
+Filament v3
+Multi-panel framework: separate Panel Provider for Admin, Staff, and Homeowner
+Filament Tables
+Server-side sortable, filterable, searchable data tables in every panel
+Filament Forms
+Form builder with all Filament field types
+Filament Widgets
+Dashboard KPI cards, charts, and stats — a distinct widget set per panel
+Filament Shield (Spatie)
+Filament-native RBAC integration, scoped per panel
+SweetAlert2
+Confirmation modals and toast notifications via custom Filament hook, used in all three panels
+Frontend (Landing Page only)
+React is now used exclusively for the public Landing Page. It is no longer used for any authenticated surface.
+Technology
+Purpose
+React.js 18
+Component-based Landing Page UI
+Vite 5
+Modern build tool and dev server
+Tailwind CSS v3
+Utility-first responsive styling
+GSAP + ScrollTrigger
+Scroll-based animations on the Landing Page
+jQuery
+DOM manipulation, minor AJAX helpers on the Landing Page
+SweetAlert2
+Contact form success/error toasts
+Axios
+HTTP request for the Landing Page contact form only
+DevOps & Infrastructure
+Technology
+Purpose
+XAMPP / Laravel Valet
+Local development environment
+Apache / Nginx
+Web server
+Composer
+PHP dependency manager
+npm
+Node.js package manager (Landing Page build only)
+Git
+Version control
+Hostinger / cPanel VPS
+Deployment target
+3. System Architecture
+The system now has four distinct front doors sharing one Laravel backend: a public React Landing Page, and three independent Filament panels — Admin, Staff, and Homeowner — each with its own login, navigation, and dashboard.
+Layer
+Surfaces
+Browser Layer
+Landing Page (React + GSAP) · Admin Panel (Filament) · Staff Panel (Filament) · Homeowner Panel (Filament)
+Application Layer
+Laravel 12 — Routing → Middleware → Filament Panel Providers → Controllers/Livewire → Services → Models
+Cross-cutting
+Form Requests · Policies & Gates · Observers · Queues & Jobs · Mail (Google SMTP) · Exports
+Data Layer
+MySQL 8.0+ — users, roles/permissions, homeowners, payments, complaints, requests, announcements, certificates, dues, audit logs
+Routing Strategy
+/ → Landing Page (React SPA served via Vite)
+/admin → Filament Admin Panel (HOA Admin only)
+/staff → Filament Staff Panel (HOA Staff only)
+/homeowner → Filament Homeowner Panel (Homeowner role only)
+/api/contact → Laravel API route used solely by the Landing Page contact form
+Each Filament panel is registered as its own Panel Provider (AdminPanelProvider, StaffPanelProvider, HomeownerPanelProvider) with its own path(), its own guard, its own login page, and its own set of registered Resources/Widgets/Pages. A user authenticated in one panel is not automatically authenticated in another; Filament's per-panel auth guards keep the three surfaces fully isolated even though they share the same users table.
+4. Color Palette & Design System
+Name
+Hex
+Usage
+Crimson Red
+#FF1053
+Primary CTAs, alerts, active states, badges
+Indigo Slate
+#6C6EA0
+Secondary actions, sidebar accents, info labels
+Sky Blue
+#66C7F4
+Highlights, hover states, links, info badges
+Mist Gray
+#C1CAD6
+Borders, dividers, disabled states, table stripes
+White
+#FFFFFF
+Backgrounds, card surfaces, modal backdrops
+Charcoal
+#424C55
+Primary text, headers, dark backgrounds
+This single palette applies identically across all three Filament panels (Admin, Staff, Homeowner) and the Landing Page — the Homeowner Panel is no longer styled separately as a React app, so its theme is simply the Filament theme with brand colors mapped into Filament's color config.
+Usage Rules
+Crimson Red (#FF1053): Primary action buttons (Pay Now, Submit, Approve), status badges for Overdue/Rejected, delete confirmations
+Indigo Slate (#6C6EA0): Sidebar navigation, secondary buttons, filter labels
+Sky Blue (#66C7F4): Info toasts, info banners, table sort indicators, links
+Mist Gray (#C1CAD6): Table alternating rows, input borders, disabled inputs, dividers
+White (#FFFFFF): Card backgrounds, modal surfaces, form fields
+Charcoal (#424C55): All body text, sidebar text, table content
+5. Typography
+Admin, Staff & Homeowner Panels
+Primary Font: Helvetica Neue / Helvetica / Arial (system stack), applied universally across all three Filament panels — every panel now shares one Filament theme configuration, so typography no longer needs to be defined separately per role.
+Landing Page
+Headings / Display / Decorative: Apoc Revelations It (loaded via @font-face or CDN)
+Body / Navigation / CTAs: Helvetica Neue / Helvetica / Arial
+Type Scale (Tailwind Configuration — Landing Page only)
+fontFamily: { sans: ['Helvetica Neue','Helvetica','Arial','sans-serif'], display: ['Apoc Revelations It','Helvetica Neue','sans-serif'] }
+6. Role-Based Access Control (RBAC)
+Roles & Panels
+Role
+Panel
+Description
+HOA Admin
+/admin
+Full system access. Manages users, roles, all records, system settings, audit logs
+HOA Staff
+/staff
+Operational access only. Manages homeowner records, payments, complaints, requests, announcements
+Homeowner
+/homeowner
+Self-service access. Views own records, uploads payment proof, submits complaints/requests, views announcements
+Permission Matrix
+Feature
+HOA Admin
+HOA Staff
+Homeowner
+Dashboard (Full Analytics) — /admin
+Yes
+No
+No
+Dashboard (Operational) — /staff
+No
+Yes
+No
+Dashboard (Self-Service) — /homeowner
+No
+No
+Yes
+Homeowner Records (CRUD)
+Yes
+Yes
+No
+Homeowner Profile (Own)
+Yes
+No
+View/Edit own
+Association Dues Management
+Yes
+Yes
+No
+Payment Recording
+Yes
+Yes
+No
+Payment History (Own)
+Yes
+No
+Yes
+Payment Proof Upload
+No
+No
+Yes
+Complaint Management
+Yes
+Yes
+No
+Submit Complaint
+No
+No
+Yes
+Request Management
+Yes
+Yes
+No
+Submit Request
+No
+No
+Yes
+Announcements (CRUD)
+Yes
+Yes
+No
+View Announcements
+Yes
+Yes
+Yes
+Certificate Issuance
+Yes
+Yes
+No
+Certificate Request
+No
+No
+Yes
+Reports & Exports
+Yes
+Limited
+No
+User & Account Management
+Yes
+No
+No
+Role & Permission Management
+Yes
+No
+No
+Audit Logs
+Yes
+No
+No
+System Settings
+Yes
+No
+No
+Implementation
+Use Spatie Laravel Permission for role/permission storage, shared across the single users table
+Use Filament Shield for automatic per-panel resource policy generation — Admin, Staff, and Homeowner each get their own Shield-generated policy set
+Use Laravel Policies for all controller/Livewire-level authorization
+Use Laravel Gates for specific inline authorization checks
+Each Filament Panel Provider restricts access with ->authGuard() and a canAccessPanel() check on the User model, so a Staff account cannot even reach /admin or /homeowner, and vice versa
+Homeowner Panel resources are globally scoped (Eloquent global scope / Filament ->modifyQueryUsing()) to the logged-in homeowner's own records — there is no cross-homeowner visibility by design
+Middleware groups: role:hoa-admin, role:hoa-staff, role:homeowner, applied per panel
+7. Database Schema Overview
+users
+id, name, email, password, email_verified_at, profile_photo, contact_number, date_of_birth, age, sex, address, status (active/inactive/suspended), remember_token, created_at, updated_at, deleted_at
+model_has_roles (Spatie)
+role_id, model_type, model_id
+homeowners
+id, user_id (FK -> users), lot_number, block_number, street, phase, move_in_date, occupancy_type (owner/tenant), emergency_contact_name, emergency_contact_number, status (active/inactive/delinquent), created_at, updated_at, deleted_at
+dues_schedules
+id, name, amount (decimal 10,2), due_date, billing_period_start, billing_period_end, type (monthly/annual/special), description, status (active/inactive), created_by, created_at, updated_at, deleted_at
+payment_records
+id, homeowner_id (FK -> homeowners), dues_schedule_id (FK -> dues_schedules), amount_due (decimal 10,2), amount_paid (decimal 10,2), payment_date, payment_method (cash/gcash/bank_transfer/check), reference_number, receipt_number, balance (decimal 10,2), proof_of_payment_path, status (paid/partial/unpaid/overdue), recorded_by (FK -> users), notes, created_at, updated_at, deleted_at
+complaints
+id, homeowner_id (FK -> homeowners), subject, description, category (noise/property/security/other), priority (low/medium/high/urgent), status (open/under_review/resolved/rejected/closed), resolution_notes, resolved_by (FK -> users), resolved_at, attachments (JSON), created_at, updated_at, deleted_at
+requests
+id, homeowner_id (FK -> homeowners), request_type (certificate/clearance/repair/other), subject, description, status (pending/under_review/approved/rejected/completed), response_notes, processed_by (FK -> users), processed_at, attachments (JSON), created_at, updated_at, deleted_at
+announcements
+id, title, content, type (general/urgent/event/reminder), published_at, expires_at, is_published (boolean), target_audience (all/admins/homeowners), created_by (FK -> users), updated_by (FK -> users), created_at, updated_at, deleted_at
+certificates
+id, homeowner_id (FK -> homeowners), certificate_type (residency/good_standing/clearance), request_id (FK -> requests, nullable), issued_by (FK -> users), issued_at, certificate_number, file_path, status (issued/revoked), notes, created_at, updated_at
+activity_logs (Spatie)
+id, log_name, description, subject_type, subject_id, causer_type, causer_id, properties (JSON), created_at, updated_at
+Schema is unchanged by the panel restructuring — no new tables are required. Multi-panel access is enforced entirely at the Filament/Policy layer, not the schema layer.
+8. Landing Page
+Purpose: Public-facing marketing and information page for Southville Phase I HOA. Showcases the system and routes homeowners to their own Filament login.
+Technical Stack
+React.js 18 + Vite 5
+Tailwind CSS v3
+GSAP + ScrollTrigger
+Axios (for contact form submission)
+SweetAlert2
+8.1 Navigation Bar
+Sticky on scroll with background blur effect
+Logo: "Southville Phase I HOA" wordmark
+Links: Home, About, Features, Contact, Login
+CTA Button: "Resident Login" -> /homeowner/login
+Mobile: Hamburger menu with slide-in drawer
+Smooth scroll to sections on link click
+8.2 Hero Section
+Full-viewport height; Apoc Revelations It heading: "Your Community, Organized."
+Subheading in Helvetica: brief description of the system
+Two CTAs: "Resident Login" (primary, #FF1053, -> /homeowner/login) + "Learn More" (outline, #6C6EA0)
+GSAP: staggered fade-up on hero text and buttons on page load
+Background: abstract geometric pattern using brand colors (CSS/SVG)
+8.3 About Section
+Two-column layout: text left, illustration/graphic right
+Apoc Revelations It section header: "About the HOA"
+Description of Southville Phase I and the HOA's mission
+GSAP ScrollTrigger: slide-in from left (text) and right (graphic) on scroll
+8.4 Features Section
+Grid of 6 feature cards: Homeowner Records, Payment Tracking, Complaint Management, Document Requests, Community Announcements, Secure & Accessible
+Each card: icon + title + short description
+Colors: White background, Indigo Slate icons, Crimson Red hover border
+GSAP ScrollTrigger: cards stagger-fade in on scroll
+8.5 How It Works Section
+Numbered process steps: Register -> Verify -> Access Your Panel -> Manage Everything
+Horizontal timeline on desktop, vertical on mobile
+GSAP ScrollTrigger: steps animate in sequentially as user scrolls
+8.6 Announcements Preview
+Fetches latest 3 public announcements from Laravel API
+Displayed as cards with date, title, and excerpt
+"View All" link -> redirects to /homeowner/login
+8.7 Contact Section
+Simple contact form: Name, Email, Message
+Submits via Axios POST to /api/contact
+SweetAlert2 success toast on submission
+Laravel backend: stores inquiry + sends notification email via Google SMTP
+8.8 Footer
+Logo, navigation links, social media (optional), copyright
+Color: Charcoal background, White text
+Performance
+Lazy-load images
+Code-split React components via Vite
+GSAP animations respect prefers-reduced-motion
+9. Authentication Module
+Authentication is now Filament-native across all three roles. There is no more React/Axios/Sanctum login flow — HOA Admin, HOA Staff, and Homeowner each log in through their own panel's native Filament login screen, each backed by its own auth guard.
+9.1 HOA Admin Login
+Route: /admin/login (Filament native)
+Filament's built-in authentication, admin guard
+Google SMTP email for password reset
+Rate limiting: max 5 failed attempts before temporary lockout (Laravel built-in throttle)
+Session-based authentication
+9.2 HOA Staff Login
+Route: /staff/login (Filament native, separate panel from /admin)
+Filament's built-in authentication, staff guard
+Same rate-limiting and session-based rules as the Admin Panel
+A Staff account cannot log into /admin, and an Admin account is not automatically granted a Staff Panel session — each panel checks canAccessPanel() independently
+9.3 Homeowner Login
+Route: /homeowner/login (Filament native — replaces the former React/Sanctum SPA login)
+Filament's built-in authentication, homeowner guard, session-based like the other two panels
+"Forgot Password" link -> Filament's built-in reset flow, email-based via Google SMTP
+Redirect to /homeowner (Homeowner Dashboard) on success
+SweetAlert2 toast (via Filament hook) on failed login
+9.4 Password Reset Flow (all three panels)
+1. User clicks "Forgot Password" on their panel's login screen
+2. Enters registered email
+3. Laravel sends a signed reset link via Google SMTP
+4. User clicks link -> Filament's native reset-password page for that panel
+5. Enters and confirms new password (match validation)
+6. Success notification -> redirect to that panel's login
+9.5 Email Verification
+New Homeowner accounts require email verification, using Laravel's built-in email verification sent via Google SMTP
+The Homeowner Panel shows a "Verify Your Email" banner (Filament notification banner) if not yet verified
+9.6 Universal Auth Rules
+CSRF protection on all forms (Livewire/Filament handles this natively)
+All auth routes rate-limited, per panel
+Passwords validated using Laravel's Password::defaults() (min 8, mixed case, numbers, symbols)
+Passwords hashed with bcrypt (Laravel default)
+No plain-text passwords stored or displayed
+10. Admin Panel — HOA Admin (/admin)
+Built with Filament v3 as its own Panel Provider. All Filament Resources follow best practices: custom Resource classes, Form Schemas, Table Columns, Filters, Actions.
+10.1 Dashboard
+Stats Widgets: Total Homeowners, Active Homeowners, Delinquent Accounts, Total Revenue (Current Month), Open Complaints, Pending Requests
+Chart Widget: Monthly payment collection trend (line chart, last 12 months)
+Chart Widget: Complaint status breakdown (donut chart)
+Table Widget: Recent Payments (last 10 records)
+Table Widget: Overdue Accounts (sorted by overdue days)
+10.2 Homeowner Records Resource
+Full CRUD: Create, Read, Update, Soft Delete, Restore
+Table Columns: Lot/Block, Full Name, Contact, Email, Occupancy Type, Status, Move-In Date, Actions
+Filters: Status, Occupancy Type, Date Range (Move-In)
+Searchable: Name, Email, Lot, Block; Sortable: all major columns
+Actions: View Profile, Edit, Deactivate, Delete (with SweetAlert2 confirm), Restore
+Bulk Actions: Export Selected to CSV, Deactivate Selected
+10.3 Dues Schedules Resource
+Full CRUD for dues periods (monthly/annual/special)
+Table Columns: Name, Type, Amount, Due Date, Period, Status, Created By
+Filters: Type, Status, Date Range; Actions: Edit, Deactivate, Delete
+10.4 Payment Records Resource
+Full CRUD (Staff records payments; Admin reviews all)
+Table Columns: Homeowner, Lot/Block, Dues Period, Amount Due, Amount Paid, Balance, Status, Payment Date, Recorded By
+Filters: Status (Paid/Partial/Unpaid/Overdue), Dues Schedule, Date Range
+Actions: View, Edit, Review Uploaded Proof of Payment, Print Receipt (PDF), Delete (Soft)
+10.5 Complaint Management Resource
+Full visibility of all complaints
+Table Columns: Homeowner, Subject, Category, Priority, Status, Submitted At, Resolved By
+Actions: View Full Details, Update Status, Assign to Staff, Add Resolution Notes, Close
+10.6 Request Management Resource
+Full visibility of all service requests
+Actions: Approve, Reject (with required notes), Mark as Completed, Issue Certificate (for certificate requests)
+10.7 Announcements Resource
+Full CRUD; Table Columns: Title, Type, Target Audience, Published, Expires, Created By
+Actions: Publish/Unpublish Toggle, Edit, Delete
+10.8 Certificate Issuance Resource
+View all issued certificates; issue new certificate (linked to approved request or standalone)
+Generate and download certificate PDF; revoke certificate with reason
+10.9 Reports Resource
+Payment Summary Report (by period, by homeowner, by status)
+Delinquency Report, Complaint Resolution Report, Request Fulfillment Report
+All reports exportable to CSV and PDF
+10.10 User & Account Management Resource
+Full CRUD for all users (Admin, Staff, Homeowners); assign/revoke roles and panel access
+Activate/Suspend accounts; password reset trigger via Google SMTP
+Table Columns: Name, Email, Role, Panel, Status, Last Login, Created At
+10.11 Role & Permission Management
+Powered by Filament Shield + Spatie Permission, generated per panel
+Admin can view and assign granular permissions to roles
+Cannot delete built-in roles (HOA Admin, HOA Staff, Homeowner)
+10.12 Audit Log Resource
+Read-only table of all activity_logs, aggregated across all three panels
+Table Columns: Date/Time, User, Panel, Action, Subject Type, Subject ID, Description, IP Address
+Filters: User, Panel, Action Type, Date Range; export to CSV
+10.13 System Settings
+HOA Name, Contact Email, Address, Logo Upload
+Email Notification Toggle (enable/disable specific email types)
+Google SMTP configuration display (view-only, values managed via .env)
+Panel-level toggles: temporarily disable Staff or Homeowner panel access during maintenance
+11. Staff Panel — HOA Staff (/staff)
+HOA Staff no longer shares the Admin's Filament panel instance. Staff now has its own dedicated Panel Provider mounted at /staff, with its own login, navigation, and dashboard — scoped by Filament Shield permissions so only operational resources ever render, rather than being hidden items inside the Admin navigation.
+11.1 Staff Dashboard
+Operational Stats Widgets only — no financial totals: Open Complaints, Pending Requests, Today's Payments Recorded
+Recent Activity Feed widget (Staff's own recent actions)
+Table Widget: My Recently Recorded Payments
+11.2 Staff Accessible Resources
+Homeowner Records (Create, Edit, View — no Delete)
+Payment Recording (Create and Edit own entries)
+Complaint Management (View all, Update Status, Add Notes — no Delete)
+Request Management (View all, Process, Approve, Reject)
+Announcements (Create, Edit, Publish — no Delete)
+Certificate Issuance (Issue on approved requests)
+Reports (limited: Payment Collection, Complaint Summary)
+11.3 Staff Restrictions
+Cannot access /admin at all — separate panel, separate guard
+Cannot access User & Account Management
+Cannot access Role & Permission Management
+Cannot access Audit Logs
+Cannot access System Settings
+Cannot permanently delete any record
+Cannot view financial aggregate widgets on the Staff Dashboard
+12. Homeowner Panel (/homeowner)
+The former React + Vite Resident Portal has been replaced entirely by a third Filament Panel Provider mounted at /homeowner. It reuses the same Filament Resources/Forms/Tables paradigm as the Admin and Staff panels, but every resource is globally scoped to the logged-in homeowner's own record — there is no API layer, no Sanctum SPA token, and no separate React build for this surface.
+12.1 Homeowner Panel Layout
+Standard Filament sidebar layout (collapsible on desktop, off-canvas on mobile) — same shell as Admin/Staff, themed with brand colors
+Navigation: Dashboard, My Profile, Payments, Complaints, Requests, Certificates, Announcements, Logout
+Color: Charcoal sidebar, Crimson Red active nav item, White content area
+12.2 Homeowner Dashboard
+Welcome widget with homeowner name and lot/block
+Stats Widgets: Outstanding Balance, Open Complaints, Pending Requests, Unread Announcements
+Table Widget: Recent Payment History (last 3 records)
+Table Widget: Latest Announcements (top 3)
+Quick action buttons (Filament page actions): Upload Payment Proof, Submit Complaint, New Request
+12.3 My Profile
+Filament Edit-Profile page: View and edit own profile details (Name, Email, Contact, Sex, DOB/Age, Address)
+Change Password section (separate Filament form component)
+Profile photo upload via Filament FileUpload field (validated extension + MIME + size limit)
+Unique email enforced via backend validation rule, ignoring the current record on edit; SweetAlert2 confirm before saving
+12.4 Payments Resource (own records only)
+Filament Table, globally scoped to the homeowner's own payment_records: Period, Amount Due, Amount Paid, Balance, Status (badge), Payment Date, Receipt
+Filters: By Status, By Year/Month
+Upload Proof of Payment action (JPEG/PNG/PDF, max 5MB) for a pending dues record, reviewed by Staff
+Download Receipt action (PDF) per paid record; outstanding balance highlighted in Crimson Red
+12.5 Submit Complaint
+Filament Create page / modal form: Subject, Category, Priority, Description, Attachments (optional, max 5MB each)
+Review step before submission (Filament wizard step or summary preview); SweetAlert2 confirm dialog
+12.6 My Complaints
+Filament Table, scoped to own complaints: Subject, Category, Priority, Status (badge), Submitted Date, Last Updated
+Row click / view action expands: full description, resolution notes, status timeline
+12.7 Submit Request
+Request Type select field: Certificate of Residency, Certificate of Good Standing, Community Clearance, Repair/Maintenance, Other
+Fields: Subject, Description, Supporting Documents (optional)
+Review step + SweetAlert2 confirmation
+12.8 My Requests
+Filament Table, scoped to own requests: Type, Subject, Status (badge), Submitted Date, Processed Date
+View action expands: full details, response notes, linked certificate download (if applicable)
+12.9 Certificates
+Filament Table of all certificates issued to the homeowner
+Columns: Certificate Type, Certificate Number, Issue Date, Status (badge)
+Download PDF action per certificate
+12.10 Announcements
+Filament custom page rendering a card grid of published announcements, sorted by Published Date (newest first)
+Filter: By Type (General, Urgent, Event, Reminder)
+Unread indicator (bold Crimson Red card border for new ones)
+Because this is now a Filament page rather than a React fetch(), the announcement feed is server-rendered with Livewire reactivity instead of a client-side API call.
+13. Module Breakdown
+Module 1: Homeowner Records Management
+Access: HOA Admin (Full CRUD, /admin), HOA Staff (Create/Edit/View, /staff), Homeowner (View/Edit own, /homeowner).
+Features
+Complete homeowner profile management: Name fields, Sex, DOB, Age (auto), Contact Number, Email, Profile Photo, Lot/Block/Street/Phase, Move-In Date, Occupancy Type, Emergency Contact, Account Status
+Soft delete with restore capability
+Status management: Active, Inactive, Delinquent (system-flagged when payments are overdue)
+Each homeowner record linked to a users account with a canAccessPanel() rule limiting them to /homeowner
+Validations
+Lot Number + Block Number combination must be unique; Email must be unique across system
+Contact Number: exactly 11 digits, stored as string
+Move-In Date must not be a future date
+Profile photo: JPEG/PNG/WEBP only, max 2MB, stored with unique filename
+Module 2: Association Dues & Payment Management
+Access: HOA Admin (Full, /admin), HOA Staff (Create/Edit payment records, /staff), Homeowner (View own, upload proof of payment, /homeowner).
+2A: Dues Schedule Management (Admin/Staff)
+Create billing periods (Monthly, Annual, Special Assessment) with Name, Amount, Due Date, Period, Type, Description
+System auto-generates individual payment records for each active homeowner when a dues schedule is created (via Laravel Job dispatched to Queue)
+Amount stored as DECIMAL(10,2); cannot delete a dues schedule that has linked payment records, only deactivate
+2B: Payment Recording (Admin/Staff)
+Record payment for a specific homeowner's dues record: Homeowner, Dues Schedule, Amount Paid, Payment Method (Cash/GCash/Bank Transfer/Check), Reference Number, Receipt Number, Notes
+System calculates Balance = Amount Due − Amount Paid; auto-updates status: Paid, Partial, Unpaid
+System flags Overdue when Due Date passes and status is not Paid; daily scheduled command checks overdue records and sends email notification
+Receipt PDF auto-generated and downloadable
+2C: Homeowner View (Homeowner Panel)
+Homeowner views own payment history in the /homeowner Payments Resource; outstanding dues displayed prominently
+Payment proof upload (for offline/bank/e-wallet payment verification): JPEG/PNG/PDF, max 5MB — stored in private storage, reviewed by Staff. No live payment gateway is integrated at this stage.
+2D: Delinquency Tracking
+Automated: homeowner status flips to "Delinquent" after X consecutive unpaid months (configurable in System Settings)
+Delinquency report available in Reports module; email notification to delinquent homeowners via Google SMTP
+Module 3: Complaint & Request Management
+Access: HOA Admin (Full, /admin), HOA Staff (Full operational, /staff), Homeowner (Submit/View own, /homeowner).
+3A: Complaint Submission (Homeowner Panel)
+Fields: Subject, Category, Priority, Description, Attachments (max 3 files, 5MB each)
+Review step before submission; SweetAlert2 confirm dialog
+Email notification to HOA Staff via Google SMTP on new complaint
+3B: Complaint Management (Admin/Staff Panels)
+Update status: Open -> Under Review -> Resolved / Rejected / Closed (validated transitions)
+Resolution notes required when resolving or rejecting; optional assignment to staff member
+Email notification to Homeowner on status change
+3C: Request Submission (Homeowner Panel)
+Request types: Certificate of Residency, Certificate of Good Standing, Community Clearance, Repair/Maintenance, Other
+Fields: Type, Subject, Description, Supporting Documents; review step + confirmation
+3D: Request Management (Admin/Staff Panels)
+Process requests: Pending -> Under Review -> Approved / Rejected -> Completed
+Required notes on rejection; approved certificate requests trigger certificate issuance flow
+Module 4: Announcements & Notices
+Access: HOA Admin (Full CRUD, /admin), HOA Staff (Create/Edit/Publish, /staff), Homeowner (View published, /homeowner).
+Fields: Title, Type (General/Urgent/Event/Reminder), Content, Target Audience, Publish Date, Expiry Date
+Urgent type highlighted with Crimson Red border in the Homeowner Panel
+Expired announcements hidden from the Homeowner Panel, visible in Admin/Staff with filter
+Email blast option: Admin can trigger notification to all active homeowners (queued via Laravel Jobs)
+Module 5: Certificate & Document Issuance
+Access: HOA Admin (Full, /admin), HOA Staff (Issue on approved requests, /staff).
+Certificate types: Certificate of Residency, Certificate of Good Standing, Community Clearance
+Trigger: manual (Admin) or via approved Request
+Auto-generates certificate with unique Certificate Number, HOA Name, Homeowner details, Issued Date, Issued By, Validity Period
+PDF generated via DomPDF using a styled Blade template with brand colors
+Stored in private Laravel storage; accessible only by the record owner (via /homeowner) or Admin/Staff
+Certificate number format: CERT-YYYY-XXXX (e.g., CERT-2026-0001)
+Homeowner notified via email with signed temporary download URL; revoke functionality for Admin with reason logging
+Module 6: Reports & Exports
+Access: HOA Admin (Full, /admin), HOA Staff (Limited, /staff).
+Report
+Admin
+Staff
+Format
+Payment Summary (by period)
+Yes
+Yes
+CSV, PDF
+Payment Summary (by homeowner)
+Yes
+Yes
+CSV, PDF
+Delinquency Report
+Yes
+Yes
+CSV, PDF
+Full Payment Collection History
+Yes
+No
+CSV
+Complaint Summary
+Yes
+Yes
+CSV, PDF
+Request Fulfillment Summary
+Yes
+Yes
+CSV, PDF
+Homeowner Master List
+Yes
+Yes
+CSV
+Certificate Issuance Log
+Yes
+Yes
+CSV
+Audit Log Export
+Yes
+No
+CSV
+Implementation
+Laravel Excel (Maatwebsite) for CSV/Excel export with chunked queuing for large datasets
+DomPDF for PDF report generation via styled Blade templates
+All export actions include date range and status filters before generating
+CSV columns use clean human-readable headers, not raw DB column names
+Module 7: User & Account Management
+Access: HOA Admin only (/admin).
+Create new HOA Staff accounts and new Homeowner accounts (linked to homeowner record); assign the correct panel access flag on each
+Assign/change roles; Activate / Deactivate / Suspend accounts
+Trigger password reset email via Google SMTP; view last login date, IP, and last-used panel
+Suspended accounts cannot log in to any panel; a message is displayed on login attempt
+Module 8: Audit Log
+Access: HOA Admin only (/admin).
+Tracked events: all CRUD operations on Homeowners, Payments, Dues Schedules, Complaints, Requests, Announcements, Certificates — across all three panels
+Role assignments and changes; login/logout events per panel; failed login attempts; password changes; export actions
+Implementation: Spatie Laravel Activity Log + Laravel Model Observers
+Logs include User, Panel, Action, Model Type, Model ID, Old/New Values (JSON), IP Address, User Agent, Timestamp
+Audit logs use hard deletes (never soft deleted); read-only in Admin Panel; exportable to CSV
+Module 9: Dashboard & Analytics
+HOA Admin Dashboard (/admin)
+Total Homeowners (active/inactive breakdown); Total Revenue (current month); Total Outstanding Dues
+Delinquent Accounts count; Open Complaints count; Pending Requests count
+Monthly Revenue Chart (line, last 12 months); Complaint Status Donut Chart
+Recent Payments table (last 10); Overdue Accounts table (sorted by most overdue)
+HOA Staff Dashboard (/staff)
+Operational widgets only, no financial aggregates
+Open Complaints, Pending Requests, Today's Payments Recorded, recent activity feed
+Homeowner Dashboard (/homeowner)
+Outstanding Balance (highlighted if > 0); Open Complaints count; Pending Requests count
+Latest 3 Announcements; quick action buttons
+14. Universal Form Rules
+All forms across all four surfaces (Admin Panel, Staff Panel, Homeowner Panel, Landing Page contact form) implement the following rules.
+14.1 Password Fields
+Eye toggle on all password inputs; match validation before submission
+Laravel Password::defaults() rule: minimum 8 characters, mixed case, numbers, symbols
+Fields cleared on validation error; never displayed in plain text post-submission
+14.2 Name Fields (First, Middle, Last)
+Auto-capitalize first letter of each word; reject numbers/special characters (except apostrophes and hyphens)
+Trim leading/trailing spaces, prevent multiple consecutive spaces; validated on frontend and backend
+14.3 Suffix Field
+Optional dropdown: Jr. / Sr. / II / III / IV / N/A; no free-text entry
+14.4 Sex Field
+Options: Male / Female / Prefer not to say; dropdown in full forms, radio buttons in compact forms
+14.5 Contact Number
+11 digits exactly, numeric only; placeholder 09XXXXXXXXX; stored as VARCHAR(11)
+14.6 Date of Birth & Age
+Date picker, max date = today; auto-calculates age on change; backend recalculates age, ignores frontend-submitted value
+14.7 Email Address
+Lowercase before save, trim spaces; real-time duplicate check on blur (debounced 400ms)
+Unique DB constraint + Laravel unique validation; ignores current record's email on edit
+14.8 Required / Optional Fields
+Required: red asterisk label; Optional: '(Optional)' text; backend Form Request classes are authoritative
+14.9 Input Sanitization
+Trim all text inputs; escape all output in Blade with {{ }}; Filament/Livewire escapes rendered content by default
+14.10 Registration Review Step
+Summary card before final submit; disable submit on click, re-enable on failure; duplicate submit prevention
+14.11 SweetAlert2 Usage
+All delete/destructive actions require confirmation, in every panel via the shared Filament SweetAlert2 hook
+Submit confirmations for important actions; toasts auto-dismiss after 3 seconds
+14.12 Modal Reset Logic
+All fields, validation errors, messages, file previews, and states cleared on modal cancel/close/dismiss
+14.13 CSRF Protection
+All forms use Laravel/Livewire's native CSRF protection; the Landing Page's Axios contact-form request sends an X-CSRF-TOKEN header from a meta tag
+14.14 File Uploads
+MIME check on backend, not just extension; max size enforced (2MB photos, 5MB documents)
+Unique filenames via Str::uuid(); sensitive files in storage/app/private/, served via signed URLs
+14.15 Dropdown Defaults
+Default: "Select an option" — never a real DB value as placeholder; dependent dropdowns reset on parent change
+14.16 Numeric / Currency
+DECIMAL(10,2) for all monetary values, no floating-point types for money
+Frontend displays formatted (e.g., ₱1,250.00) but submits raw numeric value
+14.17 Dates / Times
+End date never before start date; consistent display format: MMM DD, YYYY
+14.18 Status Fields
+Always dropdown or controlled action, never free-text; defined as PHP enums or string constants
+14.19 Delete Actions
+Soft deletes for Homeowners, Payment Records, Complaints, Requests, Announcements, Certificates
+Hard deletes: Audit Logs only (intentionally immutable)
+14.20 Tables (Filament Tables across all three panels)
+Server-side pagination, search, sort, filter on every major table
+CSV export per table where applicable; responsive layout
+15. Security Implementation
+Authentication Security
+bcrypt password hashing (Laravel default)
+Rate limiting on login: throttle:5,1 (5 attempts per minute) on all three panel login routes
+Signed password reset tokens with 60-minute expiry
+Session-based authentication for Admin, Staff, and Homeowner — each panel uses its own auth guard so a hijacked Homeowner session cannot be reused against /admin or /staff
+Authorization Security
+Laravel Policies on every Controller/Livewire method; Filament Shield generates and enforces per-panel policies
+Middleware groups: auth, verified, role:..., applied per panel
+Homeowner Panel resources are globally scoped so a Homeowner can only ever query their own data — this is enforced at the Eloquent query layer, not just hidden in the UI
+Input Security
+All inputs sanitized and validated server-side
+SQL injection prevention: Eloquent ORM with parameterized queries
+XSS: Blade {{ }} escaping, Livewire/Filament safe rendering by default; mass assignment protection via $fillable
+File upload: MIME verification, unique stored names, private storage for sensitive files
+Infrastructure Security
+.env file never committed to version control; HTTPS enforced in production
+Sensitive config via environment variables; APP_DEBUG=false in production
+Database: least-privilege MySQL user for application
+Rate Limiting
+Login: 5 attempts/minute per panel; Password Reset: 3 requests/minute
+API endpoints (Landing Page contact form only): throttle:3,1
+16. Development Phases
+Phase 1: Project Setup & Architecture (Week 1–2)
+Initialize Laravel 12 and the standalone React+Vite Landing Page project; install Filament, Spatie Permission, Spatie Activity Log, Laravel Excel, DomPDF; configure MySQL, Git, Google SMTP; run base migrations; seed roles (HOA Admin, HOA Staff, Homeowner) and an initial Admin account; scaffold three separate Filament Panel Providers (Admin, Staff, Homeowner) with their own paths, guards, and brand-color theme configuration.
+Phase 2: Authentication Module (Week 2–3)
+Filament native login for all three panels (/admin, /staff, /homeowner), each on its own guard; password reset flows per panel; email verification for Homeowner accounts; canAccessPanel() checks so accounts can only reach their assigned panel; rate limiting.
+Phase 3: Homeowner Records Management (Week 3–4)
+homeowners migration/model; HomeownerResource registered in Admin (full CRUD) and Staff (no delete) panels, plus a scoped read/edit-own view registered in the Homeowner panel; universal form rules applied; soft delete/restore; status management; profile photo upload; email duplicate check.
+Phase 4: Dues Schedules & Payment Management (Week 4–5)
+dues_schedules and payment_records migrations/models; DuesScheduleResource, PaymentRecordResource in Admin/Staff panels, plus a scoped Payments resource in the Homeowner panel; Job for auto-generating payment records; daily overdue-detection command; receipt PDF generation; homeowner payment proof upload; delinquency auto-flagging.
+Phase 5: Complaint & Request Management (Week 5–6)
+complaints and requests migrations/models; management resources in Admin/Staff panels; submission resources with review steps in the Homeowner panel; status transition logic; file attachment handling (private storage, signed URLs); email notifications.
+Phase 6: Announcements Module (Week 6)
+announcements migration/model; AnnouncementResource in Admin/Staff panels; scheduled publish/expire logic; email blast feature; read-only announcement feed page in the Homeowner panel.
+Phase 7: Certificate & Document Issuance (Week 7)
+certificates migration/model; CertificateResource in Admin/Staff panels; branded PDF certificate template; certificate number generation; private storage with signed URL delivery; certificate list view in the Homeowner panel; email notification with download link.
+Phase 8: Reports & Exports (Week 7–8)
+Laravel Excel export classes for all report types; DomPDF PDF report templates; Filament report pages with date/status filters, registered in Admin (full) and Staff (limited) panels via Filament Shield.
+Phase 9: Audit Log Module (Week 8)
+Laravel Model Observers for all tracked models across all three panels; Spatie Activity Log configuration; login/logout and failed login logging per panel; read-only, exportable AuditLogResource in the Admin panel only.
+Phase 10: Dashboards (Week 8–9)
+HOA Admin Dashboard (Stats, Charts, Tables); HOA Staff Dashboard (operational widgets); Homeowner Dashboard — all as Filament Widget classes registered per panel, no separate React dashboard components.
+Phase 11: Homeowner Panel Build-out (Week 9–10)
+Homeowner Panel Provider finalized; scoped resources for Profile, Payments, Complaints, Requests, Certificates; custom Announcements page; review-step forms; SweetAlert2 confirmations wired via the shared Filament hook; responsive Filament theme verified on mobile.
+Phase 12: Landing Page (Week 10–11)
+React + Vite + GSAP landing page with all sections; ScrollTrigger animations; Apoc Revelations It headings; mobile responsive; contact form with backend endpoint; login CTAs pointed at /homeowner/login.
+Phase 13: Integration Testing (Week 11)
+End-to-end flow testing (registration -> homeowner login -> pay dues -> complaint -> certificate); admin and staff flow testing; cross-panel permission testing (confirming Staff cannot reach /admin, Homeowner cannot reach /staff, etc.); email notification testing; file upload/download testing.
+Phase 14: System Testing & Bug Fixes (Week 12)
+Cross-browser testing (Chrome, Firefox, Edge, Safari); responsive testing across breakpoints for all three panels; performance testing; security testing (CSRF, XSS, SQL injection, unauthorized cross-panel route access); bug fixing.
+Phase 15: ISO 25010 Evaluation (Week 12–13)
+Prepare evaluation instruments; conduct evaluation with target users across all three roles; tabulate and analyze results; document findings.
+Phase 16: Deployment & Documentation (Week 13–14)
+Deploy to Hostinger/cPanel VPS; configure production .env; run migrations/seeders; configure web server routes for all three panels plus the Landing Page build; set up Supervisor for queue workers and Laravel Scheduler cron; prepare User Manual and Technical Documentation covering all three panels.
+17. Deployment Plan
+Pre-Deployment Checklist
+APP_ENV=production, APP_DEBUG=false
+APP_KEY generated; production DB credentials in .env; Google SMTP credentials in .env
+php artisan migrate --force
+php artisan db:seed --class=RolesAndPermissionsSeeder
+php artisan db:seed --class=AdminUserSeeder
+php artisan storage:link
+php artisan config:cache, route:cache, view:cache
+npm run build (Vite production build — Landing Page only)
+HTTPS certificate installed (Let's Encrypt)
+Apache/Nginx config: point web root to public/; verify /admin, /staff, /homeowner all resolve to their respective Filament panels
+Laravel Queue worker: Supervisor process running
+Laravel Scheduler: cron entry for schedule:run
+File permissions: storage/ and bootstrap/cache/ writable by web user
+Environment Configuration (.env key items)
+APP_NAME="Southville Phase I HOA IS"APP_ENV=productionAPP_DEBUG=falseAPP_URL=https://yourdomain.comDB_CONNECTION=mysqlDB_HOST=127.0.0.1DB_PORT=3306DB_DATABASE=hoa_isDB_USERNAME=hoa_db_userDB_PASSWORD=STRONG_PASSWORDMAIL_MAILER=smtpMAIL_HOST=smtp.gmail.comMAIL_PORT=587MAIL_USERNAME=yourgmail@gmail.comMAIL_PASSWORD=GOOGLE_APP_PASSWORDMAIL_ENCRYPTION=tlsMAIL_FROM_ADDRESS=yourgmail@gmail.comMAIL_FROM_NAME="Southville Phase I HOA"QUEUE_CONNECTION=databaseFILESYSTEM_DISK=local
+Note: Sanctum's SANCTUM_STATEFUL_DOMAINS variable is no longer required — it has been removed from the environment configuration since the Homeowner surface no longer authenticates as a Sanctum SPA.
+18. ISO 25010 Quality Evaluation Plan
+Characteristic
+Sub-characteristics
+Evaluation Method
+Functional Suitability
+Completeness, correctness, appropriateness
+Functional testing, UAT
+Performance Efficiency
+Time behavior, resource utilization
+Load testing, response time measurement
+Compatibility
+Co-existence, interoperability
+Cross-browser testing
+Usability
+Learnability, operability, UI aesthetics, accessibility
+User questionnaire (Likert scale)
+Reliability
+Maturity, availability, fault tolerance
+Uptime monitoring, error rate tracking
+Security
+Confidentiality, integrity, authentication, authorization
+Security testing, penetration checklist (including cross-panel access attempts)
+Maintainability
+Modularity, reusability, analyzability, modifiability
+Code review, documentation review
+Portability
+Adaptability, installability
+Deployment to different environments
+Evaluation Instrument
+5-point Likert scale (1 = Strongly Disagree -> 5 = Strongly Agree)
+Separate questionnaires for: HOA Admin, HOA Staff, Homeowners — one per panel
+Minimum respondents: HOA Admin (1), HOA Staff (3–5), Homeowners (15–20)
+Scale interpretation: 4.50–5.00 Outstanding / 3.50–4.49 Very Good / 2.50–3.49 Good / 1.50–2.49 Fair / 1.00–1.49 Poor
+Target mean score: ≥ 4.50 (Outstanding) — consistent with capstone benchmark
