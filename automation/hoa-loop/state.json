@@ -1,32 +1,104 @@
-{
-  "schema_version": 1,
-  "project_id": "southville-hoa-is-v1.2",
-  "status": "ready",
-  "armed": true,
-  "current_phase": "01-foundation-tri-panel",
-  "total_iterations": 0,
-  "phase_iterations": 0,
-  "consecutive_no_progress": 0,
-  "started_at": null,
-  "updated_at": "2026-08-17T00:00:00+08:00",
-  "last_fingerprint": null,
-  "last_verification": null,
-  "blocked_reason": null,
-  "pending_human_decisions": [],
-  "phases": [
-    { "id": "00-spec-reconciliation", "owner": "controller-architect", "status": "completed", "requires_human_after": true },
-    { "id": "01-foundation-tri-panel", "owner": "filament-panels", "status": "in_progress", "requires_human_after": false },
-    { "id": "02-auth-account-lifecycle", "owner": "laravel-domain", "status": "pending", "requires_human_after": false },
-    { "id": "03-homeowners-profile", "owner": "laravel-domain", "status": "pending", "requires_human_after": false },
-    { "id": "04-dues-payments-delinquency", "owner": "laravel-domain", "status": "pending", "requires_human_after": false },
-    { "id": "05-complaints-requests-uploads", "owner": "laravel-domain", "status": "pending", "requires_human_after": false },
-    { "id": "06-announcements-contact", "owner": "landing-frontend", "status": "pending", "requires_human_after": false },
-    { "id": "07-certificates", "owner": "laravel-domain", "status": "pending", "requires_human_after": false },
-    { "id": "08-reports-exports", "owner": "filament-panels", "status": "pending", "requires_human_after": false },
-    { "id": "09-audit-security", "owner": "qa-security", "status": "pending", "requires_human_after": false },
-    { "id": "10-dashboards", "owner": "filament-panels", "status": "pending", "requires_human_after": false },
-    { "id": "11-landing-alignment", "owner": "landing-frontend", "status": "pending", "requires_human_after": false },
-    { "id": "12-integration-qa", "owner": "qa-security", "status": "pending", "requires_human_after": true },
-    { "id": "13-deployment-documentation", "owner": "release-docs", "status": "pending", "requires_human_after": true }
-  ]
+﻿{
+    "schema_version":  1,
+    "project_id":  "southville-hoa-is-v1.2",
+    "status":  "ready",
+    "armed":  true,
+    "current_phase":  "01-foundation-tri-panel",
+    "total_iterations":  0,
+    "phase_iterations":  0,
+    "consecutive_no_progress":  0,
+    "started_at":  "2026-08-17T02:20:06.4020848+08:00",
+    "updated_at":  "2026-08-17T02:20:07.6209059+08:00",
+    "last_fingerprint":  null,
+    "last_verification":  null,
+    "blocked_reason":  null,
+    "pending_human_decisions":  [
+
+                                ],
+    "phases":  [
+                   {
+                       "id":  "00-spec-reconciliation",
+                       "owner":  "controller-architect",
+                       "status":  "completed",
+                       "requires_human_after":  true
+                   },
+                   {
+                       "id":  "01-foundation-tri-panel",
+                       "owner":  "filament-panels",
+                       "status":  "in_progress",
+                       "requires_human_after":  false
+                   },
+                   {
+                       "id":  "02-auth-account-lifecycle",
+                       "owner":  "laravel-domain",
+                       "status":  "pending",
+                       "requires_human_after":  false
+                   },
+                   {
+                       "id":  "03-homeowners-profile",
+                       "owner":  "laravel-domain",
+                       "status":  "pending",
+                       "requires_human_after":  false
+                   },
+                   {
+                       "id":  "04-dues-payments-delinquency",
+                       "owner":  "laravel-domain",
+                       "status":  "pending",
+                       "requires_human_after":  false
+                   },
+                   {
+                       "id":  "05-complaints-requests-uploads",
+                       "owner":  "laravel-domain",
+                       "status":  "pending",
+                       "requires_human_after":  false
+                   },
+                   {
+                       "id":  "06-announcements-contact",
+                       "owner":  "landing-frontend",
+                       "status":  "pending",
+                       "requires_human_after":  false
+                   },
+                   {
+                       "id":  "07-certificates",
+                       "owner":  "laravel-domain",
+                       "status":  "pending",
+                       "requires_human_after":  false
+                   },
+                   {
+                       "id":  "08-reports-exports",
+                       "owner":  "filament-panels",
+                       "status":  "pending",
+                       "requires_human_after":  false
+                   },
+                   {
+                       "id":  "09-audit-security",
+                       "owner":  "qa-security",
+                       "status":  "pending",
+                       "requires_human_after":  false
+                   },
+                   {
+                       "id":  "10-dashboards",
+                       "owner":  "filament-panels",
+                       "status":  "pending",
+                       "requires_human_after":  false
+                   },
+                   {
+                       "id":  "11-landing-alignment",
+                       "owner":  "landing-frontend",
+                       "status":  "pending",
+                       "requires_human_after":  false
+                   },
+                   {
+                       "id":  "12-integration-qa",
+                       "owner":  "qa-security",
+                       "status":  "pending",
+                       "requires_human_after":  true
+                   },
+                   {
+                       "id":  "13-deployment-documentation",
+                       "owner":  "release-docs",
+                       "status":  "pending",
+                       "requires_human_after":  true
+                   }
+               ]
 }

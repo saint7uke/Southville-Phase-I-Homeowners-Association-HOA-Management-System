@@ -11,3 +11,9 @@
 - Next task: implement and verify the tri-panel/auth foundation without breaking the protected baseline.
 
 Each future cycle must append: timestamp, phase, bounded task, files changed, verifier command/result, remaining risk, and next recommended task.
+
+## Controller repair - 2026-08-17
+
+- The first worker process exited before an agent turn because this Codex CLI version treats `--approve-for-me` and an explicit `--sandbox` as mutually exclusive.
+- Removed the redundant sandbox argument; `--approve-for-me` already enforces the workspace-write sandbox.
+- No application files changed and no iteration was charged.

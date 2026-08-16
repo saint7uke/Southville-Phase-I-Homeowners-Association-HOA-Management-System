@@ -121,7 +121,6 @@ while ($true) {
     $arguments = @(
         'exec',
         '--approve-for-me',
-        '--sandbox', $config.codex.sandbox,
         '--cd', ('"' + $workspace + '"'),
         '--output-schema', ('"' + $schemaPath + '"'),
         '--output-last-message', ('"' + $lastMessagePath + '"'),
