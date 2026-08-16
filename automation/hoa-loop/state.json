@@ -3,14 +3,14 @@
     "project_id":  "southville-hoa-is-v1.2",
     "status":  "running",
     "armed":  true,
-    "current_phase":  "02-auth-account-lifecycle",
-    "total_iterations":  2,
+    "current_phase":  "03-homeowners-profile",
+    "total_iterations":  4,
     "phase_iterations":  0,
     "consecutive_no_progress":  0,
     "started_at":  "2026-08-17T02:21:10.5527166+08:00",
-    "updated_at":  "2026-08-17T02:43:00+08:00",
+    "updated_at":  "2026-08-17T03:18:00+08:00",
     "last_fingerprint":  null,
-    "last_verification":  "full passed: Pint, 35 tests/93 assertions, Composer QA, Vite build, route cache",
+    "last_verification":  "full passed: Pint, 56 tests/221 assertions, Composer QA, Vite build, route cache",
     "blocked_reason":  null,
     "pending_human_decisions":  [
 
@@ -31,13 +31,13 @@
                    {
                        "id":  "02-auth-account-lifecycle",
                        "owner":  "laravel-domain",
-                       "status":  "in_progress",
+                       "status":  "completed",
                        "requires_human_after":  false
                    },
                    {
                        "id":  "03-homeowners-profile",
                        "owner":  "laravel-domain",
-                       "status":  "pending",
+                       "status":  "in_progress",
                        "requires_human_after":  false
                    },
                    {

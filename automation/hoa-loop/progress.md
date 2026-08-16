@@ -28,3 +28,14 @@ Each future cycle must append: timestamp, phase, bounded task, files changed, ve
 - Compatibility: `/portal` remains available on `web`; Spatie roles remain canonical on guard `web`; the new panel has no shared Admin resources.
 - Remaining risk: password reset/email verification/account lifecycle and homeowner resources remain intentionally deferred.
 - Next task: implement and test `02-auth-account-lifecycle` without expanding into dues or certificate work.
+
+## Implementation cycles 3-4 - 2026-08-17
+
+- Phase: `02-auth-account-lifecycle`
+- Bounded task: account transitions, session-safe panel reset/verification, login metadata and authentication auditing.
+- Files changed: additive user lifecycle migration; typed enums; lifecycle/create actions; after-commit event/listeners; generic panel reset page; User resource actions/forms; panel providers; portal authentication/session middleware; notification copy; and `AccountLifecycleTest`.
+- Review correction: closed reset-state enumeration, stale portal sessions after reset, denied-login audit misclassification, crafted user-creation lifecycle bypass, concurrent last-admin deactivation, and shared/wrong reset throttle behavior.
+- Evidence: independent blocker re-review found no remaining merge blockers. Full verifier passed Pint, 56 tests/221 assertions, Composer QA, production Vite build, and route-cache compatibility.
+- Compatibility: Pending/Rejected residents still reach `/portal/status`; Admin/Staff are not verification-gated; only `/homeowner` requires verified email.
+- Remaining risk: complete homeowner profile, private profile photo and self-service password/profile flows remain Phase 03.
+- Next task: implement owner-scoped profile completion and private media without weakening the established guard/session rules.

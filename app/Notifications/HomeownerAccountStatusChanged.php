@@ -24,7 +24,7 @@ final class HomeownerAccountStatusChanged extends Notification implements Should
     {
         $message = (new MailMessage)->subject('Southville resident account update')->greeting('Hello '.$notifiable->first_name.'.');
         if ($this->status === 'Active') {
-            return $message->line('Your resident application has been approved.')->action('Open resident portal', route('portal.login'));
+            return $message->line('Your resident application has been approved.')->action('Open homeowner panel', url('/homeowner/login'));
         }
         if ($this->status === 'Rejected') {
             return $message->line('Your resident application was not approved.')->line($this->reason ? 'Reason: '.$this->reason : 'Contact the HOA office if you need assistance.');

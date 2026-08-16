@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\Pages\RequestPasswordReset;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\MigrateLegacyPanelSession;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -29,7 +30,10 @@ final class HomeownerPanelProvider extends PanelProvider
             ->id('homeowner')
             ->path('homeowner')
             ->authGuard('homeowner')
+            ->authPasswordBroker('users')
             ->login()
+            ->passwordReset(requestAction: RequestPasswordReset::class)
+            ->emailVerification()
             ->brandName('Southville Phase I HOA Homeowner')
             ->colors([
                 'primary' => Color::hex('#d90b46'),

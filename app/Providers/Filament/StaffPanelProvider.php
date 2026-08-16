@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\Pages\RequestPasswordReset;
 use App\Filament\Staff\Widgets\StaffOverview;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\MigrateLegacyPanelSession;
@@ -30,7 +31,9 @@ final class StaffPanelProvider extends PanelProvider
             ->id('staff')
             ->path('staff')
             ->authGuard('staff')
+            ->authPasswordBroker('users')
             ->login()
+            ->passwordReset(requestAction: RequestPasswordReset::class)
             ->brandName('Southville Phase I HOA Staff')
             ->colors([
                 'primary' => Color::hex('#176b57'),

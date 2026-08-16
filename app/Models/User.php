@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Notifications\HomeownerAccountStatusChanged;
-use App\Support\AuthenticatedActor;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -18,7 +17,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
-final class User extends Authenticatable implements FilamentUser
+final class User extends Authenticatable implements FilamentUser, MustVerifyEmailContract
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable, SoftDeletes;
@@ -27,8 +26,7 @@ final class User extends Authenticatable implements FilamentUser
 
     protected $fillable = [
         'first_name', 'middle_name', 'last_name', 'suffix', 'sex', 'contact_number',
-        'date_of_birth', 'email', 'password', 'account_status', 'rejection_reason',
-        'approved_at', 'approved_by',
+        'date_of_birth', 'email', 'password',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -41,6 +39,9 @@ final class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'date_of_birth' => 'date',
             'approved_at' => 'datetime',
+            'last_login_at' => 'datetime',
+            'suspended_at' => 'datetime',
+            'password_changed_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -53,6 +54,11 @@ final class User extends Authenticatable implements FilamentUser
     public function approver(): BelongsTo
     {
         return $this->belongsTo(self::class, 'approved_by');
+    }
+
+    public function suspender(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'suspended_by');
     }
 
     public function getFullNameAttribute(): string
@@ -90,18 +96,8 @@ final class User extends Authenticatable implements FilamentUser
     {
         self::saving(function (User $user): void {
             $user->normalizeIdentity();
-            if ($user->isDirty('account_status') && $user->account_status === 'Active') {
-                $user->approved_at ??= now();
-                $user->approved_by ??= app(AuthenticatedActor::class)->id();
-                $user->rejection_reason = null;
-            }
-        });
-        self::saved(function (User $user): void {
-            if ($user->wasChanged('account_status') && $user->homeowner) {
-                $user->homeowner->update(['status' => $user->account_status === 'Active' ? 'Active' : 'Inactive']);
-            }
-            if ($user->wasChanged('account_status') && $user->hasRole('homeowner')) {
-                $user->notify(new HomeownerAccountStatusChanged($user->account_status, $user->rejection_reason));
+            if ($user->exists && $user->isDirty('email')) {
+                $user->email_verified_at = null;
             }
         });
     }

@@ -24,7 +24,6 @@ final class RegisterHomeowner
                 'date_of_birth' => $data['date_of_birth'],
                 'email' => $data['email'],
                 'password' => $data['password'],
-                'account_status' => 'Pending',
             ]);
 
             $user->assignRole('homeowner');

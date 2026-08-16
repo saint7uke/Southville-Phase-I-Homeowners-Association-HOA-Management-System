@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Enums\UserAccountStatus;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -25,7 +26,7 @@ final class UsersTable
             TextColumn::make('contact_number')->label('Contact'),
             TextColumn::make('created_at')->label('Registered')->dateTime()->sortable(),
         ])->defaultSort('created_at', 'desc')->filters([
-            SelectFilter::make('account_status')->options(['Pending' => 'Pending', 'Active' => 'Active', 'Rejected' => 'Rejected', 'Inactive' => 'Inactive']),
+            SelectFilter::make('account_status')->options(UserAccountStatus::options()),
             TrashedFilter::make(),
         ])->recordActions([EditAction::make()])->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make(), RestoreBulkAction::make()])]);
     }

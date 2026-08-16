@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AuthenticatePortalSession;
 use App\Http\Middleware\EnsureHomeownerIsApproved;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
         $middleware->alias([
+            'portal.auth.session' => AuthenticatePortalSession::class,
             'homeowner.approved' => EnsureHomeownerIsApproved::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,

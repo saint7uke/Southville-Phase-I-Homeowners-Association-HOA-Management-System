@@ -21,7 +21,7 @@ Route::middleware('guest')->prefix('portal')->name('portal.')->group(function ()
     Route::post('/login', [AuthController::class, 'store'])->middleware('throttle:login')->name('login.store');
 });
 
-Route::middleware('auth')->prefix('portal')->name('portal.')->group(function (): void {
+Route::middleware(['auth', 'portal.auth.session'])->prefix('portal')->name('portal.')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
     Route::view('/status', 'portal.auth.status')->name('status');
 

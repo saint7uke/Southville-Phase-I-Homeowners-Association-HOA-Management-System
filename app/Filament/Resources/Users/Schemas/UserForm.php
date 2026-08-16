@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Enums\UserAccountStatus;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -24,8 +25,10 @@ final class UserForm
             DatePicker::make('date_of_birth')->maxDate(today()->subDay())->required(),
             TextInput::make('email')->email()->maxLength(255)->unique(ignoreRecord: true)->required(),
             TextInput::make('password')->password()->minLength(12)->required(fn (string $operation): bool => $operation === 'create')->dehydrated(fn (?string $state): bool => filled($state)),
-            Select::make('account_status')->options(['Pending' => 'Pending', 'Active' => 'Active', 'Rejected' => 'Rejected', 'Inactive' => 'Inactive'])->required(),
-            Textarea::make('rejection_reason')->maxLength(500)->columnSpanFull(),
+            Select::make('role')->options(['hoa_admin' => 'HOA Administrator', 'hoa_staff' => 'HOA Staff'])->required()->visible(fn (string $operation): bool => $operation === 'create')->dehydrated(fn (string $operation): bool => $operation === 'create'),
+            Select::make('account_status')->options(UserAccountStatus::options())->required()->visible(fn (string $operation): bool => $operation === 'edit')->dehydrated(fn (string $operation): bool => $operation === 'edit'),
+            Textarea::make('rejection_reason')->maxLength(500)->columnSpanFull()->visible(fn (string $operation): bool => $operation === 'edit'),
+            Textarea::make('suspension_reason')->maxLength(500)->columnSpanFull()->visible(fn (string $operation): bool => $operation === 'edit'),
         ])->columns(2);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\Pages\RequestPasswordReset;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\MigrateLegacyPanelSession;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -28,7 +29,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->authGuard('admin')
+            ->authPasswordBroker('users')
             ->login()
+            ->passwordReset(requestAction: RequestPasswordReset::class)
             ->brandName('Southville Phase I HOA')
             ->colors([
                 'primary' => Color::hex('#d90b46'),

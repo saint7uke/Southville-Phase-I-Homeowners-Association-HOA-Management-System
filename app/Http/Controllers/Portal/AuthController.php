@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Portal;
 
+use App\Enums\UserAccountStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Portal\LoginRequest;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -20,19 +22,33 @@ final class AuthController extends Controller
 
     public function store(LoginRequest $request): RedirectResponse
     {
-        if (! Auth::attempt($request->safe()->only(['email', 'password']), $request->boolean('remember'))) {
+        $guard = Auth::guard('web');
+        $credentials = $request->safe()->only(['email', 'password']);
+        $authenticated = $guard->attemptWhen(
+            $credentials,
+            static function (User $user): bool {
+                $status = UserAccountStatus::tryFrom((string) $user->account_status);
+
+                return $user->hasRole('homeowner') && in_array($status, [
+                    UserAccountStatus::Active,
+                    UserAccountStatus::Pending,
+                    UserAccountStatus::Rejected,
+                ], true);
+            },
+            $request->boolean('remember'),
+        );
+
+        if (! $authenticated) {
             throw ValidationException::withMessages(['email' => __('The provided credentials are incorrect.')]);
         }
 
         $request->session()->regenerate();
-        $user = $request->user();
+        /** @var User $user */
+        $user = $guard->user();
 
-        if (! $user?->hasRole('homeowner')) {
-            Auth::logout();
-            throw ValidationException::withMessages(['email' => __('This account must use the staff admin panel.')]);
-        }
+        $status = UserAccountStatus::tryFrom((string) $user->account_status);
 
-        if ($user->account_status !== 'Active') {
+        if (in_array($status, [UserAccountStatus::Pending, UserAccountStatus::Rejected], true)) {
             return redirect()->route('portal.status');
         }
 
