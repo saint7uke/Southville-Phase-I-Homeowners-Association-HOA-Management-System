@@ -8,6 +8,7 @@ use App\Support\AuthenticatedActor;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -25,12 +26,17 @@ final class Complaint extends Model
 
     public function homeowner(): BelongsTo
     {
-        return $this->belongsTo(Homeowner::class);
+        return $this->belongsTo(Homeowner::class)->withTrashed();
     }
 
     public function handler(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'handled_by');
+        return $this->belongsTo(User::class, 'handled_by')->withTrashed();
+    }
+
+    public function caseAttachments(): HasMany
+    {
+        return $this->hasMany(CaseAttachment::class);
     }
 
     protected static function booted(): void
@@ -41,15 +47,26 @@ final class Complaint extends Model
                 return;
             }
 
-            $allowed = ['Pending' => ['Under Review', 'Dismissed'], 'Under Review' => ['Resolved', 'Dismissed'], 'Resolved' => [], 'Dismissed' => []];
+            $allowed = [
+                'Pending' => ['Under Review', 'Rejected', 'Dismissed'],
+                'Under Review' => ['Resolved', 'Rejected', 'Closed', 'Dismissed'],
+                'Resolved' => ['Closed'],
+                'Rejected' => [],
+                'Closed' => [],
+                'Dismissed' => [],
+            ];
             $from = (string) $complaint->getOriginal('status');
 
             if (! in_array($complaint->status, $allowed[$from] ?? [], true)) {
                 throw ValidationException::withMessages(['status' => "Status cannot move from {$from} to {$complaint->status}."]);
             }
 
+            if (in_array($complaint->status, ['Resolved', 'Rejected', 'Closed', 'Dismissed'], true) && blank($complaint->admin_remarks)) {
+                throw ValidationException::withMessages(['admin_remarks' => 'Resolution notes are required for a terminal complaint status.']);
+            }
+
             $complaint->handled_by ??= app(AuthenticatedActor::class)->id();
-            if ($complaint->status === 'Resolved') {
+            if (in_array($complaint->status, ['Resolved', 'Rejected', 'Closed', 'Dismissed'], true)) {
                 $complaint->resolved_at ??= now();
             }
         });

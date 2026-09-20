@@ -27,7 +27,11 @@ final class ComplaintController extends Controller
 
     public function store(StoreComplaintRequest $request, CreateComplaint $action): RedirectResponse
     {
-        $complaint = $action->handle($request->user()->homeowner, $request->safe()->except('attachment'), $request->file('attachment'));
+        $files = $request->file('attachments', []);
+        if ($request->hasFile('attachment')) {
+            $files[] = $request->file('attachment');
+        }
+        $complaint = $action->handle($request->user()->homeowner, $request->safe()->except(['attachment', 'attachments']), $files, $request->user());
 
         return redirect()->route('portal.complaints.show', $complaint)->with('success', __('Complaint submitted successfully.'));
     }
@@ -35,6 +39,7 @@ final class ComplaintController extends Controller
     public function show(Complaint $complaint): View
     {
         abort_unless($complaint->homeowner_id === request()->user()->homeowner->id, 404);
+        $complaint->load('caseAttachments');
 
         return view('portal.complaints.show', compact('complaint'));
     }

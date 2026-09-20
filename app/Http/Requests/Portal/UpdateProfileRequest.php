@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Portal;
 
+use App\Models\Homeowner;
+use App\Models\User;
+use App\Validation\HomeownerProfileValidator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 final class UpdateProfileRequest extends FormRequest
 {
@@ -16,13 +18,24 @@ final class UpdateProfileRequest extends FormRequest
 
     public function rules(): array
     {
+        $user = $this->user();
+        $homeowner = $user?->homeowner;
+
+        if (! $user instanceof User || ! $homeowner instanceof Homeowner) {
+            return [];
+        }
+
         return [
-            'contact_number' => ['required', 'regex:/^09\d{9}$/'],
-            'email' => ['required', 'email:rfc', 'max:255', Rule::unique('users', 'email')->ignore($this->user()?->id)],
-            'house_number' => ['required', 'string', 'max:50'],
-            'street' => ['required', 'string', 'max:100'],
-            'block' => ['nullable', 'string', 'max:20'],
-            'lot' => ['nullable', 'string', 'max:20'],
+            ...app(HomeownerProfileValidator::class)->rules($user, $homeowner, $this->all()),
+            'confirm_profile_update' => ['accepted'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->replace([
+            ...$this->all(),
+            ...app(HomeownerProfileValidator::class)->normalize($this->all()),
+        ]);
     }
 }

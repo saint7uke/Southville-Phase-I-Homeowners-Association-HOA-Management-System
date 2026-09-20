@@ -5,10 +5,12 @@ namespace App\Filament\Resources\Homeowners;
 use App\Filament\Resources\Homeowners\Pages\CreateHomeowner;
 use App\Filament\Resources\Homeowners\Pages\EditHomeowner;
 use App\Filament\Resources\Homeowners\Pages\ListHomeowners;
+use App\Filament\Resources\Homeowners\Pages\ViewHomeowner;
 use App\Filament\Resources\Homeowners\Schemas\HomeownerForm;
 use App\Filament\Resources\Homeowners\Tables\HomeownersTable;
 use App\Models\Homeowner;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -44,15 +46,17 @@ class HomeownerResource extends Resource
         return [
             'index' => ListHomeowners::route('/'),
             'create' => CreateHomeowner::route('/create'),
+            'view' => ViewHomeowner::route('/{record}'),
             'edit' => EditHomeowner::route('/{record}/edit'),
         ];
     }
 
     public static function getRecordRouteBindingEloquentQuery(): Builder
     {
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
+        $query = parent::getRecordRouteBindingEloquentQuery();
+
+        return Filament::getCurrentPanel()?->getId() === 'admin'
+            ? $query->withoutGlobalScopes([SoftDeletingScope::class])
+            : $query;
     }
 }

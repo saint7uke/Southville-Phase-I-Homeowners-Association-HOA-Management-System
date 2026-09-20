@@ -32,6 +32,7 @@ final class RegisterHomeowner
                 'street' => $data['street'],
                 'block' => $data['block'] ?? null,
                 'lot' => $data['lot'] ?? null,
+                'phase' => 'Southville Phase I',
                 'residency_date' => $data['residency_date'],
                 'ownership_type' => $data['ownership_type'],
                 'status' => 'Inactive',

@@ -8,6 +8,7 @@ use App\Actions\Payments\RecordPayment;
 use App\Models\DuesSetting;
 use App\Models\Homeowner;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,7 +18,9 @@ final class RecordPaymentTest extends TestCase
 
     public function test_balance_and_status_are_calculated_on_the_server(): void
     {
+        $this->seed(RolesAndPermissionsSeeder::class);
         $recorder = User::factory()->create();
+        $recorder->assignRole('hoa_staff');
         $resident = User::factory()->create();
         $homeowner = Homeowner::query()->create(['user_id' => $resident->id, 'house_number' => '8', 'street' => 'Narra', 'residency_date' => '2021-01-01', 'ownership_type' => 'Owner', 'status' => 'Active']);
         $dues = DuesSetting::query()->create(['name' => 'Monthly dues', 'amount' => 500, 'frequency' => 'Monthly', 'is_active' => true]);

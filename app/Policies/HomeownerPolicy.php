@@ -6,6 +6,7 @@ namespace App\Policies;
 
 use App\Models\Homeowner;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 final class HomeownerPolicy
 {
@@ -14,9 +15,11 @@ final class HomeownerPolicy
         return $user->can('manage_homeowners');
     }
 
-    public function view(User $user, Homeowner $homeowner): bool
+    public function view(User $user, Homeowner $homeowner): Response
     {
-        return $user->can('manage_homeowners') || $homeowner->user_id === $user->id;
+        return $user->can('manage_homeowners') || $homeowner->user_id === $user->id
+            ? Response::allow()
+            : Response::denyAsNotFound();
     }
 
     public function create(User $user): bool
@@ -26,7 +29,8 @@ final class HomeownerPolicy
 
     public function update(User $user, Homeowner $homeowner): bool
     {
-        return $user->can('manage_homeowners');
+        return ($user->can('manage_homeowners') && (! $homeowner->trashed() || $user->hasRole('hoa_admin')))
+            || ($homeowner->user_id === $user->id && $user->can('update_own_profile'));
     }
 
     public function delete(User $user, Homeowner $homeowner): bool

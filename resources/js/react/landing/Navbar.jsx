@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { navigation } from './content';
 
-export default function Navbar() {
+export default function Navbar({ branding = {} }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [activeSection, setActiveSection] = useState('home');
@@ -30,11 +30,11 @@ export default function Navbar() {
     return (
         <header data-nav className={`hoa-navbar ${scrolled || menuOpen ? 'is-scrolled' : ''}`}>
             <div className="hoa-navbar-inner">
-                <a className="hoa-brand" href="#home" aria-label="Southville Phase I HOA home"><span className="hoa-brand-mark" aria-hidden="true">S1</span><span><strong>Southville Phase I</strong><small>Homeowners Association</small></span></a>
+                <a className="hoa-brand" href="#home" aria-label={`${branding.hoaName || 'Southville Phase I HOA'} home`}><span className="hoa-brand-mark" aria-hidden="true">{branding.logoUrl ? <img src={branding.logoUrl} alt="" /> : 'S1'}</span><span><strong>{branding.hoaName || 'Southville Phase I'}</strong><small>Homeowners Association</small></span></a>
                 <button className="hoa-menu-toggle" type="button" aria-expanded={menuOpen} aria-controls="primary-navigation" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} onClick={() => setMenuOpen((open) => !open)}><span /><span /><span /></button>
                 <nav id="primary-navigation" className={`hoa-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Primary navigation">
                     {navigation.map(([label, href]) => <a key={href} href={href} className={activeSection === href.slice(1) ? 'is-active' : ''} aria-current={activeSection === href.slice(1) ? 'location' : undefined} onClick={() => setMenuOpen(false)}>{label}</a>)}
-                    <a className="hoa-button hoa-button-small hoa-button-primary" href="/portal/login">Resident login</a>
+                    <a className="hoa-button hoa-button-small hoa-button-primary" href="/homeowner/login">Resident login</a>
                 </nav>
             </div>
         </header>

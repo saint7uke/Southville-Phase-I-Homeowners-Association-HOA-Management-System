@@ -13,9 +13,15 @@ final class DashboardController extends Controller
     public function __invoke(): View
     {
         $homeowner = request()->user()->homeowner()->withCount(['complaints', 'serviceRequests'])->firstOrFail();
-        $announcements = Announcement::query()->published()->latest('published_at')->limit(4)->get();
+        $announcements = Announcement::query()->visibleToResidents()->latest('published_at')->limit(4)->get();
         $payments = $homeowner->payments()->latest('payment_date')->limit(5)->get();
+        $duesObligations = $homeowner->duesObligations()
+            ->with('duesSetting')
+            ->whereIn('status', ['Pending', 'Partial', 'Overdue'])
+            ->orderBy('due_date')
+            ->limit(8)
+            ->get();
 
-        return view('portal.dashboard', compact('homeowner', 'announcements', 'payments'));
+        return view('portal.dashboard', compact('homeowner', 'announcements', 'payments', 'duesObligations'));
     }
 }

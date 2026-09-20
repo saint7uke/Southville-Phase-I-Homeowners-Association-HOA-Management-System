@@ -9,11 +9,16 @@ use App\Models\DuesSetting;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 final class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->isProduction()) {
+            throw new RuntimeException('DatabaseSeeder contains demonstration identities and cannot run in production. Use RolesAndPermissionsSeeder and AdminUserSeeder instead.');
+        }
+
         $this->call(RolesAndPermissionsSeeder::class);
 
         $admin = User::query()->firstOrCreate(['email' => 'admin@southville.test'], [

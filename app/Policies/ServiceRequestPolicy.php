@@ -21,12 +21,12 @@ final class ServiceRequestPolicy
 
     public function create(User $user): bool
     {
-        return $user->can('manage_requests') || ($user->can('submit_own_request') && $user->account_status === 'Active');
+        return $user->hasRole('hoa_admin') || ($user->can('submit_own_request') && $user->account_status === 'Active');
     }
 
     public function update(User $user, ServiceRequest $request): bool
     {
-        return $user->can('manage_requests');
+        return $user->can('manage_requests') && (! $request->trashed() || $user->hasRole('hoa_admin'));
     }
 
     public function delete(User $user, ServiceRequest $request): bool

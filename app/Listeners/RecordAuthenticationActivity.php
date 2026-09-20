@@ -48,6 +48,7 @@ final class RecordAuthenticationActivity
                 $event instanceof Logout => 'Auth.logout',
                 default => 'Auth.password_reset',
             },
+            'panel' => $panel?->value ?? $guard,
             'auditable_type' => $user?->getMorphClass(),
             'auditable_id' => $user?->id,
             'old_values' => null,

@@ -11,7 +11,7 @@ final class AnnouncementPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('manage_announcements');
+        return $user->can('manage_announcements') || $user->can('view_published_announcements');
     }
 
     public function view(User $user, Announcement $announcement): bool
@@ -26,7 +26,7 @@ final class AnnouncementPolicy
 
     public function update(User $user, Announcement $announcement): bool
     {
-        return $user->can('manage_announcements');
+        return $user->can('manage_announcements') && (! $announcement->trashed() || $user->hasRole('hoa_admin'));
     }
 
     public function delete(User $user, Announcement $announcement): bool

@@ -14,8 +14,13 @@ final class EnsureHomeownerIsApproved
     {
         $user = $request->user();
         abort_unless($user?->hasRole('homeowner'), 403);
+        abort_unless($user->homeowner()->exists(), 404);
 
         if ($user->account_status !== 'Active') {
+            return redirect()->route('portal.status');
+        }
+
+        if (! $user->hasVerifiedEmail()) {
             return redirect()->route('portal.status');
         }
 

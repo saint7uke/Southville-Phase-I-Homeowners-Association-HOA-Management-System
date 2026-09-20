@@ -31,7 +31,7 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
 
     protected $hidden = ['password', 'remember_token'];
 
-    protected $appends = ['full_name'];
+    protected $appends = ['age', 'full_name'];
 
     protected function casts(): array
     {
@@ -53,12 +53,12 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
 
     public function approver(): BelongsTo
     {
-        return $this->belongsTo(self::class, 'approved_by');
+        return $this->belongsTo(self::class, 'approved_by')->withTrashed();
     }
 
     public function suspender(): BelongsTo
     {
-        return $this->belongsTo(self::class, 'suspended_by');
+        return $this->belongsTo(self::class, 'suspended_by')->withTrashed();
     }
 
     public function getFullNameAttribute(): string
@@ -71,6 +71,11 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
     public function getNameAttribute(): string
     {
         return $this->full_name;
+    }
+
+    public function getAgeAttribute(): ?int
+    {
+        return $this->date_of_birth?->age;
     }
 
     public function canAccessPanel(Panel $panel): bool

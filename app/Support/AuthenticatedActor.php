@@ -23,4 +23,21 @@ final class AuthenticatedActor
     {
         return $this->user()?->getKey();
     }
+
+    public function panel(): ?string
+    {
+        $panel = Filament::getCurrentPanel()?->getId();
+
+        if ($panel !== null) {
+            return $panel;
+        }
+
+        if (app()->runningInConsole()) {
+            return 'system';
+        }
+
+        $prefix = request()->segment(1);
+
+        return in_array($prefix, ['admin', 'staff', 'homeowner', 'portal'], true) ? $prefix : 'public';
+    }
 }

@@ -21,12 +21,12 @@ final class ComplaintPolicy
 
     public function create(User $user): bool
     {
-        return $user->can('manage_complaints') || ($user->can('submit_own_complaint') && $user->account_status === 'Active');
+        return $user->hasRole('hoa_admin') || ($user->can('submit_own_complaint') && $user->account_status === 'Active');
     }
 
     public function update(User $user, Complaint $complaint): bool
     {
-        return $user->can('manage_complaints');
+        return $user->can('manage_complaints') && (! $complaint->trashed() || $user->hasRole('hoa_admin'));
     }
 
     public function delete(User $user, Complaint $complaint): bool

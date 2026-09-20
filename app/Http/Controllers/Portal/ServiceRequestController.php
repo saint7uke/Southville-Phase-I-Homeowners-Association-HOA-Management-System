@@ -27,7 +27,7 @@ final class ServiceRequestController extends Controller
 
     public function store(StoreServiceRequest $request, CreateServiceRequest $action): RedirectResponse
     {
-        $serviceRequest = $action->handle($request->user()->homeowner, $request->validated());
+        $serviceRequest = $action->handle($request->user()->homeowner, $request->safe()->except('attachments'), $request->file('attachments', []), $request->user());
 
         return redirect()->route('portal.requests.show', $serviceRequest)->with('success', __('Request submitted successfully.'));
     }
@@ -35,6 +35,7 @@ final class ServiceRequestController extends Controller
     public function show(ServiceRequest $serviceRequest): View
     {
         abort_unless($serviceRequest->homeowner_id === request()->user()->homeowner->id, 404);
+        $serviceRequest->load('caseAttachments');
 
         return view('portal.requests.show', compact('serviceRequest'));
     }

@@ -1,8 +1,8 @@
-# HOA Project Loop (Dormant)
+# HOA Project Loop
 
 This directory contains a bounded, semi-autonomous Codex goal loop for completing the HOA Information System described in `spec/PROJECT_SPEC.md`.
 
-The loop is intentionally **not armed**. Creating these files does not start Codex, change application code, migrate data, install packages, send email, or deploy anything.
+The loop was armed and executed against the existing project. Application implementation and deterministic machine verification are complete; `state.json` now pauses at the mandatory human release gates. The loop has not sent real email, changed production secrets, or deployed the application.
 
 ## Control flow
 
@@ -13,9 +13,9 @@ The loop is intentionally **not armed**. Creating these files does not start Cod
 5. The outer runner checks immutable control-file hashes, protected baseline tests, wall-clock limits, iteration limits, and no-progress fingerprints.
 6. Success requires deterministic terminal verification and a final human UAT/deployment gate.
 
-## First-run behavior
+## Reconciliation history
 
-The first cycle is research-only. It must create `reports/spec-reconciliation.md`, inventory the existing application, and stop with `awaiting_human`. It may not modify application code. This gate is mandatory because the v1.2 brief conflicts with the current repository:
+The first cycle was research-only and created `reports/spec-reconciliation.md`. It reconciled these original brief/repository differences:
 
 - Brief: Filament 3; repository: Filament 4.
 - Brief: React 18 / Vite 5 / Tailwind 3; repository: React 19 / Vite 7 / Tailwind 4.
@@ -46,9 +46,9 @@ The recommended reconciliation is to preserve supported newer dependency majors,
 powershell -ExecutionPolicy Bypass -File automation/hoa-loop/scripts/validate-loop.ps1
 ```
 
-## Future start command
+## Resume command
 
-Do not run this until the reconciliation gate and source-control decision are approved:
+After the pending human decisions in `state.json` are resolved, the bounded runner can be resumed with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File automation/hoa-loop/scripts/run-loop.ps1 -Start

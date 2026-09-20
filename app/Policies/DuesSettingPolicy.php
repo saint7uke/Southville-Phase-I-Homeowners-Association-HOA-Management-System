@@ -11,26 +11,26 @@ final class DuesSettingPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('manage_settings');
+        return $user->can('manage_dues');
     }
 
     public function view(User $user, DuesSetting $setting): bool
     {
-        return $user->can('manage_settings');
+        return $user->can('manage_dues');
     }
 
     public function create(User $user): bool
     {
-        return $user->can('manage_settings');
+        return $user->can('manage_dues');
     }
 
     public function update(User $user, DuesSetting $setting): bool
     {
-        return $user->can('manage_settings');
+        return $user->can('manage_dues');
     }
 
     public function delete(User $user, DuesSetting $setting): bool
     {
-        return $user->can('manage_settings');
+        return $user->hasRole('hoa_admin') && ! $setting->payments()->exists() && ! $setting->obligations()->exists();
     }
 }

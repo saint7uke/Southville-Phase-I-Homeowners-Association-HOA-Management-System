@@ -5,7 +5,19 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\Pages\RequestPasswordReset;
+use App\Filament\Homeowner\Pages\MyProfile;
+use App\Filament\Homeowner\Resources\Announcements\AnnouncementResource;
+use App\Filament\Homeowner\Resources\Certificates\CertificateResource;
+use App\Filament\Homeowner\Resources\Complaints\ComplaintResource;
+use App\Filament\Homeowner\Resources\Dues\DuesObligationResource;
+use App\Filament\Homeowner\Resources\Payments\PaymentResource;
+use App\Filament\Homeowner\Resources\ServiceRequests\ServiceRequestResource;
+use App\Filament\Homeowner\Widgets\HomeownerOverview;
+use App\Filament\Homeowner\Widgets\HomeownerWelcome;
+use App\Filament\Homeowner\Widgets\LatestAnnouncements;
+use App\Filament\Homeowner\Widgets\RecentPayments;
 use App\Http\Middleware\AuthenticatePanel;
+use App\Http\Middleware\EnsurePanelIsEnabled;
 use App\Http\Middleware\MigrateLegacyPanelSession;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -41,14 +53,28 @@ final class HomeownerPanelProvider extends PanelProvider
             ])
             ->pages([
                 Dashboard::class,
+                MyProfile::class,
+            ])
+            ->resources([
+                DuesObligationResource::class,
+                PaymentResource::class,
+                ComplaintResource::class,
+                ServiceRequestResource::class,
+                CertificateResource::class,
+                AnnouncementResource::class,
             ])
             ->widgets([
+                HomeownerWelcome::class,
+                HomeownerOverview::class,
+                RecentPayments::class,
+                LatestAnnouncements::class,
                 AccountWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                EnsurePanelIsEnabled::class,
                 MigrateLegacyPanelSession::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,

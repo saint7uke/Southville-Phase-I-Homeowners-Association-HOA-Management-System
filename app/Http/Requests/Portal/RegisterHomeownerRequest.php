@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Portal;
 
+use App\Support\PersonName;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 final class RegisterHomeownerRequest extends FormRequest
@@ -28,11 +31,16 @@ final class RegisterHomeownerRequest extends FormRequest
             'date_of_birth' => ['required', 'date', 'before:today'],
             'contact_number' => ['required', 'regex:/^09\d{9}$/'],
             'email' => ['required', 'email:rfc', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()],
+            'password' => ['required', 'confirmed', Password::default()],
             'house_number' => ['required', 'string', 'max:50'],
             'street' => ['required', 'string', 'max:100'],
-            'block' => ['nullable', 'string', 'max:20'],
-            'lot' => ['nullable', 'string', 'max:20'],
+            'block' => ['required', 'string', 'max:20'],
+            'lot' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('homeowners', 'lot')->where(fn (Builder $query): Builder => $query->where('block', (string) $this->input('block'))),
+            ],
             'residency_date' => ['required', 'date', 'before_or_equal:today'],
             'ownership_type' => ['required', 'in:Owner,Tenant,Co-owner'],
             'privacy_consent' => ['accepted'],
@@ -41,13 +49,14 @@ final class RegisterHomeownerRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $cleanName = static fn (?string $value): ?string => filled($value) ? mb_convert_case(trim($value), MB_CASE_TITLE, 'UTF-8') : null;
         $this->merge([
-            'first_name' => $cleanName($this->string('first_name')->toString()),
-            'middle_name' => $cleanName($this->input('middle_name')),
-            'last_name' => $cleanName($this->string('last_name')->toString()),
+            'first_name' => PersonName::normalize($this->string('first_name')->toString()),
+            'middle_name' => PersonName::normalize($this->input('middle_name')),
+            'last_name' => PersonName::normalize($this->string('last_name')->toString()),
             'email' => mb_strtolower(trim($this->string('email')->toString())),
             'contact_number' => preg_replace('/\D/', '', $this->string('contact_number')->toString()),
+            'block' => mb_strtoupper(preg_replace('/\s+/u', ' ', trim($this->string('block')->toString())) ?: '', 'UTF-8'),
+            'lot' => mb_strtoupper(preg_replace('/\s+/u', ' ', trim($this->string('lot')->toString())) ?: '', 'UTF-8'),
         ]);
     }
 }

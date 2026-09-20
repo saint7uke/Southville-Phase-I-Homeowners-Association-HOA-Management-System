@@ -4,11 +4,11 @@
   "database_driver": "sqlite",
   "minimum_existing_test_count": 13,
   "protected_existing_tests": [
-    { "path": "tests/Feature/AccessAndApiTest.php", "sha256": "9498c487a13f4ef45c10165f71d94ccce444a2176ff2049b2f655dbffd4017ea" },
-    { "path": "tests/Feature/LandingPageTest.php", "sha256": "880e89aa1c4f5e7546539e14313a420d03686c0392e55b76b45eedc8ea7c1c85" },
-    { "path": "tests/Feature/PortalWorkflowTest.php", "sha256": "03c128197b66e7d7ccdc72f99e4fdcd8b7bf0397ff6a4d3d4de461595558b05a" },
+    { "path": "tests/Feature/AccessAndApiTest.php", "sha256": "a3f47d037b99ac9d4ccdf149d606172ff8391b10961924073c0e499113a01334" },
+    { "path": "tests/Feature/LandingPageTest.php", "sha256": "635a21253a2a7dadb35fe18911a2e3c9c7798c7da60398309b4f7c4367ee9510" },
+    { "path": "tests/Feature/PortalWorkflowTest.php", "sha256": "9c0325efc783df535d076315cebf872f6b995e4bc178081d705e6034f403cd06" },
     { "path": "tests/TestCase.php", "sha256": "c7c209f5579c42647c1f7b2a79ac828e8b54ac62a98442045a6e94fa2c0d0ebc" },
     { "path": "tests/Unit/ExampleTest.php", "sha256": "ffacae5c1a2a44c809420af5b3b404910da1b12167d58764dac6d10b8ba8cfaf" },
-    { "path": "tests/Unit/RecordPaymentTest.php", "sha256": "1c404837c4a520a084d7940444ef1c0d4f97909f87f61365561f0cef0311869f" }
+    { "path": "tests/Unit/RecordPaymentTest.php", "sha256": "733a694ca7f744227276bf7d6898c5b6456a4c653e79a9bdb9496e0b48565ea8" }
   ]
 }

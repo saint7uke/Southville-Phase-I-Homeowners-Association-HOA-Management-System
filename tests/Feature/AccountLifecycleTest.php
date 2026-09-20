@@ -13,12 +13,12 @@ use App\Models\User;
 use App\Notifications\HomeownerAccountStatusChanged;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Auth\Notifications\ResetPassword;
-use Filament\Auth\Notifications\VerifyEmail;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Database\Eloquent\MassAssignmentException;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -29,7 +29,7 @@ use Tests\TestCase;
 
 final class AccountLifecycleTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -167,7 +167,7 @@ final class AccountLifecycleTest extends TestCase
         $data = [
             'first_name' => 'Elena', 'middle_name' => null, 'last_name' => 'Santos', 'suffix' => null,
             'sex' => 'Female', 'contact_number' => '09175550123', 'date_of_birth' => '1992-06-10',
-            'email' => 'elena@example.test', 'password' => 'SecureResident2026', 'role' => 'hoa_staff',
+            'email' => 'elena@example.test', 'password' => 'SecureResident!2026', 'role' => 'hoa_staff',
         ];
 
         $created = app(CreatePendingUser::class)->handle($data, $admin);
@@ -190,7 +190,7 @@ final class AccountLifecycleTest extends TestCase
         User::query()->create([
             'first_name' => 'Crafted', 'last_name' => 'Account', 'sex' => 'Female',
             'contact_number' => '09175550999', 'date_of_birth' => '1990-01-01',
-            'email' => 'mass-assignment@example.test', 'password' => 'SecureResident2026',
+            'email' => 'mass-assignment@example.test', 'password' => 'SecureResident!2026',
             'account_status' => 'Active',
         ]);
     }
@@ -203,9 +203,44 @@ final class AccountLifecycleTest extends TestCase
         app(CreatePendingUser::class)->handle([
             'first_name' => 'Invalid', 'last_name' => 'Role', 'sex' => 'Male',
             'contact_number' => '09175550456', 'date_of_birth' => '1990-01-01',
-            'email' => 'invalid-role@example.test', 'password' => 'SecureResident2026',
+            'email' => 'invalid-role@example.test', 'password' => 'SecureResident!2026',
             'role' => 'homeowner',
         ], $admin);
+    }
+
+    public function test_admin_user_creation_normalizes_identity_and_rejects_invalid_names(): void
+    {
+        $admin = $this->userWithRole('hoa_admin');
+        $data = [
+            'first_name' => '  élena   marie ',
+            'middle_name' => " o'connor ",
+            'last_name' => ' de la cruz ',
+            'suffix' => null,
+            'sex' => 'Female',
+            'contact_number' => '09175550789',
+            'date_of_birth' => '1992-06-10',
+            'email' => '  ELENA.ADMIN@EXAMPLE.TEST ',
+            'password' => 'SecureResident!2026',
+            'role' => 'hoa_staff',
+        ];
+
+        $created = app(CreatePendingUser::class)->handle($data, $admin);
+
+        $this->assertSame('Élena Marie', $created->first_name);
+        $this->assertSame("O'Connor", $created->middle_name);
+        $this->assertSame('De La Cruz', $created->last_name);
+        $this->assertSame('elena.admin@example.test', $created->email);
+
+        try {
+            app(CreatePendingUser::class)->handle([
+                ...$data,
+                'first_name' => 'Elena123',
+                'email' => 'invalid-name@example.test',
+            ], $admin);
+            $this->fail('Names containing numbers must be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('first_name', $exception->errors());
+        }
     }
 
     /** @return array<string, array{UserAccountStatus}> */

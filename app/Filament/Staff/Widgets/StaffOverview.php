@@ -23,10 +23,8 @@ final class StaffOverview extends StatsOverviewWidget
                 ->description('Verified resident records')
                 ->icon(Heroicon::OutlinedHomeModern)
                 ->color('success'),
-            Stat::make('Collections this month', 'PHP '.number_format((float) Payment::query()
-                ->whereBetween('payment_date', [now()->startOfMonth(), now()->endOfMonth()])
-                ->sum('amount_paid'), 2))
-                ->description(now()->format('F Y'))
+            Stat::make("Today's payments", Payment::query()->whereDate('payment_date', today())->count())
+                ->description('Records entered today')
                 ->icon(Heroicon::OutlinedBanknotes)
                 ->color('info'),
             Stat::make('Open complaints', Complaint::query()->whereIn('status', ['Pending', 'Under Review'])->count())

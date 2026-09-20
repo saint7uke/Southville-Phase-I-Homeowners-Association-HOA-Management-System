@@ -12,14 +12,14 @@ final class AnnouncementController extends Controller
 {
     public function index(): View
     {
-        $announcements = Announcement::query()->published()->latest('published_at')->paginate(10);
+        $announcements = Announcement::query()->visibleToResidents()->latest('published_at')->paginate(10);
 
         return view('portal.announcements.index', compact('announcements'));
     }
 
     public function show(Announcement $announcement): View
     {
-        abort_unless($announcement->status === 'Published' && $announcement->published_at?->isPast(), 404);
+        abort_unless(Announcement::query()->visibleToResidents()->whereKey($announcement)->exists(), 404);
 
         return view('portal.announcements.show', compact('announcement'));
     }

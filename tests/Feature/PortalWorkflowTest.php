@@ -32,7 +32,7 @@ final class PortalWorkflowTest extends TestCase
         $response = $this->post(route('portal.register.store'), [
             'first_name' => 'juan', 'middle_name' => 'santos', 'last_name' => 'dela cruz', 'sex' => 'Male',
             'date_of_birth' => '1990-05-10', 'contact_number' => '09171234567', 'email' => 'JUAN@EXAMPLE.COM',
-            'password' => 'ResidentPass2026', 'password_confirmation' => 'ResidentPass2026',
+            'password' => 'ResidentPass!2026', 'password_confirmation' => 'ResidentPass!2026',
             'house_number' => '22', 'street' => 'Narra Street', 'block' => '3', 'lot' => '8',
             'residency_date' => '2020-01-01', 'ownership_type' => 'Owner', 'privacy_consent' => '1',
         ]);
@@ -50,6 +50,19 @@ final class PortalWorkflowTest extends TestCase
         $user->homeowner()->create(['house_number' => '1', 'street' => 'Narra', 'residency_date' => '2022-01-01', 'ownership_type' => 'Owner', 'status' => 'Inactive']);
 
         $this->actingAs($user)->get(route('portal.dashboard'))->assertRedirect(route('portal.status'));
+    }
+
+    public function test_registration_enforces_the_configured_password_composition(): void
+    {
+        $this->post(route('portal.register.store'), [
+            'first_name' => 'Maria', 'last_name' => 'Reyes', 'sex' => 'Female',
+            'date_of_birth' => '1992-04-10', 'contact_number' => '09181234567', 'email' => 'maria@example.test',
+            'password' => 'ResidentPass2026', 'password_confirmation' => 'ResidentPass2026',
+            'house_number' => '23', 'street' => 'Narra Street', 'block' => '3', 'lot' => '9',
+            'residency_date' => '2021-01-01', 'ownership_type' => 'Owner', 'privacy_consent' => '1',
+        ])->assertSessionHasErrors('password');
+
+        $this->assertDatabaseMissing('users', ['email' => 'maria@example.test']);
     }
 
     public function test_homeowner_cannot_view_another_residents_complaint(): void

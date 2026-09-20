@@ -6,8 +6,6 @@ namespace App\Listeners;
 
 use App\Events\UserAccountStatusChanged;
 use App\Notifications\HomeownerAccountStatusChanged;
-use Filament\Auth\Notifications\VerifyEmail;
-use Filament\Facades\Filament;
 
 final class SendAccountStatusChangedNotification
 {
@@ -23,9 +21,7 @@ final class SendAccountStatusChangedNotification
         ));
 
         if ($event->to->value === 'Active' && ! $event->user->hasVerifiedEmail()) {
-            $notification = app(VerifyEmail::class);
-            $notification->url = Filament::getPanel('homeowner')->getVerifyEmailUrl($event->user);
-            $event->user->notify($notification);
+            $event->user->sendEmailVerificationNotification();
         }
     }
 }

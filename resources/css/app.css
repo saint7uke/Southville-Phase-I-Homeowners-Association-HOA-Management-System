@@ -126,6 +126,21 @@ button, input, select, textarea { font: inherit; }
 .auth-card > p { color: var(--muted); }
 .auth-brand { display: inline-flex; align-items: center; gap: .65rem; font-weight: 800; text-decoration: none; }
 .form-actions { margin-block-start: 1.5rem; display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.profile-form { inline-size: min(100%, 64rem); }
+.password-form { margin-block-start: 1.5rem; }
+.profile-fieldset { margin: 1.5rem 0 0; padding: 1rem; border: 1px solid var(--border); border-radius: .65rem; }
+.profile-fieldset legend { padding-inline: .4rem; font-weight: 800; }
+.profile-photo-preview { display: inline-grid; gap: .5rem; margin: 0 0 1rem; color: var(--muted); font-size: .88rem; }
+.profile-photo-preview img { inline-size: 10rem; block-size: 10rem; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); }
+.dues-obligation { display: grid; gap: 1rem; padding-block: 1rem; border-block-end: 1px solid var(--border); }
+.dues-obligation h3 { margin: 0; font-size: 1rem; }
+.dues-obligation p { margin: .4rem 0 0; color: var(--muted); }
+.dues-obligation summary { color: var(--accent); font-weight: 700; cursor: pointer; }
+.dues-obligation form { margin-block-start: 1rem; }
+.password-toggle { margin-block-start: .4rem; padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.confirmation-field { margin-block-start: 1.25rem; }
+.confirmation-field label { display: flex; align-items: flex-start; gap: .6rem; font-weight: 600; }
+.confirmation-field input { inline-size: 1.2rem; block-size: 1.2rem; margin-block-start: .1rem; }
 
 @media (min-width: 48rem) {
     .menu-button { display: none; }

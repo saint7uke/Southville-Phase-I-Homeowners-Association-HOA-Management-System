@@ -12,7 +12,7 @@ final class AnnouncementController extends Controller
 {
     public function latest(): JsonResponse
     {
-        $items = Announcement::query()->published()->latest('published_at')->limit(5)->get(['id', 'title', 'content', 'category', 'published_at']);
+        $items = Announcement::query()->visibleToPublic()->latest('published_at')->limit(5)->get(['id', 'title', 'content', 'category', 'published_at']);
 
         return response()->json(['data' => $items]);
     }

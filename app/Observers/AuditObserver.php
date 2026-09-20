@@ -35,9 +35,12 @@ final class AuditObserver
     /** @param array<string, mixed>|null $old @param array<string, mixed>|null $new */
     private function write(string $action, Model $model, ?array $old, ?array $new): void
     {
-        $redact = static fn (?array $values): ?array => $values === null ? null : collect($values)->except(['password', 'remember_token'])->all();
+        $redact = static fn (?array $values): ?array => $values === null ? null : collect($values)->except([
+            'password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes', 'email_verified_at',
+        ])->all();
         AuditLog::query()->create([
             'user_id' => $this->actor->id(), 'action' => class_basename($model).'.'.$action,
+            'panel' => $this->actor->panel(),
             'auditable_type' => $model::class, 'auditable_id' => $model->getKey(),
             'old_values' => $redact($old), 'new_values' => $redact($new),
             'ip_address' => app()->runningInConsole() ? null : request()->ip(),

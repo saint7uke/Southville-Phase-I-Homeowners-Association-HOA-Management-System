@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "status": "machine_verified_pending_human",
+  "generated_at": "2026-09-20T15:33:01+08:00",
+  "summary": "All in-scope implementation and machine-verification work is complete, and the protected-test baseline update is approved and verified. Release remains intentionally gated on representative human UAT, production configuration, and deployment authorization.",
+  "scenarios": [
+    { "id": "admin_cannot_use_staff_or_homeowner_panel_without_assignment", "status": "passed", "evidence": "PanelFoundationTest, AccessAndApiTest, and four-browser authenticated role-panel matrix" },
+    { "id": "staff_cannot_use_admin_or_homeowner_panel", "status": "passed", "evidence": "PanelFoundationTest, Staff provider explicit resource allow-list, and four-browser authenticated role-panel matrix" },
+    { "id": "homeowner_cannot_use_admin_or_staff_panel", "status": "passed", "evidence": "PanelFoundationTest, AccessAndApiTest, and four-browser authenticated role-panel matrix" },
+    { "id": "homeowner_records_are_owner_scoped", "status": "passed", "evidence": "HomeownerPanelResourcesTest and PortalWorkflowTest" },
+    { "id": "private_uploads_require_authorization", "status": "passed", "evidence": "CaseAttachmentTest, HomeownerProfileTest, DuesWorkflowTest, CertificateWorkflowTest" },
+    { "id": "destructive_actions_are_authorized", "status": "passed", "evidence": "Policy tests; force-delete UI actions removed; soft-delete restore coverage" },
+    { "id": "homeowner_account_and_profile", "status": "passed", "evidence": "AccountLifecycleTest, HomeownerProfileTest, PortalWorkflowTest" },
+    { "id": "dues_generation_and_payment_recording", "status": "passed", "evidence": "DuesWorkflowTest and CompletionRequirementsTest" },
+    { "id": "payment_proof_review", "status": "passed", "evidence": "DuesWorkflowTest" },
+    { "id": "complaint_status_flow", "status": "passed", "evidence": "WorkflowTransitionTest and CaseAttachmentTest" },
+    { "id": "request_and_certificate_flow", "status": "passed", "evidence": "WorkflowTransitionTest and CertificateWorkflowTest" },
+    { "id": "published_announcement_visibility", "status": "passed", "evidence": "LandingPageTest, AccessAndApiTest, HomeownerPanelResourcesTest" },
+    { "id": "reports_and_exports", "status": "passed", "evidence": "ReportAndAuditTest, including owner-bound private queued CSV" },
+    { "id": "audit_log_visibility", "status": "passed", "evidence": "ReportAndAuditTest, RolePermissionManagementTest, CompletionRequirementsTest" },
+    { "id": "landing_contact_submission", "status": "passed", "evidence": "LandingPageTest" },
+    { "id": "universal_identity_validation", "status": "passed", "evidence": "Shared Unicode-aware PersonName normalization across registration, profile, Admin user, and Homeowner operational forms; AccountLifecycleTest" },
+    { "id": "fresh_production_admin_bootstrap", "status": "passed", "evidence": "AdminUserSeederTest covers validation, password policy, idempotence, credential preservation, escalation refusal, and production refusal for demo fixtures" },
+    { "id": "responsive_accessible_landing", "status": "passed", "evidence": "The required four-step How It Works journey is present; its updated landing passed 24/24 across Chromium, Edge, Firefox, and WebKit for Axe serious/critical, 320/768/1440/1920 overflow, and reduced motion. Prior role-panel keyboard/focus/skip-link checks remain current." }
+  ],
+  "verification": {
+    "composer_qa": "passed on the exact current candidate: guarded full verifier checked protected hashes and Pint, then completed two independent 138-test / 551-assertion SQLite executions",
+    "protected_test_baseline": "approved: four reviewed strengthened-test hashes updated; full loop verifier passed without changing verifier logic",
+    "uat_fixture_seeder": "passed: idempotent non-production preparation and explicit production refusal; applied successfully to the local MySQL candidate database",
+    "uat_mysql_candidate": "recovered after a cached-config test-isolation incident: verified archive imported into only hoa_system_uat; all 23 migrations, archived 12-table fingerprint, six synthetic role fixtures, and live Chromium Admin/Staff/Homeowner matrix passed",
+    "uat_local_runtime": "prepared: post-audit database-aware readiness endpoint returned HTTP 200; database:default queue monitor reports zero pending, delayed, or reserved jobs and OK; UAT retains six fixtures and all 23 migrations",
+    "uat_restore_drill": "passed for local synthetic preparation: current MySQL dump plus five stored files restored into isolated targets; hashes and 12-table row counts matched; restored app health, 3/3 Chromium role journeys, and one queued job passed; scratch targets removed",
+    "pdf_pre_uat_review": "the current code/templates produced receipt, certificate, and payment-summary PDFs that passed text/geometry extraction plus 2x PyMuPDF visual review; a 120-row report preserved every row and repeated headings/footers across five pages; the recovered clean UAT database has no linked payment/certificate examples, so witnessed regeneration/download/print acceptance remains pending",
+    "phpunit_database_isolation": "passed: PHPUnit ignores normal config cache; non-SQLite runs require an explicit destructive-test flag plus a database name containing test/tests; an attempted hoa_system_uat boot was rejected before Laravel started",
+    "mysql_compatible_suite": "passed locally: complete 138-test / 552-assertion disposable XAMPP MariaDB lane in 142.80 seconds; scratch schema removal verified; exact GitHub MySQL 8.4 release-branch lane remains external because Docker is unavailable locally",
+    "database_readiness_health": "passed: /up executes a database read; healthy and simulated-outage regression responses are covered",
+    "community_timezone": "fixed and verified: APP_TIMEZONE defaults to Asia/Manila; regression test and regenerated document dates/identifiers passed",
+    "focused_report_suite": "passed: 13 tests / 53 assertions after the final focus-restoration patch",
+    "vite_build": "passed inside the exact-candidate full verifier: 107 modules transformed with a separate lazy-loaded LandingPage chunk",
+    "composer_audit": "passed on the exact current candidate: no security vulnerability advisories, 2026-09-20",
+    "npm_audit": "passed on the exact current candidate: 0 vulnerabilities, 2026-09-20",
+    "mysql_migrations": "passed: all 23 migrations ran; dues_settings.frequency is VARCHAR(32)",
+    "config_cache": "passed after adding the initial-Admin environment configuration; cache then cleared for local UAT development",
+    "route_cache": "passed create/clear compatibility inside the exact-candidate full verifier",
+    "view_cache": "passed",
+    "scheduler": "four HOA tasks registered",
+    "browser_suite": "passed on the exact current candidate: 40/40 serialized tests across Chromium, Edge, Firefox, and WebKit in 6.2 minutes on 2026-09-20",
+    "authenticated_panel_browser_matrix": "passed on the exact current candidate: 12/12 Admin, Staff, and Homeowner cases in Chromium, Edge, Firefox, and WebKit; keyboard-only form traversal and sign-in, visible focus, skip-link focus/activation, cross-panel denial, 320/768/1440/1920px overflow, and Axe serious/critical checks"
+  },
+  "environment_notes": [
+    "No local Poppler renderer is installed, so retained visual PDF inspection remains a human/CI release check; authorized receipt and certificate PDF responses are covered by deterministic tests.",
+    "Firefox required execution outside the restricted process sandbox on this Windows host so its tab subprocess could start; it then passed all ten configured tests in the complete 40/40 suite.",
+    "Playwright's Windows-hosted WebKit follows Safari's default setting that omits links from Tab order unless full keyboard access is enabled. Automation verified visible skip-link focus and keyboard activation with focus supplied as test setup; a real Safari/full-keyboard-access witness remains part of human UAT.",
+    "The controlled human evidence template is docs/UAT_EXECUTION_RECORD.md; its remaining blank human-result fields intentionally do not claim that UAT, PDF visual review, email delivery, backup restoration, production configuration, or deployment approval passed.",
+    "Laravel db:show --counts cannot read performance_schema.session_status in this XAMPP MariaDB installation; migrate:status and direct application-table queries succeed, so this affects the optional diagnostic command rather than application operation.",
+    "The local UAT archive is on-site, unencrypted, and synthetic; it does not satisfy the pending production requirements for encrypted off-site/versioned storage, monitoring, approved RPO/RTO, or a production-format restore drill.",
+    "The PDF artifact marker and Poppler are unavailable. Temporary application-native QA PDFs were rendered with installed PyMuPDF and removed after inspection; human authorization/download/print review remains a UAT gate.",
+    "The synthetic UAT database was restored from the verified retained archive after an unsafe cached-config test invocation altered it. Recovery and the permanent PHPUnit cache-isolation guard are documented in uat-database-recovery-2026-09-13.md."
+    ,"Docker is unavailable on the local Windows host. The complete MariaDB/MySQL-compatible suite passed, but the configured GitHub MySQL 8.4 job must still pass on the authorized release branch."
+    ,"The quality workflow now supports push, pull-request, and manual-dispatch runs. GitHub CLI is installed but not authenticated, and this checkout has no Git remote configured, so no authorized release-branch run can be dispatched locally yet."
+  ],
+  "pending_external_gates": [
+    "release_branch_mysql_8_4_ci"
+  ],
+  "pending_human_gates": [
+    "final_uat",
+    "production_secrets",
+    "deployment"
+  ]
+}

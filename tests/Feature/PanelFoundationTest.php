@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\Announcement;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Support\AuthenticatedActor;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -204,5 +205,20 @@ final class PanelFoundationTest extends TestCase
         $homeowner->assignRole('homeowner');
 
         $this->actingAs($homeowner, 'homeowner')->get('/homeowner')->assertForbidden();
+    }
+
+    public function test_admin_can_disable_staff_and_homeowner_panels_without_disabling_admin(): void
+    {
+        SystemSetting::current()->update(['staff_panel_enabled' => false, 'homeowner_panel_enabled' => false]);
+        $admin = User::factory()->create(['account_status' => 'Active']);
+        $admin->assignRole('hoa_admin');
+        $staff = User::factory()->create(['account_status' => 'Active']);
+        $staff->assignRole('hoa_staff');
+        $homeowner = User::factory()->create(['account_status' => 'Active']);
+        $homeowner->assignRole('homeowner');
+
+        $this->actingAs($staff, 'staff')->get('/staff')->assertStatus(503);
+        $this->actingAs($homeowner, 'homeowner')->get('/homeowner')->assertStatus(503);
+        $this->actingAs($admin, 'admin')->get('/admin')->assertOk();
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\Announcement;
+use App\Models\DuesSetting;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,6 +27,17 @@ final class AccessAndApiTest extends TestCase
         Announcement::query()->create(['title' => 'Water interruption', 'content' => 'Water service will pause for scheduled maintenance.', 'category' => 'Maintenance', 'status' => 'Published', 'published_at' => now(), 'created_by' => $admin->id]);
 
         $this->getJson('/api/v1/announcements/latest')->assertOk()->assertJsonPath('data.0.title', 'Water interruption')->assertJsonStructure(['data' => [['id', 'title', 'content', 'category', 'published_at']]]);
+    }
+
+    public function test_public_announcements_api_excludes_resident_only_and_expired_posts(): void
+    {
+        $admin = User::factory()->create();
+        Announcement::query()->create(['title' => 'Resident only', 'content' => 'Private resident update.', 'category' => 'General', 'audience' => 'Residents', 'status' => 'Published', 'published_at' => now(), 'created_by' => $admin->id]);
+        Announcement::query()->create(['title' => 'Expired', 'content' => 'Expired public update.', 'category' => 'General', 'audience' => 'Public', 'status' => 'Published', 'published_at' => now()->subDay(), 'expires_at' => now()->subMinute(), 'created_by' => $admin->id]);
+
+        $this->getJson('/api/v1/announcements/latest')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 
     public function test_homeowner_cannot_access_filament_admin_panel(): void
@@ -52,7 +64,21 @@ final class AccessAndApiTest extends TestCase
         $this->actingAs($staff)->get('/staff')->assertOk();
         $this->get('/admin')->assertForbidden();
         $this->get('/staff/homeowners')->assertOk();
-        $this->get('/staff/users')->assertForbidden();
+        $this->get('/staff/announcements')->assertOk();
+        $this->get('/staff/contact-messages')->assertOk();
+        $this->get('/staff/users')->assertNotFound();
+        $this->get('/staff/dues-settings')->assertOk();
+        $this->get('/staff/dues-settings/create')->assertOk();
+        $dues = DuesSetting::query()->create([
+            'name' => 'Annual dues',
+            'amount' => '1200.00',
+            'frequency' => 'Annual',
+            'is_active' => true,
+        ]);
+        $this->get("/staff/dues-settings/{$dues->id}/edit")->assertOk()->assertDontSee('Delete');
+        $this->assertFalse($staff->can('delete', $dues));
+        $this->get('/staff/complaints/create')->assertForbidden();
+        $this->get('/staff/service-requests/create')->assertForbidden();
         $this->get('/admin/reports/payments.xlsx')->assertForbidden();
         $this->get('/staff/reports/payments.xlsx')->assertOk();
     }

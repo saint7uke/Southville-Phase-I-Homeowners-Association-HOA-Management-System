@@ -6,12 +6,13 @@ import ContactSection from './landing/ContactSection';
 import CtaSection from './landing/CtaSection';
 import Footer from './landing/Footer';
 import HeroSection from './landing/HeroSection';
+import HowItWorksSection from './landing/HowItWorksSection';
 import Navbar from './landing/Navbar';
 import ParallaxSection from './landing/ParallaxSection';
 import ServicesSection from './landing/ServicesSection';
 import useLandingAnimations from './landing/useLandingAnimations';
 
-export default function LandingPage({ announcements = [] }) {
+export default function LandingPage({ announcements = [], branding = {}, contactSuccess = null }) {
     const pageRef = useRef(null);
 
     useLandingAnimations(pageRef);
@@ -19,18 +20,19 @@ export default function LandingPage({ announcements = [] }) {
     return (
         <div ref={pageRef} className="hoa-landing">
             <a className="hoa-skip-link" href="#main-content">Skip to main content</a>
-            <Navbar />
+            <Navbar branding={branding} />
             <main id="main-content" tabIndex="-1">
                 <HeroSection />
                 <AboutSection />
                 <ServicesSection />
+                <HowItWorksSection />
                 <ParallaxSection />
                 <AnnouncementsSection announcements={announcements} />
                 <BenefitsSection />
                 <CtaSection />
-                <ContactSection />
+                <ContactSection branding={branding} success={contactSuccess} />
             </main>
-            <Footer />
+            <Footer branding={branding} />
         </div>
     );
 }
