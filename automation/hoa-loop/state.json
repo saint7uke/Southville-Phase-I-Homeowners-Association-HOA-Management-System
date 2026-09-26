@@ -8,13 +8,12 @@
     "phase_iterations":  0,
     "consecutive_no_progress":  0,
     "started_at":  "2026-08-17T02:21:10.5527166+08:00",
-    "updated_at":  "2026-09-21T14:08:27+08:00",
+    "updated_at":  "2026-09-26T21:29:20+08:00",
     "last_fingerprint":  null,
-    "last_verification":  "Project-owner protected-baseline approval was reconfirmed and non-production UAT preparation authorized. Exact commit 662762d is on main/origin/main. Local guarded verification remains green, including 138 tests/551 SQLite assertions, 138/552 MariaDB-compatible assertions, and 40/40 browser cases. CI-001 was reproduced locally: ignored Vite assets were absent when PHPUnit ran, and browser Livewire login POSTs returned 419 because SESSION_DRIVER=array could not persist CSRF sessions. The uncommitted workflow now builds assets before both PHP lanes, uses database sessions only for real-browser lanes, preserves failure diagnostics, and passed a clean 107-module build plus 138/551 PHP 8.3 tests. Fresh SQLite browser evidence passed Chromium 10/10 plus authenticated WebKit 4/4 and Firefox 4/4; Firefox used the established unrestricted Windows process execution. The hoa_system_uat refresh retains all 23 migrations, six expected fixtures, and empty pending/failed job queues. CI-001 remains open only until the corrected exact GitHub MySQL 8.4 and Linux browser jobs run green.",
+    "last_verification":  "Project-owner protected-baseline approval and non-production UAT preparation remain current. Corrective commit dabb62f1e291272353cbc9aa64e504ebf29bbdf0 is on main/origin/main. GitHub Actions run 36245182854 passed all five release jobs: SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit. Local guarded verification also passed 138 tests/551 assertions, Pint, fresh migration rollback/reapply, Composer/npm audits, a 22-test/133-assertion MariaDB lifecycle suite, and authenticated Chromium role-panel accessibility/responsive checks. CI-001 is closed. The hoa_system_uat fixtures remain prepared; human UAT, production settings/recovery approval, and deployment authorization remain open.",
     "blocked_reason":  null,
     "pending_human_decisions":  [
                                     "Complete representative Admin, Staff, and Homeowner UAT, including real Safari/full-keyboard-access, screen-reader, true 200% zoom, and manual document-print checks.",
-                                    "Obtain signed-in logs for CI-001, fix the CI-only failures, and rerun the exact release candidate successfully in GitHub MySQL 8.4 and Linux browser jobs.",
                                     "Provide and approve production domain, database, SMTP, backup, and monitoring secrets/settings.",
                                     "Authorize production deployment after UAT."
                                 ],

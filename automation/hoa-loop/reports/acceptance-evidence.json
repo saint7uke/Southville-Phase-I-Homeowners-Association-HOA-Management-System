@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "status": "ci_failed_pending_diagnosis_and_human_uat",
-  "generated_at": "2026-09-21T14:08:27+08:00",
-  "summary": "The in-scope implementation and local verification are complete, the protected-test baseline update is approved, and the isolated UAT fixtures are ready. Release is blocked by CI-001 on the exact committed candidate, representative human UAT, production configuration, and deployment authorization.",
+  "status": "automated_verification_passed_pending_human_uat",
+  "generated_at": "2026-09-26T21:29:20+08:00",
+  "summary": "The in-scope implementation, protected-test baseline, local verification, and exact GitHub release workflow are green. Representative human UAT, production configuration and recovery approval, and deployment authorization remain required.",
   "scenarios": [
     { "id": "admin_cannot_use_staff_or_homeowner_panel_without_assignment", "status": "passed", "evidence": "PanelFoundationTest, AccessAndApiTest, and four-browser authenticated role-panel matrix" },
     { "id": "staff_cannot_use_admin_or_homeowner_panel", "status": "passed", "evidence": "PanelFoundationTest, Staff provider explicit resource allow-list, and four-browser authenticated role-panel matrix" },
@@ -32,7 +32,7 @@
     "uat_restore_drill": "passed for local synthetic preparation: current MySQL dump plus five stored files restored into isolated targets; hashes and 12-table row counts matched; restored app health, 3/3 Chromium role journeys, and one queued job passed; scratch targets removed",
     "pdf_pre_uat_review": "the current code/templates produced receipt, certificate, and payment-summary PDFs that passed text/geometry extraction plus 2x PyMuPDF visual review; a 120-row report preserved every row and repeated headings/footers across five pages; the recovered clean UAT database has no linked payment/certificate examples, so witnessed regeneration/download/print acceptance remains pending",
     "phpunit_database_isolation": "passed: PHPUnit ignores normal config cache; non-SQLite runs require an explicit destructive-test flag plus a database name containing test/tests; an attempted hoa_system_uat boot was rejected before Laravel started",
-    "mysql_compatible_suite": "passed locally: complete 138-test / 552-assertion disposable XAMPP MariaDB lane in 142.80 seconds; scratch schema removal verified. Exact GitHub MySQL 8.4 run 35497361687 on commit 662762d failed at PHPUnit and is tracked as CI-001",
+    "mysql_compatible_suite": "passed locally: complete 138-test / 552-assertion disposable XAMPP MariaDB lane in 142.80 seconds; scratch schema removal verified. Native GitHub MySQL 8.4 also passed in run 36245182854 on corrective commit dabb62f",
     "database_readiness_health": "passed: /up executes a database read; healthy and simulated-outage regression responses are covered",
     "community_timezone": "fixed and verified: APP_TIMEZONE defaults to Asia/Manila; regression test and regenerated document dates/identifiers passed",
     "focused_report_suite": "passed: 13 tests / 53 assertions after the final focus-restoration patch",
@@ -46,7 +46,7 @@
     "scheduler": "four HOA tasks registered",
     "browser_suite": "passed on the exact current candidate: 40/40 serialized tests across Chromium, Edge, Firefox, and WebKit in 6.2 minutes on 2026-09-20",
     "authenticated_panel_browser_matrix": "passed locally on the exact current candidate: 12/12 Admin, Staff, and Homeowner cases in Chromium, Edge, Firefox, and WebKit; keyboard-only form traversal and sign-in, visible focus, skip-link focus/activation, cross-panel denial, 320/768/1440/1920px overflow, and Axe serious/critical checks",
-    "github_release_candidate_ci": "failed run 35497361687 tested exact commit 662762d70c3bae1ab36dafe74e9d0228dc09bd59. Both causes are now locally reproduced and corrected in the uncommitted workflow: assets build before PHPUnit in both PHP lanes, and real-browser lanes use persistent database sessions instead of array sessions. Remote rerun remains required",
+    "github_release_candidate_ci": "passed: run 36245182854 tested exact corrective commit dabb62f1e291272353cbc9aa64e504ebf29bbdf0 and completed all five jobs successfully: SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit. CI-001 is closed; failed runs 35497361687 and 36243913243 remain retained as diagnostic history",
     "uat_preparation_refresh": "passed on 2026-09-20: APP_ENV local, isolated hoa_system_uat database, 23 migrations, six expected role/status fixtures, zero pending jobs, and zero failed jobs",
     "php_8_3_compatibility": "passed with the isolated official PHP 8.3.33 NTS runtime: Composer platform requirements succeeded and the exact SQLite CI command completed 138 tests / 551 assertions in 39.25 seconds",
     "strict_psr_autoload": "passed: optimized strict PSR audit exited 0 with 10,199 classes and no PSR-4 mapping violations; the only warning was Pint's packaged provider stub sharing the application provider class name, with the real application class selected first",
@@ -61,13 +61,11 @@
     "Laravel db:show --counts cannot read performance_schema.session_status in this XAMPP MariaDB installation; migrate:status and direct application-table queries succeed, so this affects the optional diagnostic command rather than application operation.",
     "The local UAT archive is on-site, unencrypted, and synthetic; it does not satisfy the pending production requirements for encrypted off-site/versioned storage, monitoring, approved RPO/RTO, or a production-format restore drill.",
     "The PDF artifact marker and Poppler are unavailable. Temporary application-native QA PDFs were rendered with installed PyMuPDF and removed after inspection; human authorization/download/print review remains a UAT gate.",
-    "The synthetic UAT database was restored from the verified retained archive after an unsafe cached-config test invocation altered it. Recovery and the permanent PHPUnit cache-isolation guard are documented in uat-database-recovery-2026-09-13.md."
-    ,"Docker is unavailable on the local Windows host. The complete MariaDB/MySQL-compatible suite passed, but the configured GitHub MySQL 8.4 job must still pass on the authorized release branch."
-    ,"The checkout now has an origin remote and exact commit 662762d is present on main/origin/main. GitHub Actions run 35497361687 failed across both PHPUnit lanes and all three Linux browser jobs. Detailed logs require repository sign-in; no CI pass is claimed."
+    "The synthetic UAT database was restored from the verified retained archive after an unsafe cached-config test invocation altered it. Recovery and the permanent PHPUnit cache-isolation guard are documented in uat-database-recovery-2026-09-13.md.",
+    "Docker is unavailable on the local Windows host. The complete local MariaDB/MySQL-compatible suite and the configured GitHub native MySQL 8.4 job both passed.",
+    "Corrective commit dabb62f1e291272353cbc9aa64e504ebf29bbdf0 is on main/origin/main. GitHub Actions run 36245182854 passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit; the Node 20 action deprecation and future ubuntu-latest image migration notices are non-blocking maintenance warnings."
   ],
-  "pending_external_gates": [
-    "release_branch_mysql_8_4_ci"
-  ],
+  "pending_external_gates": [],
   "pending_human_gates": [
     "final_uat",
     "production_secrets",

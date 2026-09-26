@@ -1,5 +1,13 @@
 # Loop Progress
 
+## CI-001 remote closure - 2026-09-26
+
+- Pushed the prepared release-verification changes as `ccc8157`, then inspected authenticated [run 36243913243](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36243913243). SQLite passed, while native MySQL exposed non-canonical JSON whitespace and all three browser engines exposed a serious Axe `scrollable-region-focusable` violation in Filament table containers.
+- Added a reversible migration that stores audit payloads as canonical text while preserving the existing Eloquent array casts, and registered a Filament render hook that gives scrollable table regions keyboard focus, a region role, and an accessible label.
+- Verified the correction locally with the guarded 138-test / 551-assertion SQLite suite, 22-test / 133-assertion disposable MariaDB lifecycle suite, fresh migration/rollback/reapply, Pint, view compilation, Composer/npm audits, and authenticated Chromium role-panel accessibility/responsive checks.
+- Pushed corrective commit `dabb62f1e291272353cbc9aa64e504ebf29bbdf0`. [GitHub Actions run 36245182854](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36245182854) passed all five jobs: SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit. `CI-001` is closed.
+- Remaining release gates are human UAT, manual assistive-technology/document-print checks, approved production configuration and recovery evidence, and deployment authorization. No production deployment was performed.
+
 ## CI-001 root-cause correction - 2026-09-21
 
 - Reproduced the GitHub PHPUnit failure by temporarily removing the ignored local `public/build` output. Four landing tests then failed with `ViteManifestNotFoundException`, proving the workflow incorrectly ran PHPUnit before a frontend build; the MySQL job did not install/build Node assets at all.

@@ -26,7 +26,7 @@
 ## Production hardening before launch
 
 - [x] Run the complete disposable local MySQL-compatible lane; 138 tests / 552 assertions passed on XAMPP MariaDB
-- [ ] Require the configured GitHub MySQL 8.4 lane to pass on the release branch; exact commit `662762d` failed [run 35497361687](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/35497361687). Both causes are reproduced and corrected locally: assets now build before PHPUnit, browser jobs use persistent sessions, clean PHP passed 138/551, and fresh SQLite Chromium passed 10/10. Commit/push and a green remote rerun remain required (`CI-001`).
+- [x] Require the configured GitHub MySQL 8.4 lane to pass on the release branch; corrective commit `dabb62f` passed [run 36245182854](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36245182854), including SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit. This closes `CI-001`; the earlier failure remains recorded in [run 35497361687](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/35497361687).
 - [ ] Configure the HOA Google Workspace SMTP account and a supervised queue worker
 - [ ] Replace development accounts and test email addresses
 - [ ] Configure production file storage, backups, retention, and recovery drills
