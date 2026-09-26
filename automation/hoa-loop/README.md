@@ -21,9 +21,9 @@ The first cycle was research-only and created `reports/spec-reconciliation.md`. 
 - Brief: React 18 / Vite 5 / Tailwind 3; repository: React 19 / Vite 7 / Tailwind 4.
 - Brief: `/homeowner` Filament panel; repository: custom `/portal` homeowner surface.
 - Brief: MySQL target; current local environment: SQLite.
-- Brief: Sanctum removed; repository still lists Sanctum.
+- Brief: Sanctum removed; the repository initially listed Sanctum, then removed it after a dedicated unused-dependency audit and full regression verification.
 
-The recommended reconciliation is to preserve supported newer dependency majors, add a true `/homeowner` Filament panel, and provide a deliberate transition from `/portal` rather than deleting working behavior in one pass. A human must approve the final choice.
+The approved reconciliation preserves supported newer dependency majors, adds a true `/homeowner` Filament panel, and retains `/portal` as a compatibility surface rather than deleting working behavior. These choices were implemented and verified; final release acceptance still requires the human gates recorded in `state.json`.
 
 ## Files
 

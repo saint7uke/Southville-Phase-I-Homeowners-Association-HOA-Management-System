@@ -17,8 +17,8 @@ The research-only first cycle must verify and expand this list, recommend a path
 ## Authentication and Sanctum
 
 - Brief says Sanctum is removed and all panels use session authentication.
-- Repository still requires `laravel/sanctum`.
-- Determine whether Sanctum has any remaining runtime use before removal. Package removal is a separate, reversible change with full verification.
+- The repository initially required `laravel/sanctum`.
+- Resolution: the dedicated dependency audit found no runtime use; Sanctum was removed and the complete protected regression suite remained green.
 
 ## Database
 

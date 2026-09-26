@@ -45,4 +45,6 @@ The original brief was reread section by section rather than treating the normal
 
 ## Remaining acceptance gates
 
-No additional unimplemented application requirement was identified by the source-brief audit. Release acceptance is still unproven until the exact GitHub MySQL 8.4 job passes on the authorized release branch, representative Admin/Staff/Homeowner UAT and ISO scoring complete, manual NVDA/real-Safari/200%-zoom/document-print checks pass, production domain/database/SMTP/storage/backup/monitoring settings are approved, and deployment is explicitly authorized.
+No additional unimplemented application requirement was identified by the source-brief audit. The former external CI gate closed on 2026-09-26: corrective commit `dabb62f1e291272353cbc9aa64e504ebf29bbdf0` passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit in [GitHub Actions run 36245182854](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36245182854), and evidence-only descendant `87117be859d0634b73a79b316d187ebea7fc4386` repeated the same five-job pass in [run 36245505037](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36245505037).
+
+Release acceptance remains unproven until representative Admin/Staff/Homeowner UAT and ISO scoring complete, manual NVDA/real-Safari/200%-zoom/document-print checks pass, production domain/database/SMTP/storage/backup/monitoring settings are approved, and deployment is explicitly authorized.

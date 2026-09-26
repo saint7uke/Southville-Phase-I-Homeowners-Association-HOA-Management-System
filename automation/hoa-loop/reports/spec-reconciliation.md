@@ -14,7 +14,7 @@ The instruction to start from the existing project approves the following backwa
 4. Prefer additive migrations and compatibility adapters over renaming or dropping the working `dues_settings`, `payments`, `service_requests`, or custom audit tables.
 5. Keep SQLite for fast automated tests and document/verify a MySQL 8 release lane before production.
 6. Preserve the approved HOA landing-page visual direction and hero image while completing missing functional, accessibility, and route requirements.
-7. Keep Sanctum until a dedicated dependency-removal cycle confirms it is unused and the full suite remains green.
+7. Keep Sanctum until a dedicated dependency-removal cycle confirms it is unused and the full suite remains green. That later cycle found no runtime use, removed Sanctum, and passed the protected regression suite.
 
 ## Verified implementation matrix
 
