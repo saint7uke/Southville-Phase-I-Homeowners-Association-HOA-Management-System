@@ -1,7 +1,7 @@
 # Protected Test Baseline Review
 
-Date: 2026-09-09  
-Status: Approved by the project owner; `baseline.json` was updated to the four reviewed hashes on 2026-09-09.
+Date: 2026-09-20
+Status: Approved by the project owner; approval was reconfirmed on 2026-09-20 and `baseline.json` contains the four reviewed hashes.
 
 ## Conclusion
 
@@ -55,4 +55,4 @@ The four protected test files whose hashes changed were strengthened to cover ne
 
 ## Approval effect
 
-The project owner approved updating only the four changed SHA-256 values in `automation/hoa-loop/baseline.json`. No test or verifier logic was changed as part of the approval. The approval does not authorize deployment, sending real email, or modifying production secrets.
+The project owner approved updating only the four changed SHA-256 values in `automation/hoa-loop/baseline.json` and explicitly reconfirmed that approval on 2026-09-20. No test or verifier logic was changed as part of the approval. The approval also authorizes non-production UAT preparation; it does not authorize deployment, sending real email, or modifying production secrets.

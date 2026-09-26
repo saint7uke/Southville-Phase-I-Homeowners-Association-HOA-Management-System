@@ -1,5 +1,41 @@
 # Loop Progress
 
+## CI-001 root-cause correction - 2026-09-21
+
+- Reproduced the GitHub PHPUnit failure by temporarily removing the ignored local `public/build` output. Four landing tests then failed with `ViteManifestNotFoundException`, proving the workflow incorrectly ran PHPUnit before a frontend build; the MySQL job did not install/build Node assets at all.
+- Moved `npm ci` and the production Vite build before PHPUnit in the SQLite lane and added the same Node 22 setup/build sequence to the MySQL 8.4 lane. The clean-checkout simulation then passed the 107-module build and all 138 PHP 8.3 tests / 551 assertions.
+- Reproduced all four authenticated Chromium failures on a freshly migrated and seeded SQLite database. Retained Playwright traces showed each Livewire login POST returned HTTP 419 because the browser workflow used the non-persistent `array` session driver.
+- Switched only real-browser workflow environments to the migrated `database` session driver; fast isolated PHPUnit remains on `array`. The same fresh SQLite Chromium reproduction then passed 10/10 tests in 2.4 minutes, including Admin reports and all three role login/isolation/responsive/accessibility journeys.
+- Repeated the authenticated subset against fresh disposable SQLite fixtures in the remaining GitHub engines: WebKit passed 4/4 and Firefox passed 4/4. Firefox required the established outside-process-sandbox execution on this Windows host; the unrestricted run completed in 1.7 minutes.
+- Kept bounded failure summaries and seven-day logs/traces in the workflow so future CI-only failures remain diagnosable without weakening exit codes.
+- `CI-001` remains open until these uncommitted workflow corrections are authorized, pushed, and the exact GitHub MySQL 8.4 plus Linux browser jobs complete successfully. Local fresh-state evidence now covers all three CI browser engines.
+
+## Isolated PHP 8.3 compatibility reproduction - 2026-09-20
+
+- Downloaded the official PHP 8.3.33 NTS x64 package into a dedicated temporary directory; XAMPP and the project runtime configuration were not replaced.
+- Added `verifiers/php83-repro.ini`, which reads its extension directory from `HOA_PHP83_EXTENSION_DIR`, so paths containing spaces/apostrophes are handled without a machine-specific value in source control.
+- Composer's complete platform-requirements check passed under PHP 8.3.33 with the CI-relevant SQLite, mbstring, GD, ZIP, fileinfo, intl, cURL, and OpenSSL extensions.
+- The exact SQLite CI command passed under PHP 8.3.33: 138 tests / 551 assertions in 39.25 seconds.
+- Composer's optimized `--strict-psr` audit exited 0 with 10,199 classes. Its sole ambiguity warning is Pint's packaged `AppServiceProvider` stub versus the real application provider; the application class is selected first and there were no PSR-4 mapping failures.
+- `CI-001` is therefore narrowed away from the PHP 8.3 version and project class-case/PSR-4 violations. Linux runner configuration/filesystem behavior and the signed-in failure logs remain the next evidence targets.
+
+## CI failure observability hardening - 2026-09-20
+
+- GitHub CLI remains unauthenticated, so run `35497361687` still exposes only generic exit-code annotations to this environment.
+- Updated the quality workflow so SQLite/MySQL PHPUnit and each Linux Playwright job retain their original exit status while writing a bounded failure tail to the job summary and check annotations.
+- Failed PHPUnit logs and Playwright logs, HTML reports, screenshots, and traces are retained as seven-day workflow artifacts. Successful jobs do not upload diagnostic artifacts.
+- Verification: Symfony YAML parsed all three jobs; Git for Windows Bash parsed the diagnostic blocks; a simulated failure preserved exit code 7 and emitted its failure summary/annotation; `git diff --check` remains clean.
+- This change improves the next authorized run's diagnosis and does not weaken, skip, retry, or mark any failing test successful. It remains uncommitted and requires an authorized commit/push before GitHub can execute it.
+
+## Protected-baseline approval and UAT preparation refresh - 2026-09-20
+
+- The project owner explicitly reconfirmed the reviewed protected-test baseline update and authorized non-production UAT preparation.
+- Verified the exact committed candidate is `662762d70c3bae1ab36dafe74e9d0228dc09bd59` on both `main` and `origin/main`; the working tree was clean before this evidence-only update.
+- Refreshed the isolated `hoa_system_uat` fixtures idempotently. All 23 migrations and six designated users are present with the expected Admin, Staff, Homeowner, and Pending mappings; `jobs` and `failed_jobs` are empty.
+- Exact GitHub Actions run `35497361687` completed red: SQLite and MySQL 8.4 failed at PHPUnit, while Chromium, Firefox, and WebKit failed at Playwright. Public metadata exposes only exit code 1 and detailed logs require repository sign-in, so `CI-001` is recorded as an open High release defect.
+- The exact CI command still passes locally with 138 tests / 551 assertions. No application behavior, test assertion, protected verifier, production secret, or deployment state was changed.
+- Next task: obtain the signed-in failure logs, fix the CI-only cause, rerun the exact release candidate green, and then conduct the witnessed UAT matrix.
+
 ## Authenticated panel browser matrix - 2026-09-09
 
 - Added `tests/Browser/role-panels.spec.js` to exercise real Admin, Staff, and Homeowner logins against designated local test accounts.

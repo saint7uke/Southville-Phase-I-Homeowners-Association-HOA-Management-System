@@ -8,11 +8,11 @@ The task wording and acceptance thresholds come from the [ISO/IEC 25010 evaluati
 
 | Field | Value |
 | --- | --- |
-| Release/version or commit | Working-tree release candidate prepared 2026-09-10 |
+| Release/version or commit | `662762d70c3bae1ab36dafe74e9d0228dc09bd59` (`main` / `origin/main`) |
 | Candidate environment | Local XAMPP 8.2.12 / MySQL `hoa_system_uat` |
 | Base URL | `http://127.0.0.1:8000` |
 | Database/data-set description | Synthetic UAT fixtures; no production data |
-| Evaluation start and end | Machine preparation through 2026-09-13; witnessed UAT pending |
+| Evaluation start and end | Machine preparation refreshed 2026-09-20; witnessed UAT pending |
 | UAT coordinator | |
 | Technical observer | |
 | HOA approver | |
@@ -24,7 +24,7 @@ The following machine evidence was last reconciled on 2026-09-20. Re-run the che
 | Check | Current evidence | Candidate result / evidence link | Status |
 | --- | --- | --- | --- |
 | PHP quality suite | Guarded full verifier passed Pint plus two independent 138-test / 551-assertion SQLite executions; MySQL-compatible: 138 tests / 552 assertions | Exact candidate full verifier and disposable MariaDB lane, 2026-09-20 | Machine passed |
-| Exact MySQL 8.4 CI lane | Workflow is configured with a disposable `hoa_test` service, destructive-test opt-in, and manual dispatch | Release-branch run URL pending; this local checkout has no Git remote configured | External CI pending |
+| Exact MySQL 8.4 CI lane | Exact committed candidate ran in GitHub Actions; setup and migrations passed, but PHPUnit exited 1 | [Run 35497361687](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/35497361687); detailed step log requires repository sign-in | Failed / `CI-001` |
 | Focused reports/audit suite | 13 tests / 53 assertions passed | | Pre-verified |
 | Production asset build | Vite build passed; 107 modules; landing page emitted as a lazy chunk | Source-brief audit build, 2026-09-20 | Machine passed |
 | Fresh production Admin bootstrap | Environment-driven seeder is idempotent, refuses missing/weak input and existing-account elevation, and demo fixtures refuse production | 3 focused tests, 2026-09-20 | Machine passed |
@@ -60,6 +60,8 @@ The seeder is idempotent and refuses to run when `APP_ENV=production`. The base 
 | Designated test email inbox | | | |
 
 Before testing, confirm that the environment is not production, outbound email is restricted to the designated inbox, the queue and scheduler are running, and a restorable database backup exists.
+
+Preparation refresh on 2026-09-20: `APP_ENV=local`, database `hoa_system_uat`, all 23 migrations present, all six identities and their expected role/status mappings verified, and both `jobs` and `failed_jobs` contained zero rows. This confirms fixture readiness only; queue-worker, scheduler, email-inbox, and witnessed backup checks remain UAT tasks.
 
 The 2026-09-13 recovery restored the clean archived fixture state with no payments or certificates. Use new records for every witnessed creation journey. Any unlinked synthetic file left in local storage is not UAT evidence.
 
@@ -139,7 +141,7 @@ Severity: **Critical** blocks all use; **High** blocks a required workflow or cr
 
 | Defect ID | Severity | Role/journey | Summary | Owner | State | Retest evidence |
 | --- | --- | --- | --- | --- | --- | --- |
-| | | | | | | |
+| CI-001 | High | Release verification | Exact GitHub candidate failed both PHPUnit lanes and all three Linux browser jobs. Missing pre-test Vite builds and non-persistent browser sessions were reproduced and corrected locally; release remains blocked until the corrected exact candidate reruns green. | Technical lead | Fix prepared; remote retest pending | [Run 35497361687](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/35497361687); clean PHP 138/551, Chromium 10/10, authenticated WebKit 4/4 and Firefox 4/4 fresh-state reproductions, 2026-09-21 |
 
 ## 10. ISO/IEC 25010 results
 
@@ -163,7 +165,7 @@ Record approval or a controlled evidence reference, never the secret value.
 
 | Gate | Approved configuration/evidence reference | Approver and date | Status |
 | --- | --- | --- | --- |
-| Protected-test baseline changes reviewed against `automation/hoa-loop/reports/protected-baseline-review.md` | Project-owner approval received; four reviewed hashes updated and the full verifier passed | Project owner, 2026-09-10 | Approved |
+| Protected-test baseline changes reviewed against `automation/hoa-loop/reports/protected-baseline-review.md` | Project-owner approval reconfirmed; four reviewed hashes are current and the guarded full verifier passed | Project owner, 2026-09-20 | Approved |
 | Production domain, HTTPS, `public/` document root, and secure session settings | | | |
 | Production MySQL database, least-privilege account, migration backup, and retention policy | | | |
 | SMTP sender/domain and approved recipient controls | | | |

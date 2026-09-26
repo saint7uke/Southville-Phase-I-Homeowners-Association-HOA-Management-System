@@ -23,8 +23,36 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: cp .env.example .env
       - run: php artisan key:generate
+      - run: npm ci
+      - run: npm run build
       - run: vendor/bin/pint --test
-      - run: php artisan test --compact
+      - name: Run PHPUnit with retained diagnostics
+        id: sqlite-phpunit
+        shell: bash
+        run: |
+          set +e
+          php artisan test --compact 2>&1 | tee storage/logs/phpunit-sqlite.log
+          status=${PIPESTATUS[0]}
+
+          if (( status != 0 )); then
+            clean_log=$(mktemp)
+            sed -E 's/\x1B\[[0-9;]*[mK]//g' storage/logs/phpunit-sqlite.log > "$clean_log"
+            {
+              echo '### SQLite PHPUnit failure'
+              echo '```text'
+              tail -n 80 "$clean_log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            while IFS= read -r line; do
+              line=${line//'%'/'%25'}
+              line=${line//$'\r'/'%0D'}
+              line=${line//$'\n'/'%0A'}
+              echo "::error title=SQLite PHPUnit failure::$line"
+            done < <(tail -n 20 "$clean_log")
+          fi
+
+          exit "$status"
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ':memory:'
@@ -32,8 +60,14 @@ jobs:
           SESSION_DRIVER: array
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
-      - run: npm ci
-      - run: npm run build
+      - name: Upload SQLite PHPUnit failure log
+        if: failure() && steps.sqlite-phpunit.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpunit-sqlite-${{ github.run_attempt }}
+          path: storage/logs/phpunit-sqlite.log
+          if-no-files-found: error
+          retention-days: 7
       - run: npx playwright install --with-deps chromium
       - run: touch database/database.sqlite
       - run: php artisan migrate --force
@@ -45,7 +79,7 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: database/database.sqlite
           CACHE_STORE: array
-          SESSION_DRIVER: array
+          SESSION_DRIVER: database
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
       - run: composer audit
@@ -75,9 +109,15 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, pdo_mysql, gd, zip
           coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
       - run: composer install --no-interaction --prefer-dist
       - run: cp .env.example .env
       - run: php artisan key:generate
+      - run: npm ci
+      - run: npm run build
       - run: php artisan migrate --force
         env: &mysql-env
           DB_CONNECTION: mysql
@@ -91,8 +131,42 @@ jobs:
           SESSION_DRIVER: array
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
-      - run: php artisan test --compact
+      - name: Run PHPUnit with retained diagnostics
+        id: mysql-phpunit
+        shell: bash
+        run: |
+          set +e
+          php artisan test --compact 2>&1 | tee storage/logs/phpunit-mysql.log
+          status=${PIPESTATUS[0]}
+
+          if (( status != 0 )); then
+            clean_log=$(mktemp)
+            sed -E 's/\x1B\[[0-9;]*[mK]//g' storage/logs/phpunit-mysql.log > "$clean_log"
+            {
+              echo '### MySQL 8.4 PHPUnit failure'
+              echo '```text'
+              tail -n 80 "$clean_log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            while IFS= read -r line; do
+              line=${line//'%'/'%25'}
+              line=${line//$'\r'/'%0D'}
+              line=${line//$'\n'/'%0A'}
+              echo "::error title=MySQL PHPUnit failure::$line"
+            done < <(tail -n 20 "$clean_log")
+          fi
+
+          exit "$status"
         env: *mysql-env
+      - name: Upload MySQL PHPUnit failure log
+        if: failure() && steps.mysql-phpunit.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpunit-mysql-${{ github.run_attempt }}
+          path: storage/logs/phpunit-mysql.log
+          if-no-files-found: error
+          retention-days: 7
 
   browser-matrix:
     runs-on: ubuntu-latest
@@ -121,7 +195,7 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: database/database.sqlite
           CACHE_STORE: array
-          SESSION_DRIVER: array
+          SESSION_DRIVER: database
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
           HOA_BROWSER_ADMIN_EMAIL: admin@southville.test
@@ -135,5 +209,42 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx playwright install --with-deps ${{ matrix.browser }}
-      - run: npx playwright test --project=${{ matrix.browser }}
+      - name: Run Playwright with retained diagnostics
+        id: playwright
+        shell: bash
+        run: |
+          set +e
+          npx playwright test --project=${{ matrix.browser }} 2>&1 | tee storage/logs/playwright-${{ matrix.browser }}.log
+          status=${PIPESTATUS[0]}
+
+          if (( status != 0 )); then
+            clean_log=$(mktemp)
+            sed -E 's/\x1B\[[0-9;]*[mK]//g' storage/logs/playwright-${{ matrix.browser }}.log > "$clean_log"
+            {
+              echo '### Playwright ${{ matrix.browser }} failure'
+              echo '```text'
+              tail -n 100 "$clean_log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            while IFS= read -r line; do
+              line=${line//'%'/'%25'}
+              line=${line//$'\r'/'%0D'}
+              line=${line//$'\n'/'%0A'}
+              echo "::error title=Playwright ${{ matrix.browser }} failure::$line"
+            done < <(tail -n 20 "$clean_log")
+          fi
+
+          exit "$status"
         env: *browser-env
+      - name: Upload Playwright failure evidence
+        if: failure() && steps.playwright.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ matrix.browser }}-${{ github.run_attempt }}
+          path: |
+            storage/logs/playwright-${{ matrix.browser }}.log
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 7
