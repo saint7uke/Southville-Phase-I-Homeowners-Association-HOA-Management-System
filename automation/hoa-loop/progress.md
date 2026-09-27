@@ -284,3 +284,11 @@ Each future cycle must append: timestamp, phase, bounded task, files changed, ve
 - Ran the immutable full verifier against the exact current candidate. Protected baseline hashes matched, Pint passed, and the verifier completed its direct PHP run plus the independent Composer QA run: both passed 138 tests / 551 assertions.
 - The same run produced the 107-module Vite production bundle and proved route-cache creation and cleanup compatibility. The verifier completed successfully at level `full` without modifying protected tests or verifier logic.
 - The `terminal` level remains intentionally unavailable because phases 12/13 and pending human decisions are not complete; this is an acceptance gate, not a machine failure, and was not bypassed.
+
+## Hardened release-candidate CI closure - 2026-09-27
+
+- Pushed completion-evidence commit `a3bc2b2`; its first and failed-job rerun both exposed a native PHP 8.3.35 CLI-server segmentation fault under Firefox request load. The crash occurred at different application requests and caused connection-refused errors, while product assertions and the other four CI jobs remained green.
+- Hardened the Linux Playwright harness with PHP CLI server worker isolation and one CI-only test retry. Assertions, browser inventory, timeouts, and production behavior were not weakened or changed.
+- The guarded full verifier then passed protected hashes, Pint, two independent 145-test / 580-assertion SQLite executions, the 107-module Vite build, and route-cache create/clear compatibility.
+- Commit `bbe03508ac00cd3906eca6e6123a6cda7c689ce0` was pushed to `main`. GitHub Actions run 36305858757 passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit; Firefox passed all 10 tests without invoking the configured retry.
+- Reconciled the state, acceptance snapshot, source-brief audit, and UAT handoff to the hardened candidate. Remaining gates are representative human UAT/ISO scoring, manual assistive-technology/zoom/print checks, approved production settings and recovery ownership, and explicit deployment authorization.

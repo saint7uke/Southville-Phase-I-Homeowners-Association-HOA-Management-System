@@ -8,7 +8,7 @@ The task wording and acceptance thresholds come from the [ISO/IEC 25010 evaluati
 
 | Field | Value |
 | --- | --- |
-| Release/version or commit | `3d342d8b25636a3d1553b9e6b30155c483043db9` (`main` / `origin/main`) |
+| Release/version or commit | `bbe03508ac00cd3906eca6e6123a6cda7c689ce0` (`main` / `origin/main`) |
 | Candidate environment | Local XAMPP 8.2.12 / MySQL `hoa_system_uat` |
 | Base URL | `http://127.0.0.1:8000` |
 | Database/data-set description | Synthetic UAT fixtures; no production data |
@@ -23,8 +23,8 @@ The following machine evidence was last reconciled on 2026-09-27. Re-run the che
 
 | Check | Current evidence | Candidate result / evidence link | Status |
 | --- | --- | --- | --- |
-| PHP quality suite | Guarded full verifier passed every approved protected hash and Pint plus two independent 145-test / 580-assertion SQLite executions; exact CI MySQL 8.4 lane passed | Local guarded verifier and [run 36296937019](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36296937019), 2026-09-27 | Machine passed |
-| Exact GitHub release workflow | Current branding commit passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit | [Run 36296937019](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36296937019), 2026-09-27 | Machine passed; `CI-001` closed |
+| PHP quality suite | Guarded full verifier passed every approved protected hash and Pint plus two independent 145-test / 580-assertion SQLite executions; exact CI MySQL 8.4 lane passed | Local guarded verifier and [run 36305858757](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36305858757), 2026-09-27 | Machine passed |
+| Exact GitHub release workflow | Hardened release commit passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit | [Run 36305858757](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36305858757), 2026-09-27 | Machine passed; `CI-001` and `CI-002` closed |
 | Focused reports/audit suite | 13 tests / 53 assertions passed | | Pre-verified |
 | Production asset build | Vite build passed; 107 modules; landing page emitted as a lazy chunk | Guarded full verifier, 2026-09-27 | Machine passed |
 | Fresh production Admin bootstrap | Environment-driven seeder is idempotent, refuses missing/weak input and existing-account elevation, and demo fixtures refuse production | 3 focused tests, 2026-09-20 | Machine passed |
@@ -32,7 +32,7 @@ The following machine evidence was last reconciled on 2026-09-27. Re-run the che
 | MySQL schema | All 23 migrations ran successfully; dues frequency is `VARCHAR(32)` | Isolated `hoa_system_uat`, 2026-09-20 | Machine passed |
 | Laravel production compilation | Route and view caches compiled; four HOA schedules registered | | Pre-verified |
 | Local candidate runtime | Database-aware `/up` and `/` HTTP 200; queue monitor OK with zero pending jobs; four schedules registered | Preparation and recovery checks, 2026-09-13 | Machine passed |
-| Browser test inventory | Current branding candidate passed all configured Chromium, Firefox, and WebKit suites, including favicon/logo loading; focused local landing checks passed 6/6 | [Run 36296937019](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36296937019), 2026-09-27 | Machine passed |
+| Browser test inventory | Hardened candidate passed all 10 configured Chromium, Firefox, and WebKit tests, including favicon/logo loading; Firefox passed without retry after PHP CLI server worker isolation | [Run 36305858757](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36305858757), 2026-09-27 | Machine passed |
 | Authenticated panel matrix | 12/12 role/browser cases passed, including keyboard sign-in, visible focus, skip-link activation, cross-panel 403, Axe serious/critical, and 320/768/1440/1920 px overflow checks | Exact current four-browser candidate run, 2026-09-20 | Machine passed |
 
 “Pre-verified” is not a human UAT pass. The coordinator must attach the candidate run logs or record why existing evidence applies to the exact candidate.
@@ -142,6 +142,7 @@ Severity: **Critical** blocks all use; **High** blocks a required workflow or cr
 | Defect ID | Severity | Role/journey | Summary | Owner | State | Retest evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | CI-001 | High | Release verification | Earlier candidates exposed missing pre-test Vite builds, non-persistent browser sessions, MySQL JSON canonicalization differences, and inaccessible scrollable Filament table regions. All causes were corrected and the exact corrective commit passed every configured release job. | Technical lead | Closed, 2026-09-26 | [Green run 36245182854](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36245182854); failed [run 35497361687](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/35497361687) and [run 36243913243](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36243913243) retained as diagnostic history |
+| CI-002 | High | Firefox release verification | PHP 8.3.35's single-process CLI test server segfaulted under browser request load, causing connection-refused errors rather than product assertion failures. Linux CI now runs the PHP CLI server with isolated workers and retains one CI-only Playwright retry; all 10 Firefox tests passed without using the retry. | Technical lead | Closed, 2026-09-27 | [Green run 36305858757](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36305858757); failed [run 36298622023](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36298622023) retained as diagnostic history |
 
 ## 10. ISO/IEC 25010 results
 
