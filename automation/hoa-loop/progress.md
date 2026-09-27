@@ -307,3 +307,9 @@ Each future cycle must append: timestamp, phase, bounded task, files changed, ve
 - Centralized PHP discovery for the server, queue worker, and scheduler: an explicit `HOA_PHP_BINARY` override is honored first, the surrounding XAMPP installation is detected next, and `PATH` is used only as a fallback. Missing or invalid PHP locations now produce actionable errors.
 - Standardized the documented local URLs on `http://127.0.0.1:8000` and documented the three-terminal runtime needed to exercise queued notifications and scheduled HOA tasks.
 - Smoke-tested all three launchers through Artisan help, including XAMPP-relative discovery and the explicit override. The protected quick verifier then passed baseline hashes, Pint, and 146 tests / 582 assertions.
+
+## CI runtime maintenance - 2026-09-27
+
+- Followed the successful exact-commit launcher run by addressing its two infrastructure notices instead of carrying them into release: deprecated Node 20 action runtimes and the announced `ubuntu-latest` image migration.
+- Updated the official checkout, Node setup, and failure-artifact actions to their current v7 majors, pinned all jobs to Ubuntu 24.04, and declared the workflow's token permission as read-only repository contents.
+- Preserved the existing PHP 8.3, Node 22, native MySQL 8.4, SQLite, Composer audit, and three-browser verification contract; no product assertion, timeout, or test inventory was weakened.
