@@ -33,6 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->passwordReset(requestAction: RequestPasswordReset::class)
             ->brandName('Southville Phase I HOA')
+            ->favicon(asset('images/HOA.png'))
             ->colors([
                 'primary' => Color::hex('#d90b46'),
                 'info' => Color::hex('#267ca4'),

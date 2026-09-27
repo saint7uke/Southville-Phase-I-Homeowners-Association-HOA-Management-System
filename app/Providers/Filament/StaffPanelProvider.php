@@ -47,6 +47,7 @@ final class StaffPanelProvider extends PanelProvider
             ->login()
             ->passwordReset(requestAction: RequestPasswordReset::class)
             ->brandName('Southville Phase I HOA Staff')
+            ->favicon(asset('images/HOA.png'))
             ->colors([
                 'primary' => Color::hex('#176b57'),
                 'info' => Color::hex('#267ca4'),

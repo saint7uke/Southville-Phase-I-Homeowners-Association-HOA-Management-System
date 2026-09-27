@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Official resident services and community updates for Southville Phase I HOA.">
     <title>{{ $branding['hoaName'] }}</title>
+    <x-favicon />
     @vite(['resources/css/app.css', 'resources/js/react/main.jsx'])
 </head>
 <body>

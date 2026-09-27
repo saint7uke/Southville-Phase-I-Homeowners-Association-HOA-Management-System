@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Account status | Southville Phase I HOA</title>
+    <x-favicon />
     @vite(['resources/css/app.css'])
 </head>
 <body>

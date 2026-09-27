@@ -4,6 +4,11 @@ import { expect, test } from '@playwright/test';
 test('landing page has no serious automated accessibility violations', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' });
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    const brandLogo = page.locator('.hoa-navbar .hoa-brand-mark img');
+    await expect(brandLogo).toBeVisible();
+    await expect(brandLogo).toHaveAttribute('src', /images\/HOA\.png$/);
+    await expect.poll(() => brandLogo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /images\/HOA\.png$/);
     await expect(page.locator('#how-it-works')).toContainText('Register');
     await expect(page.locator('#how-it-works')).toContainText('Verify');
     await expect(page.locator('#how-it-works')).toContainText('Access your panel');

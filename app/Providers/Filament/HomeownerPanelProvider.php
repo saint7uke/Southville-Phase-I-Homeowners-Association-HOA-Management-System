@@ -47,6 +47,7 @@ final class HomeownerPanelProvider extends PanelProvider
             ->passwordReset(requestAction: RequestPasswordReset::class)
             ->emailVerification()
             ->brandName('Southville Phase I HOA Homeowner')
+            ->favicon(asset('images/HOA.png'))
             ->colors([
                 'primary' => Color::hex('#d90b46'),
                 'info' => Color::hex('#267ca4'),

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Resident login | Southville Phase I HOA</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Resident login | Southville Phase I HOA</title><x-favicon />@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
 <body><main class="auth-shell"><section class="auth-card" aria-labelledby="login-title">
     <a class="auth-brand" href="{{ route('home') }}"><span class="brand-mark" aria-hidden="true">S1</span>Southville Phase I</a>
     <h1 id="login-title">Resident login</h1><p>Access your requests, complaints, payments, and community updates.</p>

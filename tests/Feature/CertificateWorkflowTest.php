@@ -47,6 +47,7 @@ final class CertificateWorkflowTest extends TestCase
         $this->assertMatchesRegularExpression('/^CERT-\d{4}-\d{4}$/', $certificate->certificate_number);
         $this->assertNotNull($certificate->file_path);
         Storage::disk('local')->assertExists($certificate->file_path);
+        $this->assertStringContainsString('/Subtype /Image', Storage::disk('local')->get($certificate->file_path));
         $this->actingAs($homeowner->user, 'web')
             ->get(URL::temporarySignedRoute('certificates.download', now()->addMinutes(30), $certificate))
             ->assertOk()

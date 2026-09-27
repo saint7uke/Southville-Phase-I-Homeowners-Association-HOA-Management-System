@@ -18,7 +18,7 @@ final class HomeController extends Controller
             'hoaName' => $settings->hoa_name,
             'contactEmail' => $settings->contact_email,
             'address' => $settings->address,
-            'logoUrl' => $settings->logo_path ? route('branding.logo') : null,
+            'logoUrl' => $settings->logo_path ? route('branding.logo') : asset('images/HOA.png'),
         ];
 
         return view('landing.index', compact('announcements', 'branding'));

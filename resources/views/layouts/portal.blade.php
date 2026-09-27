@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Resident Portal') | Southville Phase I HOA</title>
+    <x-favicon />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="portal-body">

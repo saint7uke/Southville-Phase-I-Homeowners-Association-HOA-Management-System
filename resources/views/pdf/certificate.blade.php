@@ -5,8 +5,10 @@
     <style>
         @page { margin: 28mm 22mm; }
         body { font-family: DejaVu Sans, sans-serif; color: #13293d; font-size: 12px; line-height: 1.7; }
+        .certificate-header { position: relative; min-height: 78px; margin-bottom: 28px; padding: 8px 82px 0; }
+        .certificate-logo { position: absolute; top: 0; left: 0; width: 72px; height: 72px; object-fit: contain; }
         .association { text-align: center; color: #0b5f8a; font-size: 16px; font-weight: bold; }
-        .community { text-align: center; color: #4c6575; margin-bottom: 42px; }
+        .community { text-align: center; color: #4c6575; margin-top: 4px; }
         h1 { text-align: center; letter-spacing: 1px; font-size: 24px; margin-bottom: 34px; }
         .body { margin: 0 10mm; }
         .number { margin-top: 42px; color: #4c6575; font-size: 10px; }
@@ -14,8 +16,11 @@
     </style>
 </head>
 <body>
-    <div class="association">{{ mb_strtoupper($settings->hoa_name ?? 'Southville Phase I Homeowners Association') }}</div>
-    <div class="community">{{ $settings->address ?? 'Brgy. Inocencio' }}</div>
+    <header class="certificate-header">
+        <img class="certificate-logo" src="{{ $logoDataUri }}" alt="Southville Phase I Homeowners Association logo">
+        <div class="association">{{ mb_strtoupper($settings->hoa_name ?? 'Southville Phase I Homeowners Association') }}</div>
+        <div class="community">{{ $settings->address ?? 'Brgy. Inocencio' }}</div>
+    </header>
     <h1>{{ mb_strtoupper($certificate->type) }}</h1>
     <div class="body">
         <p>To whom it may concern:</p>
