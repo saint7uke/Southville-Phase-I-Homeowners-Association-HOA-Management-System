@@ -93,12 +93,18 @@ final class Reports extends Page
 
     public function sortBy(string $column): void
     {
+        if (! in_array($column, ['title', 'category', 'description'], true)) {
+            return;
+        }
+
         if ($this->sortColumn === $column) {
             $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
             $this->sortColumn = $column;
             $this->sortDirection = 'asc';
         }
+
+        $this->resetPage();
     }
 
     public function getReportFilters(string $slug): array

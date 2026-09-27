@@ -9,9 +9,13 @@ use Filament\Widgets\ChartWidget;
 
 final class ComplaintStatusChart extends ChartWidget
 {
+    protected static ?int $sort = 100;
+
     protected ?string $heading = 'Complaint status breakdown';
 
-    protected int|string|array $columnSpan = 1;
+    protected int|string|array $columnSpan = 'full';
+
+    protected ?string $maxHeight = '22rem';
 
     protected function getData(): array
     {

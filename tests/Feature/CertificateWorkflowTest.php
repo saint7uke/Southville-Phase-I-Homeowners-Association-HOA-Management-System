@@ -6,15 +6,19 @@ namespace Tests\Feature;
 
 use App\Actions\Certificates\IssueCertificate;
 use App\Actions\Certificates\RevokeCertificate;
+use App\Filament\Resources\Certificates\Pages\CreateCertificate;
+use App\Models\Certificate;
 use App\Models\Homeowner;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Facades\Filament;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 final class CertificateWorkflowTest extends TestCase
@@ -50,6 +54,58 @@ final class CertificateWorkflowTest extends TestCase
         $this->actingAs($this->homeowner()->user, 'web')
             ->get(URL::temporarySignedRoute('certificates.download', now()->addMinutes(30), $certificate))
             ->assertNotFound();
+    }
+
+    public function test_new_certificates_always_expire_at_the_end_of_the_issuance_year(): void
+    {
+        $this->travelTo(now()->setDate(2026, 4, 15)->setTime(10, 30));
+        $homeowner = $this->homeowner();
+        $admin = User::factory()->create(['account_status' => 'Active']);
+        $admin->assignRole('hoa_admin');
+
+        $certificate = app(IssueCertificate::class)->handle([
+            'homeowner_id' => $homeowner->id,
+            'type' => 'Community Clearance',
+        ], $admin);
+
+        $this->assertSame('2026-12-31 23:59:59', $certificate->expires_at?->format('Y-m-d H:i:s'));
+    }
+
+    public function test_certificate_expiry_cannot_be_overridden_by_form_input(): void
+    {
+        $homeowner = $this->homeowner();
+        $admin = User::factory()->create(['account_status' => 'Active']);
+        $admin->assignRole('hoa_admin');
+
+        $this->expectException(ValidationException::class);
+
+        app(IssueCertificate::class)->handle([
+            'homeowner_id' => $homeowner->id,
+            'type' => 'Community Clearance',
+            'expires_at' => now()->addMonth(),
+        ], $admin);
+    }
+
+    public function test_admin_form_issues_certificate_with_automatic_year_end_expiry(): void
+    {
+        Storage::fake('local');
+        $this->travelTo(now()->setDate(2026, 7, 8)->setTime(9, 0));
+        $homeowner = $this->homeowner();
+        $admin = User::factory()->create(['account_status' => 'Active']);
+        $admin->assignRole('hoa_admin');
+        $this->actingAs($admin, 'admin');
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        Livewire::test(CreateCertificate::class)
+            ->fillForm([
+                'homeowner_id' => $homeowner->id,
+                'type' => 'Community Clearance',
+                'purpose' => 'Employment requirement',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('2026-12-31 23:59:59', Certificate::query()->sole()->expires_at?->format('Y-m-d H:i:s'));
     }
 
     public function test_revoked_certificate_is_not_downloadable(): void
@@ -96,6 +152,7 @@ final class CertificateWorkflowTest extends TestCase
         $this->assertSame($request->id, $certificate->service_request_id);
         $this->assertSame('Completed', $request->refresh()->status);
         $this->assertSame($certificate->certificate_number, $request->document_output);
+        $this->assertSame(now()->endOfYear()->format('Y-m-d H:i:s'), $certificate->expires_at?->format('Y-m-d H:i:s'));
     }
 
     public function test_staff_can_issue_a_community_clearance_from_an_approved_request(): void

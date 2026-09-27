@@ -132,8 +132,12 @@ final class ReportAndAuditTest extends TestCase
             ->set('perPage', 5)
             ->call('setPage', 2)
             ->assertSet('paginators.page', 2)
-            ->assertSee('Showing 6 to 8 of 8 reports')
+            ->assertSee('Showing 6–8 of 8 reports')
             ->call('sortBy', 'title')
+            ->assertSet('sortDirection', 'desc')
+            ->assertSet('paginators.page', 1)
+            ->call('sortBy', 'unsupported')
+            ->assertSet('sortColumn', 'title')
             ->assertSet('sortDirection', 'desc');
 
         $titles = $page->instance()->getReportsForCategory('all')->pluck('title')->all();

@@ -18,7 +18,7 @@ final class ServiceRequestForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Select::make('homeowner_id')->relationship('homeowner', 'id')->getOptionLabelFromRecordUsing(fn (Homeowner $record): string => $record->user->full_name)->searchable()->preload()->required(),
+            Select::make('homeowner_id')->relationship('homeowner', 'id', modifyQueryUsing: fn (Builder $query): Builder => $query->with('user:id,first_name,middle_name,last_name,suffix'))->getOptionLabelFromRecordUsing(fn (Homeowner $record): string => $record->user->full_name)->searchable()->preload()->required(),
             Select::make('request_type')->options(array_combine(ServiceRequest::TYPES, ServiceRequest::TYPES))->required(),
             TextInput::make('subject')->required()->maxLength(160),
             Textarea::make('details')->maxLength(3000)->columnSpanFull(),

@@ -27,7 +27,7 @@ final class IssueCertificate
             'homeowner_id' => ['required', 'integer', Rule::exists('homeowners', 'id')->whereNull('deleted_at')],
             'type' => ['required', Rule::in(ServiceRequest::CERTIFICATE_TYPES)],
             'purpose' => ['nullable', 'string', 'max:255'],
-            'expires_at' => ['nullable', 'date', 'after:now'],
+            'expires_at' => ['prohibited'],
             'service_request_id' => ['prohibited'],
         ])->validate();
 
@@ -104,6 +104,7 @@ final class IssueCertificate
             'certificate_number' => app(NextCertificateNumber::class)->handle((int) $issuedAt->format('Y')),
             'status' => 'Issued',
             'issued_at' => $issuedAt,
+            'expires_at' => $issuedAt->copy()->endOfYear(),
             'issued_by' => $issuer->id,
         ]);
 

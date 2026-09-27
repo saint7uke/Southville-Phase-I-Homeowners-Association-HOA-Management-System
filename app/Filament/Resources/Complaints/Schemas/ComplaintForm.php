@@ -17,7 +17,7 @@ final class ComplaintForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Select::make('homeowner_id')->relationship('homeowner', 'id')->getOptionLabelFromRecordUsing(fn (Homeowner $record): string => $record->user->full_name)->searchable()->preload()->required(),
+            Select::make('homeowner_id')->relationship('homeowner', 'id', modifyQueryUsing: fn (Builder $query): Builder => $query->with('user:id,first_name,middle_name,last_name,suffix'))->getOptionLabelFromRecordUsing(fn (Homeowner $record): string => $record->user->full_name)->searchable()->preload()->required(),
             TextInput::make('subject')->maxLength(160)->required(),
             Select::make('category')->options(array_combine($values = ['Noise', 'Property Damage', 'Neighbor Dispute', 'Common Area', 'Security', 'Others'], $values))->required(),
             Select::make('priority')->options(['Low' => 'Low', 'Medium' => 'Medium', 'High' => 'High', 'Urgent' => 'Urgent'])->required(),
