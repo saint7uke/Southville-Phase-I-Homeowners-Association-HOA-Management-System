@@ -28,13 +28,22 @@ npm.cmd run build
 .\serve.bat
 ```
 
+For email notifications and scheduled HOA tasks, keep these running in two additional PowerShell windows:
+
+```powershell
+.\queue-worker.bat
+.\scheduler.bat
+```
+
+The launchers resolve PHP from `HOA_PHP_BINARY`, the surrounding XAMPP installation, or `PATH`, in that order.
+
 Open:
 
-- Public site: `http://localhost/`
+- Public site: `http://127.0.0.1:8000/`
 - Homeowner panel: `http://127.0.0.1:8000/homeowner`
 - Legacy resident portal: `http://127.0.0.1:8000/portal/login`
-- Admin panel: `http://localhost/admin`
-- Staff panel: `http://localhost/staff`
+- Admin panel: `http://127.0.0.1:8000/admin`
+- Staff panel: `http://127.0.0.1:8000/staff`
 
 ## Seeded development accounts
 

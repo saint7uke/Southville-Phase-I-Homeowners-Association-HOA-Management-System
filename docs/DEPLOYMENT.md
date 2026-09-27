@@ -9,7 +9,7 @@
 5. Start the application with `serve.bat`, the queue with `queue-worker.bat`, and the scheduler with `scheduler.bat` in separate terminals.
 6. Open `http://127.0.0.1:8000`. Do not close the queue or scheduler windows while testing emails or automated dues.
 
-The XAMPP directory contains a space, so use the checked-in batch launchers or quote the full PHP path. Do not rely on a global `php` command unless `F:\Xampp 8\php` has been added to `PATH`.
+The XAMPP directory contains a space, so use the checked-in batch launchers or quote the full PHP path. The launchers resolve PHP from `HOA_PHP_BINARY`, the XAMPP installation surrounding this `htdocs` project, or `PATH`, in that order. Do not rely on a global `php` command unless its directory has been added to `PATH`.
 
 ## Production release
 
@@ -44,6 +44,6 @@ Supervise the queue worker (Supervisor/systemd on a VPS). On shared hosting, run
 
 Run `composer qa`, `npm run build`, `php artisan route:cache`, `php artisan view:cache`, `php artisan schedule:list`, and `composer audit`. Verify `/up` returns success with the production database available and fails in a controlled dependency-outage check, then verify all three panel logins, a queued test email, an authorized private download, and a database backup before switching traffic.
 
-The checked-in `quality` GitHub Actions workflow includes an exact MySQL 8.4 job and runs on push, pull request, or approved manual dispatch. The current release line passed `sqlite-test`, `mysql-test`, and the Chromium, Firefox, and WebKit `browser-matrix` jobs in [run 36245505037](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36245505037). Require those five jobs on the protected release branch before merge or deployment, and retain the exact candidate's successful run URL in the UAT record. A local MariaDB pass remains useful compatibility evidence but does not replace the native MySQL 8.4 job.
+The checked-in `quality` GitHub Actions workflow includes an exact MySQL 8.4 job and runs on push, pull request, or approved manual dispatch. Release candidate `ac467e6252205eb970060a0d40982e7e434a1f82` passed `sqlite-test`, `mysql-test`, and the Chromium, Firefox, and WebKit `browser-matrix` jobs in [run 36306753508](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36306753508). Require those five jobs on the protected release branch before merge or deployment, and retain the exact candidate's successful run URL in the UAT record. A local MariaDB pass remains useful compatibility evidence but does not replace the native MySQL 8.4 job.
 
 Do not switch traffic until the [UAT execution record](UAT_EXECUTION_RECORD.md) is accepted, protected-test changes are approved, production settings are signed off without recording secret values, and the named deployment approver authorizes the release window.

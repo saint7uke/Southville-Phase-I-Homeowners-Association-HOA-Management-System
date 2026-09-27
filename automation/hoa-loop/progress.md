@@ -300,3 +300,10 @@ Each future cycle must append: timestamp, phase, bounded task, files changed, ve
 - Added Laravel's native notification delivery guard so unavailable certificates are skipped before mail conversion, while valid certificate delivery remains enabled. Added a regression covering both branches.
 - Retried both retained failures against the corrected code; both completed as clean skips. The database queue and failed-job table are empty.
 - The guarded full verifier passed protected hashes, Pint, two independent 146-test / 582-assertion SQLite executions, the 107-module Vite build, and route-cache create/clear. Commit `ac467e6252205eb970060a0d40982e7e434a1f82` passed all five jobs in GitHub Actions run 36306753508.
+
+## Local XAMPP launcher hardening - 2026-09-27
+
+- Reconciled the local setup documentation with the checked-in Windows launchers after the earlier `php`-not-on-`PATH` and missing-launcher failures.
+- Centralized PHP discovery for the server, queue worker, and scheduler: an explicit `HOA_PHP_BINARY` override is honored first, the surrounding XAMPP installation is detected next, and `PATH` is used only as a fallback. Missing or invalid PHP locations now produce actionable errors.
+- Standardized the documented local URLs on `http://127.0.0.1:8000` and documented the three-terminal runtime needed to exercise queued notifications and scheduled HOA tasks.
+- Smoke-tested all three launchers through Artisan help, including XAMPP-relative discovery and the explicit override. The protected quick verifier then passed baseline hashes, Pint, and 146 tests / 582 assertions.
