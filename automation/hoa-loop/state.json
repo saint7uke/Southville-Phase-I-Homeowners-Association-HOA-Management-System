@@ -8,9 +8,9 @@
     "phase_iterations":  0,
     "consecutive_no_progress":  0,
     "started_at":  "2026-08-17T02:21:10.5527166+08:00",
-    "updated_at":  "2026-09-26T21:29:20+08:00",
+    "updated_at":  "2026-09-27T13:49:51+08:00",
     "last_fingerprint":  null,
-    "last_verification":  "Project-owner protected-baseline approval and non-production UAT preparation remain current. Corrective commit dabb62f1e291272353cbc9aa64e504ebf29bbdf0 is on main/origin/main. GitHub Actions run 36245182854 passed all five release jobs: SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit. Local guarded verification also passed 138 tests/551 assertions, Pint, fresh migration rollback/reapply, Composer/npm audits, a 22-test/133-assertion MariaDB lifecycle suite, and authenticated Chromium role-panel accessibility/responsive checks. CI-001 is closed. The hoa_system_uat fixtures remain prepared; human UAT, production settings/recovery approval, and deployment authorization remain open.",
+    "last_verification":  "The 2026-09-27 guarded full verifier restored and confirmed every approved protected-test hash, passed Pint, completed two independent 145-test/580-assertion SQLite executions, built 107 Vite modules, and compiled/cleared the route cache. GitHub Actions run 36296937019 passed the exact branding candidate 3d342d8 in SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit. The global HOA favicon, responsive landing logo, final certificate-PDF logo embedding, reports UI, automatic certificate expiry, eager-loading fixes, and dashboard order are covered by deterministic tests; a current A4 certificate render and desktop/mobile landing renders had no visual defects. The hoa_system_uat fixtures remain prepared; human UAT, production settings/recovery approval, and deployment authorization remain open.",
     "blocked_reason":  null,
     "pending_human_decisions":  [
                                     "Complete representative Admin, Staff, and Homeowner UAT, including real Safari/full-keyboard-access, screen-reader, true 200% zoom, and manual document-print checks.",

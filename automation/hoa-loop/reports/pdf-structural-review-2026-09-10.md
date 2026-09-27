@@ -47,8 +47,14 @@ Focused configuration, certificate, dues, and report tests passed 35 tests / 127
 - `report.blade.php` uses a fixed-layout full-width table, wrapping cells, compact typography, repeated semantic table headings, an empty state, filter metadata, and a confidentiality footer. The controller explicitly selects A4 landscape.
 - Controllers and persisted-certificate delivery enforce policy/status/file checks before download; receipt/report authorization is covered by the automated test suite.
 
+## Certificate branding re-review - 2026-09-27
+
+The current certificate template now embeds the canonical `public/images/HOA.png` seal as a PDF image object at generation time, with remote asset loading disabled. `CertificateWorkflowTest` verifies that the private stored PDF contains the embedded image and that its authorized signed download remains available. A representative one-page A4 certificate was regenerated from the current template, rendered with PyMuPDF at 2x (1191 x 1684), and visually inspected. The top-left seal, centered association header, title, resident/address text, signature, certificate number, and December 31, 2026 expiry were all readable with no clipping, overlap, or broken glyphs. Temporary PDF and PNG QA artifacts were removed after review.
+
+The global favicon and landing-header logo use the same canonical image. Focused Chromium verification passed logo/favicon loading, Axe serious/critical checks, reduced motion, and overflow checks at 320, 768, 1440, and 1920 px; GitHub run 36296937019 repeated the browser suite in Chromium, Firefox, and WebKit.
+
 ## Tooling limitation and remaining gate
 
-The PDF skill's required artifact-operation marker (`container_tools/mark_artifact_operation_started.mjs`) is not present in this workspace, and Poppler is not installed. The marker command was attempted once and failed because the module is absent. Chromium headless also downloaded the PDF rather than rendering its viewer, so application-native temporary QA outputs were rendered with the already-installed PyMuPDF package as the documented fallback; none was delivered as a final PDF artifact.
+Poppler is not installed. The PDF skill's artifact-operation marker was located in the installed PDF skill and completed successfully before the 2026-09-27 template edit. Chromium headless downloaded the PDF rather than rendering its viewer, so application-native temporary QA outputs were rendered with the already-installed PyMuPDF package as the documented fallback; none was delivered as a final PDF artifact.
 
 The current MySQL-candidate receipt, certificate, and payment-summary PDF receive machine visual passes only. Each representative report type still requires its specified filter/download workflow, and all documents require witnessed authorization, opening/printing, content validation, and evidence attachment before DOC-01 through DOC-03 can be accepted.

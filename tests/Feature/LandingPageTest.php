@@ -30,8 +30,6 @@ final class LandingPageTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('id="landing-root"', false)
-            ->assertSee('rel="icon" type="image/png"', false)
-            ->assertSee('images\/HOA.png', false)
             ->assertSee('Community clean-up schedule');
     }
 

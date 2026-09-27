@@ -8,7 +8,7 @@ The task wording and acceptance thresholds come from the [ISO/IEC 25010 evaluati
 
 | Field | Value |
 | --- | --- |
-| Release/version or commit | `dabb62f1e291272353cbc9aa64e504ebf29bbdf0` (`main` / `origin/main`) |
+| Release/version or commit | `3d342d8b25636a3d1553b9e6b30155c483043db9` (`main` / `origin/main`) |
 | Candidate environment | Local XAMPP 8.2.12 / MySQL `hoa_system_uat` |
 | Base URL | `http://127.0.0.1:8000` |
 | Database/data-set description | Synthetic UAT fixtures; no production data |
@@ -19,20 +19,20 @@ The task wording and acceptance thresholds come from the [ISO/IEC 25010 evaluati
 
 ## 2. Machine-verification handoff
 
-The following machine evidence was last reconciled on 2026-09-26. Re-run the checks for the exact release commit and replace **Current evidence** if the candidate changes.
+The following machine evidence was last reconciled on 2026-09-27. Re-run the checks for the exact release commit and replace **Current evidence** if the candidate changes.
 
 | Check | Current evidence | Candidate result / evidence link | Status |
 | --- | --- | --- | --- |
-| PHP quality suite | Guarded full verifier passed Pint plus two independent 138-test / 551-assertion SQLite executions; MySQL-compatible: 138 tests / 552 assertions | Exact candidate full verifier and disposable MariaDB lane, 2026-09-20 | Machine passed |
-| Exact GitHub release workflow | Corrective commit passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit | [Run 36245182854](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36245182854), 2026-09-26 | Machine passed; `CI-001` closed |
+| PHP quality suite | Guarded full verifier passed every approved protected hash and Pint plus two independent 145-test / 580-assertion SQLite executions; exact CI MySQL 8.4 lane passed | Local guarded verifier and [run 36296937019](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36296937019), 2026-09-27 | Machine passed |
+| Exact GitHub release workflow | Current branding commit passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit | [Run 36296937019](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36296937019), 2026-09-27 | Machine passed; `CI-001` closed |
 | Focused reports/audit suite | 13 tests / 53 assertions passed | | Pre-verified |
-| Production asset build | Vite build passed; 107 modules; landing page emitted as a lazy chunk | Source-brief audit build, 2026-09-20 | Machine passed |
+| Production asset build | Vite build passed; 107 modules; landing page emitted as a lazy chunk | Guarded full verifier, 2026-09-27 | Machine passed |
 | Fresh production Admin bootstrap | Environment-driven seeder is idempotent, refuses missing/weak input and existing-account elevation, and demo fixtures refuse production | 3 focused tests, 2026-09-20 | Machine passed |
 | Dependency audits | Composer: no advisories; npm: 0 vulnerabilities | | Pre-verified |
 | MySQL schema | All 23 migrations ran successfully; dues frequency is `VARCHAR(32)` | Isolated `hoa_system_uat`, 2026-09-20 | Machine passed |
 | Laravel production compilation | Route and view caches compiled; four HOA schedules registered | | Pre-verified |
 | Local candidate runtime | Database-aware `/up` and `/` HTTP 200; queue monitor OK with zero pending jobs; four schedules registered | Preparation and recovery checks, 2026-09-13 | Machine passed |
-| Browser test inventory | Exact current candidate passed 40/40 across Chromium, Edge, Firefox, and WebKit after the source-brief fixes | Complete serialized candidate run, 6.2 minutes, 2026-09-20 | Machine passed |
+| Browser test inventory | Current branding candidate passed all configured Chromium, Firefox, and WebKit suites, including favicon/logo loading; focused local landing checks passed 6/6 | [Run 36296937019](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36296937019), 2026-09-27 | Machine passed |
 | Authenticated panel matrix | 12/12 role/browser cases passed, including keyboard sign-in, visible focus, skip-link activation, cross-panel 403, Axe serious/critical, and 320/768/1440/1920 px overflow checks | Exact current four-browser candidate run, 2026-09-20 | Machine passed |
 
 “Pre-verified” is not a human UAT pass. The coordinator must attach the candidate run logs or record why existing evidence applies to the exact candidate.
@@ -119,7 +119,7 @@ Mark **Pass**, **Fail**, or **Not tested**. Every mandatory row must be Pass for
 | UX-03 | At 200% browser zoom, the role journeys remain readable and operable without two-dimensional scrolling except data tables where necessary. | | | |
 | UX-04 | Representative desktop and mobile browsers render the approved journeys without clipped controls or horizontal page overflow. | Machine pass at 320/768/1440/1920 px in Chromium, Edge, Firefox, and WebKit; representative-device witness pending | Four-browser 40/40 run, 2026-09-13 | Codex machine preparation, 2026-09-13 |
 | DOC-01 | Receipt PDF opens and prints with correct identity, reference, amount, dates, branding, and page boundaries. | Current candidate machine-rendered with no visual defects; witnessed download/print review pending | [`pdf-structural-review-2026-09-10.md`](../automation/hoa-loop/reports/pdf-structural-review-2026-09-10.md) | Codex, 2026-09-10 |
-| DOC-02 | Certificate PDF opens and prints with correct identity, number, purpose, dates, branding, and page boundaries. | Current candidate machine-rendered with no visual defects; witnessed download/print review pending | [`pdf-structural-review-2026-09-10.md`](../automation/hoa-loop/reports/pdf-structural-review-2026-09-10.md) | Codex, 2026-09-10 |
+| DOC-02 | Certificate PDF opens and prints with correct identity, number, purpose, dates, branding, and page boundaries. | Current branded certificate machine-rendered at 2x with the embedded HOA seal and no visual defects; witnessed download/print review pending | [`pdf-structural-review-2026-09-10.md`](../automation/hoa-loop/reports/pdf-structural-review-2026-09-10.md) | Codex, 2026-09-27 |
 | DOC-03 | Report PDFs and CSV files contain the selected filters/columns, correct totals, safe spreadsheet text, and no unauthorized rows. | Current PDF machine-rendered and 120-row stress layout passed; witnessed filter/download/CSV review pending | [`pdf-structural-review-2026-09-10.md`](../automation/hoa-loop/reports/pdf-structural-review-2026-09-10.md) | Codex, 2026-09-10 |
 
 ## 8. Operations and recovery evidence

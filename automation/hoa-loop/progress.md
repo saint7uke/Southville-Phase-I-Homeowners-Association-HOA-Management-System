@@ -1,5 +1,13 @@
 # Loop Progress
 
+## Current-candidate branding and verification refresh - 2026-09-27
+
+- Replaced the incorrectly named public `HOA.png` gate photograph with the uploaded HOA seal, registered it as the favicon across public, legacy portal, and all three Filament surfaces, and placed it in the existing responsive landing brand slot. The hero fallback now points to the proper community photograph.
+- Embedded the HOA seal directly into generated certificate PDFs with remote loading disabled. Feature coverage verifies the stored PDF image object; a temporary A4 sample was rendered at 2x with PyMuPDF and visually passed without clipping or overlap.
+- Added dedicated global-favicon and dashboard-layout tests plus landing browser assertions. Restored `LandingPageTest.php` byte-for-byte to its approved protected baseline because the new dedicated test provides the additional coverage without changing a protected hash.
+- The guarded full verifier passed protected hashes, Pint, two independent 145-test / 580-assertion SQLite executions, a 107-module Vite build, and route-cache compatibility. GitHub Actions run 36296937019 passed the exact branding candidate in SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit.
+- Application scope remains machine-complete against the reconciled v1.2 brief. Human UAT/ISO scoring, production configuration and recovery approval, and deployment authorization remain mandatory external gates.
+
 ## CI-001 remote closure - 2026-09-26
 
 - Pushed the prepared release-verification changes as `ccc8157`, then inspected authenticated [run 36243913243](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36243913243). SQLite passed, while native MySQL exposed non-canonical JSON whitespace and all three browser engines exposed a serious Axe `scrollable-region-focusable` violation in Filament table containers.
