@@ -8,12 +8,13 @@
     "phase_iterations":  0,
     "consecutive_no_progress":  0,
     "started_at":  "2026-08-17T02:21:10.5527166+08:00",
-    "updated_at":  "2026-09-27T16:58:12+08:00",
+    "updated_at":  "2026-09-27T17:03:40+08:00",
     "last_fingerprint":  null,
-    "last_verification":  "The 2026-09-27 guarded full verifier confirmed every approved protected-test hash, passed Pint, completed two independent 146-test/582-assertion SQLite executions, built 107 Vite modules, and compiled/cleared the route cache. A subsequent protected quick verifier again passed Pint and 146 tests/582 assertions. GitHub Actions run 36307753852 passed release candidate d1ed448 on pinned Ubuntu 24.04 using current v7 official actions in SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit without the prior runtime/image notices. The local XAMPP server, queue, and scheduler launchers also passed explicit-override and automatic-discovery smoke tests. Human UAT, production settings/recovery approval, and deployment authorization remain open.",
+    "last_verification":  "The 2026-09-27 guarded full verifier confirmed every approved protected-test hash, passed Pint, completed two independent 146-test/582-assertion SQLite executions, built 107 Vite modules, and compiled/cleared the route cache. A subsequent protected quick verifier again passed Pint and 146 tests/582 assertions. GitHub Actions run 36307753852 passed release candidate d1ed448 on pinned Ubuntu 24.04 using current v7 official actions in SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit without the prior runtime/image notices; evidence-only head 6b8aaa1 also passed all five jobs in run 36307942608. A read-only repository audit confirmed workflow tokens default to read-only but main has no protection or ruleset, so the five release checks are not yet enforced. Human UAT, branch-protection authorization, production settings/recovery approval, and deployment authorization remain open.",
     "blocked_reason":  null,
     "pending_human_decisions":  [
                                     "Complete representative Admin, Staff, and Homeowner UAT, including real Safari/full-keyboard-access, screen-reader, true 200% zoom, and manual document-print checks.",
+                                    "Authorize main-branch protection requiring the five green release checks, applying to administrators, and blocking force-pushes and deletion without imposing a reviewer requirement.",
                                     "Provide and approve production domain, database, SMTP, backup, and monitoring secrets/settings.",
                                     "Authorize production deployment after UAT."
                                 ],

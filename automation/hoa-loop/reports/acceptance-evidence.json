@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "status": "automated_verification_passed_pending_human_uat",
-  "generated_at": "2026-09-27T16:58:12+08:00",
+  "generated_at": "2026-09-27T17:03:40+08:00",
   "summary": "The in-scope implementation, current HOA branding, protected-test baseline, guarded local verification, and exact GitHub release workflow are green. Representative human UAT, production configuration and recovery approval, and deployment authorization remain required.",
   "scenarios": [
     { "id": "admin_cannot_use_staff_or_homeowner_panel_without_assignment", "status": "passed", "evidence": "PanelFoundationTest, AccessAndApiTest, and four-browser authenticated role-panel matrix" },
@@ -63,9 +63,12 @@
     "The PDF artifact marker and Poppler are unavailable. Temporary application-native QA PDFs were rendered with installed PyMuPDF and removed after inspection; human authorization/download/print review remains a UAT gate.",
     "The synthetic UAT database was restored from the verified retained archive after an unsafe cached-config test invocation altered it. Recovery and the permanent PHPUnit cache-isolation guard are documented in uat-database-recovery-2026-09-13.md.",
     "Docker is unavailable on the local Windows host. The complete local MariaDB/MySQL-compatible suite and the configured GitHub native MySQL 8.4 job both passed.",
-    "Release commit d1ed44814913e61ed0c30b92e8a1335b67a52da2 is on main/origin/main. GitHub Actions run 36307753852 passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit on pinned Ubuntu 24.04 with current v7 official actions and no prior Node-runtime or runner-image annotations."
+    "Release commit d1ed44814913e61ed0c30b92e8a1335b67a52da2 is on main/origin/main. GitHub Actions run 36307753852 passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit on pinned Ubuntu 24.04 with current v7 official actions and no prior Node-runtime or runner-image annotations.",
+    "A read-only GitHub governance audit on 2026-09-27 confirmed Actions are enabled, workflow tokens default to read-only and cannot approve pull requests, but main has no branch protection or repository ruleset. The successful five-job release checks therefore remain advisory until the owner authorizes protection."
   ],
-  "pending_external_gates": [],
+  "pending_external_gates": [
+    "main_branch_protection"
+  ],
   "pending_human_gates": [
     "final_uat",
     "production_secrets",

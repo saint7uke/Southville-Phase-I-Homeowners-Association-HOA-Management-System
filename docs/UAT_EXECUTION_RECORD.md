@@ -168,6 +168,7 @@ Record approval or a controlled evidence reference, never the secret value.
 | Gate | Approved configuration/evidence reference | Approver and date | Status |
 | --- | --- | --- | --- |
 | Protected-test baseline changes reviewed against `automation/hoa-loop/reports/protected-baseline-review.md` | Project-owner approval reconfirmed; four reviewed hashes are current and the guarded full verifier passed | Project owner, 2026-09-20 | Approved |
+| GitHub `main` protection requires the five release checks, applies to administrators, and blocks force-pushes/deletion | Read-only audit confirmed the five checks pass but no branch protection or ruleset exists | | Pending owner authorization |
 | Production domain, HTTPS, `public/` document root, and secure session settings | | | |
 | Production MySQL database, least-privilege account, migration backup, and retention policy | | | |
 | SMTP sender/domain and approved recipient controls | | | |
