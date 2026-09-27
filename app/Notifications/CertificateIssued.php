@@ -15,6 +15,8 @@ final class CertificateIssued extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    private ?Certificate $certificate = null;
+
     public function __construct(private readonly int $certificateId)
     {
         $this->afterCommit();
@@ -25,9 +27,20 @@ final class CertificateIssued extends Notification implements ShouldQueue
         return ['mail'];
     }
 
+    public function shouldSend(object $notifiable, string $channel): bool
+    {
+        if ($channel !== 'mail') {
+            return true;
+        }
+
+        $this->certificate = Certificate::query()->find($this->certificateId);
+
+        return $this->certificate !== null;
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
-        $certificate = Certificate::query()->findOrFail($this->certificateId);
+        $certificate = $this->certificate ?? Certificate::query()->findOrFail($this->certificateId);
         $url = URL::temporarySignedRoute('certificates.download', now()->addMinutes(30), $certificate);
 
         return (new MailMessage)

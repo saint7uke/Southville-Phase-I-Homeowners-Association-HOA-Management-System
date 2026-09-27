@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Actions\Announcements\SendAnnouncementBlast;
 use App\Actions\Certificates\IssueCertificate;
 use App\Models\Announcement;
+use App\Models\Certificate;
 use App\Models\Complaint;
 use App\Models\ContactMessage;
 use App\Models\Homeowner;
@@ -58,6 +59,27 @@ final class WorkflowNotificationTest extends TestCase
         $this->assertSame(1, app(SendAnnouncementBlast::class)->handle($announcement, $admin));
         Notification::assertSentTo($homeowner->user, AnnouncementPublished::class);
         $this->assertDatabaseHas('audit_logs', ['user_id' => $admin->id, 'action' => 'Announcement.email_blast', 'auditable_id' => $announcement->id]);
+    }
+
+    public function test_certificate_notification_skips_delivery_when_its_certificate_was_deleted(): void
+    {
+        $admin = $this->user('hoa_admin');
+        $homeowner = $this->homeowner();
+        $certificate = Certificate::withoutEvents(fn (): Certificate => Certificate::query()->create([
+            'homeowner_id' => $homeowner->id,
+            'certificate_number' => 'CERT-2026-9999',
+            'type' => 'Certificate of Residency',
+            'status' => 'Issued',
+            'issued_at' => now(),
+            'expires_at' => now()->endOfYear(),
+            'issued_by' => $admin->id,
+        ]));
+
+        $this->assertTrue((new CertificateIssued($certificate->id))->shouldSend($homeowner->user, 'mail'));
+
+        $certificate->forceDelete();
+
+        $this->assertFalse((new CertificateIssued($certificate->id))->shouldSend($homeowner->user, 'mail'));
     }
 
     private function user(string $role): User
