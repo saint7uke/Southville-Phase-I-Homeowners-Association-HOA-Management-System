@@ -36,15 +36,15 @@ The original brief was reread section by section rather than treating the normal
 
 ## Current verification
 
-- Guarded full verifier refreshed on 2026-09-27: protected hashes, Pint, two independent SQLite executions of 145 tests / 580 assertions, 107-module production build, and route-cache create/clear compatibility passed.
+- Guarded full verifier refreshed on 2026-09-27: protected hashes, Pint, two independent SQLite executions of 146 tests / 582 assertions, 107-module production build, and route-cache create/clear compatibility passed.
 - Disposable XAMPP MariaDB/MySQL-compatible lane: 138 tests / 552 assertions passed in 142.80 seconds; `hoa_system_ci_test` was removed and independently verified absent.
 - Production Vite build: 107 modules passed.
-- Hardened release candidate `bbe03508ac00cd3906eca6e6123a6cda7c689ce0`: GitHub run 36305858757 passed SQLite, native MySQL 8.4, and all 10 configured browser tests in Chromium, Firefox, and WebKit. Firefox passed without retry after Linux PHP CLI server worker isolation; landing logo/favicon loading, responsive overflow, accessibility, reduced motion, report-dialog focus restoration, and authenticated role journeys all remained enforced.
+- Release candidate `ac467e6252205eb970060a0d40982e7e434a1f82`: GitHub run 36306753508 passed SQLite, native MySQL 8.4, and all 10 configured browser tests in Chromium, Firefox, and WebKit. The candidate also prevents stale queued certificate notifications from failing after their certificate is removed.
 - Current dependency advisories: Composer reported none; npm reported zero vulnerabilities.
 - Protected baseline hashes remain unchanged and matching.
 
 ## Remaining acceptance gates
 
-No additional unimplemented application requirement was identified by the source-brief audit. The current hardened candidate `bbe03508ac00cd3906eca6e6123a6cda7c689ce0` completed the five-job SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit matrix in [GitHub Actions run 36305858757](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36305858757).
+No additional unimplemented application requirement was identified by the source-brief audit. The current candidate `ac467e6252205eb970060a0d40982e7e434a1f82` completed the five-job SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit matrix in [GitHub Actions run 36306753508](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36306753508).
 
 Release acceptance remains unproven until representative Admin/Staff/Homeowner UAT and ISO scoring complete, manual NVDA/real-Safari/200%-zoom/document-print checks pass, production domain/database/SMTP/storage/backup/monitoring settings are approved, and deployment is explicitly authorized.

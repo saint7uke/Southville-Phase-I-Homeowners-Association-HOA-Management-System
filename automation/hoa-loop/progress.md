@@ -292,3 +292,11 @@ Each future cycle must append: timestamp, phase, bounded task, files changed, ve
 - The guarded full verifier then passed protected hashes, Pint, two independent 145-test / 580-assertion SQLite executions, the 107-module Vite build, and route-cache create/clear compatibility.
 - Commit `bbe03508ac00cd3906eca6e6123a6cda7c689ce0` was pushed to `main`. GitHub Actions run 36305858757 passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit; Firefox passed all 10 tests without invoking the configured retry.
 - Reconciled the state, acceptance snapshot, source-brief audit, and UAT handoff to the hardened candidate. Remaining gates are representative human UAT/ISO scoring, manual assistive-technology/zoom/print checks, approved production settings and recovery ownership, and explicit deployment authorization.
+
+## UAT queue-lifecycle closure - 2026-09-27
+
+- Refreshed the isolated local `hoa_system_uat` environment: applied migration 24, confirmed database-aware HTTP 200 readiness and all four schedules, and found three pending synthetic `CertificateIssued` notifications.
+- With mail restricted to the log driver, drained the queue. One valid notification completed; two messages failed because their referenced certificates had been removed, exposing `UAT-001`.
+- Added Laravel's native notification delivery guard so unavailable certificates are skipped before mail conversion, while valid certificate delivery remains enabled. Added a regression covering both branches.
+- Retried both retained failures against the corrected code; both completed as clean skips. The database queue and failed-job table are empty.
+- The guarded full verifier passed protected hashes, Pint, two independent 146-test / 582-assertion SQLite executions, the 107-module Vite build, and route-cache create/clear. Commit `ac467e6252205eb970060a0d40982e7e434a1f82` passed all five jobs in GitHub Actions run 36306753508.

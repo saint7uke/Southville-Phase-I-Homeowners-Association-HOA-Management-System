@@ -8,7 +8,7 @@ The task wording and acceptance thresholds come from the [ISO/IEC 25010 evaluati
 
 | Field | Value |
 | --- | --- |
-| Release/version or commit | `bbe03508ac00cd3906eca6e6123a6cda7c689ce0` (`main` / `origin/main`) |
+| Release/version or commit | `ac467e6252205eb970060a0d40982e7e434a1f82` (`main` / `origin/main`) |
 | Candidate environment | Local XAMPP 8.2.12 / MySQL `hoa_system_uat` |
 | Base URL | `http://127.0.0.1:8000` |
 | Database/data-set description | Synthetic UAT fixtures; no production data |
@@ -23,16 +23,16 @@ The following machine evidence was last reconciled on 2026-09-27. Re-run the che
 
 | Check | Current evidence | Candidate result / evidence link | Status |
 | --- | --- | --- | --- |
-| PHP quality suite | Guarded full verifier passed every approved protected hash and Pint plus two independent 145-test / 580-assertion SQLite executions; exact CI MySQL 8.4 lane passed | Local guarded verifier and [run 36305858757](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36305858757), 2026-09-27 | Machine passed |
-| Exact GitHub release workflow | Hardened release commit passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit | [Run 36305858757](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36305858757), 2026-09-27 | Machine passed; `CI-001` and `CI-002` closed |
+| PHP quality suite | Guarded full verifier passed every approved protected hash and Pint plus two independent 146-test / 582-assertion SQLite executions; exact CI MySQL 8.4 lane passed | Local guarded verifier and [run 36306753508](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36306753508), 2026-09-27 | Machine passed |
+| Exact GitHub release workflow | Current release commit passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit | [Run 36306753508](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36306753508), 2026-09-27 | Machine passed; `CI-001`, `CI-002`, and `UAT-001` closed |
 | Focused reports/audit suite | 13 tests / 53 assertions passed | | Pre-verified |
 | Production asset build | Vite build passed; 107 modules; landing page emitted as a lazy chunk | Guarded full verifier, 2026-09-27 | Machine passed |
 | Fresh production Admin bootstrap | Environment-driven seeder is idempotent, refuses missing/weak input and existing-account elevation, and demo fixtures refuse production | 3 focused tests, 2026-09-20 | Machine passed |
 | Dependency audits | Composer: no advisories; npm: 0 vulnerabilities | | Pre-verified |
-| MySQL schema | All 23 migrations ran successfully; dues frequency is `VARCHAR(32)` | Isolated `hoa_system_uat`, 2026-09-20 | Machine passed |
+| MySQL schema | All 24 migrations ran successfully; dues frequency is `VARCHAR(32)` and audit payloads use canonical text | Isolated `hoa_system_uat`, 2026-09-27 | Machine passed |
 | Laravel production compilation | Route and view caches compiled; four HOA schedules registered | | Pre-verified |
-| Local candidate runtime | Database-aware `/up` and `/` HTTP 200; queue monitor OK with zero pending jobs; four schedules registered | Preparation and recovery checks, 2026-09-13 | Machine passed |
-| Browser test inventory | Hardened candidate passed all 10 configured Chromium, Firefox, and WebKit tests, including favicon/logo loading; Firefox passed without retry after PHP CLI server worker isolation | [Run 36305858757](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36305858757), 2026-09-27 | Machine passed |
+| Local candidate runtime | Database-aware `/up` HTTP 200; zero pending/failed jobs after replaying stale certificate notifications; four schedules registered | Preparation refresh, 2026-09-27 | Machine passed |
+| Browser test inventory | Current candidate passed all 10 configured Chromium, Firefox, and WebKit tests, including favicon/logo loading | [Run 36306753508](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36306753508), 2026-09-27 | Machine passed |
 | Authenticated panel matrix | 12/12 role/browser cases passed, including keyboard sign-in, visible focus, skip-link activation, cross-panel 403, Axe serious/critical, and 320/768/1440/1920 px overflow checks | Exact current four-browser candidate run, 2026-09-20 | Machine passed |
 
 “Pre-verified” is not a human UAT pass. The coordinator must attach the candidate run logs or record why existing evidence applies to the exact candidate.
@@ -61,7 +61,7 @@ The seeder is idempotent and refuses to run when `APP_ENV=production`. The base 
 
 Before testing, confirm that the environment is not production, outbound email is restricted to the designated inbox, the queue and scheduler are running, and a restorable database backup exists.
 
-Preparation refresh on 2026-09-20: `APP_ENV=local`, database `hoa_system_uat`, all 23 migrations present, all six identities and their expected role/status mappings verified, and both `jobs` and `failed_jobs` contained zero rows. This confirms fixture readiness only; queue-worker, scheduler, email-inbox, and witnessed backup checks remain UAT tasks.
+Preparation refresh on 2026-09-27: `APP_ENV=local`, database `hoa_system_uat`, all 24 migrations present, and all six designated identities have the expected roles and lifecycle states. Database-aware `/up` returned HTTP 200 and all four schedules were registered. Three retained synthetic certificate notifications were drained: two initially exposed `UAT-001`, then replayed as clean skips after the fix; both `jobs` and `failed_jobs` now contain zero rows. This confirms machine fixture readiness only; designated email-inbox, continuous worker/scheduler, and witnessed backup checks remain UAT tasks.
 
 The 2026-09-13 recovery restored the clean archived fixture state with no payments or certificates. Use new records for every witnessed creation journey. Any unlinked synthetic file left in local storage is not UAT evidence.
 
@@ -128,7 +128,7 @@ Perform these checks in the candidate environment. Production values are approve
 
 | ID | Check | Result | Evidence / defect ID | Owner and date |
 | --- | --- | --- | --- | --- |
-| O-01 | Queue processes a designated test notification and failed-job monitoring is visible. | | | |
+| O-01 | Queue processes a designated test notification and failed-job monitoring is visible. | Machine preparation pass: one valid notification completed; two stale messages exposed `UAT-001`, then replayed cleanly after the fix; zero pending/failed jobs. Designated-inbox witness remains pending. | `WorkflowNotificationTest`; local queue replay, 2026-09-27 | Codex, 2026-09-27 |
 | O-02 | Scheduler runs the four HOA tasks without overlapping or duplicating records. | | | |
 | O-03 | `/up` and the approved monitoring check report healthy service state. | Machine pass: `/up` now checks database readability; healthy and simulated-outage regression cases pass. Production monitor witness pending. | [`uat-database-recovery-2026-09-13.md`](../automation/hoa-loop/reports/uat-database-recovery-2026-09-13.md) | Codex, 2026-09-13 |
 | O-04 | Database and required private/public files are backed up according to the operations guide. | | | |
@@ -143,6 +143,7 @@ Severity: **Critical** blocks all use; **High** blocks a required workflow or cr
 | --- | --- | --- | --- | --- | --- | --- |
 | CI-001 | High | Release verification | Earlier candidates exposed missing pre-test Vite builds, non-persistent browser sessions, MySQL JSON canonicalization differences, and inaccessible scrollable Filament table regions. All causes were corrected and the exact corrective commit passed every configured release job. | Technical lead | Closed, 2026-09-26 | [Green run 36245182854](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36245182854); failed [run 35497361687](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/35497361687) and [run 36243913243](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36243913243) retained as diagnostic history |
 | CI-002 | High | Firefox release verification | PHP 8.3.35's single-process CLI test server segfaulted under browser request load, causing connection-refused errors rather than product assertion failures. Linux CI now runs the PHP CLI server with isolated workers and retains one CI-only Playwright retry; all 10 Firefox tests passed without using the retry. | Technical lead | Closed, 2026-09-27 | [Green run 36305858757](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36305858757); failed [run 36298622023](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36298622023) retained as diagnostic history |
+| UAT-001 | High | Queued certificate notification | Two retained notifications failed because their referenced synthetic certificates had been removed before delivery. `CertificateIssued::shouldSend()` now resolves the record at delivery time and skips missing certificates. Both failed jobs replayed cleanly; zero pending/failed jobs remain. | Technical lead | Closed, 2026-09-27 | Regression test plus local database-queue retry; [green run 36306753508](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36306753508) |
 
 ## 10. ISO/IEC 25010 results
 
