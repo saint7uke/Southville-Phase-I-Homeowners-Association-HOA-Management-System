@@ -313,3 +313,9 @@ Each future cycle must append: timestamp, phase, bounded task, files changed, ve
 - Followed the successful exact-commit launcher run by addressing its two infrastructure notices instead of carrying them into release: deprecated Node 20 action runtimes and the announced `ubuntu-latest` image migration.
 - Updated the official checkout, Node setup, and failure-artifact actions to their current v7 majors, pinned all jobs to Ubuntu 24.04, and declared the workflow's token permission as read-only repository contents.
 - Preserved the existing PHP 8.3, Node 22, native MySQL 8.4, SQLite, Composer audit, and three-browser verification contract; no product assertion, timeout, or test inventory was weakened.
+
+## Release-governance audit - 2026-09-27
+
+- Read-only GitHub inspection confirmed the public repository has no `main` branch protection and no repository ruleset. The five successful release checks are therefore visible but not enforced against future changes.
+- Confirmed repository Actions are enabled, default workflow-token permissions are read-only, workflows cannot approve pull requests, and the exact evidence-only head passed SQLite, native MySQL 8.4, Chromium, Firefox, and WebKit in run 36307942608.
+- Recorded branch protection as an external human-authorization gate. The proposed solo-maintainer-safe policy requires the five existing checks, includes administrators, and blocks force-pushes/deletion without requiring a second reviewer; no repository setting was changed implicitly.
