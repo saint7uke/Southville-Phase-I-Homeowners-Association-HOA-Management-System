@@ -13,7 +13,7 @@ final class Certificate extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['homeowner_id', 'service_request_id', 'certificate_number', 'file_path', 'type', 'purpose', 'status', 'issued_at', 'expires_at', 'issued_by', 'revoked_at', 'revoked_by', 'revocation_reason'];
+    protected $fillable = ['homeowner_id', 'service_request_id', 'certificate_type_id', 'certificate_number', 'file_path', 'type', 'purpose', 'status', 'issued_at', 'expires_at', 'issued_by', 'revoked_at', 'revoked_by', 'revocation_reason'];
 
     protected function casts(): array
     {
@@ -23,6 +23,11 @@ final class Certificate extends Model
     public function homeowner(): BelongsTo
     {
         return $this->belongsTo(Homeowner::class)->withTrashed();
+    }
+
+    public function certificateType(): BelongsTo
+    {
+        return $this->belongsTo(CertificateType::class);
     }
 
     public function serviceRequest(): BelongsTo

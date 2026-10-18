@@ -1,0 +1,169 @@
+.hoa-filament-auth {
+    --hoa-accent: #0879ad;
+    --hoa-accent-soft: #e8f5fb;
+    --hoa-ink: #173140;
+    --hoa-muted: #617784;
+    --hoa-line: #d9e5ea;
+    display: grid;
+    grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+    width: min(100%, 62rem);
+    max-width: 100%;
+    min-height: min(44rem, calc(100dvh - 3rem));
+    margin-inline: auto;
+    overflow: hidden;
+    border: 1px solid rgb(8 48 66 / .12);
+    border-radius: 1.5rem;
+    background: #fff;
+    box-shadow: 0 1.5rem 4rem rgb(5 29 42 / .18);
+    color: var(--hoa-ink);
+    font-family: 'Poppins', system-ui, sans-serif;
+}
+
+.hoa-filament-auth--staff { --hoa-accent: #236d8d; --hoa-accent-soft: #eaf4f7; }
+.hoa-filament-auth--homeowner { --hoa-accent: #0879ad; --hoa-accent-soft: #e8f5fb; }
+
+.fi-simple-main:has(.hoa-filament-auth) {
+    width: 100% !important;
+    max-width: none !important;
+    flex: 1 1 auto;
+    padding: 0 !important;
+}
+.fi-simple-main:has(.hoa-filament-auth) .fi-simple-page {
+    width: 100%;
+    max-width: none;
+    min-height: 100dvh;
+    background: #eef4f6;
+}
+.fi-simple-main:has(.hoa-filament-auth) .fi-simple-page-content,
+.fi-simple-main:has(.hoa-filament-auth) .fi-simple-page-content > * {
+    width: 100% !important;
+    max-width: none !important;
+}
+.fi-simple-main:has(.hoa-filament-auth) .fi-simple-page-content {
+    box-sizing: border-box;
+    padding: clamp(1rem, 4vw, 3rem);
+}
+.fi-simple-main:has(.hoa-filament-auth) .fi-simple-header { display: none; }
+
+.hoa-filament-auth-intro {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(2rem, 5vw, 4rem);
+    background: linear-gradient(155deg, #0a3850, #0b607e);
+    color: #f5fbfd;
+}
+
+.hoa-filament-auth-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .75rem;
+    width: fit-content;
+    margin-bottom: 3.5rem;
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+.hoa-filament-auth-brand:hover { color: #fff; }
+.hoa-filament-auth-logo { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 1rem; background: #fff; }
+.hoa-filament-auth-logo img { width: 2.4rem; height: 2.4rem; object-fit: contain; }
+.hoa-filament-auth-portal { margin: 0 0 .75rem; color: #bce7f7; font-size: .72rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.hoa-filament-auth-intro h2 { max-width: 19rem; margin: 0; color: #fff; font-size: clamp(1.7rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -.04em; }
+.hoa-filament-auth-support { max-width: 19rem; margin: 1.25rem 0 0; color: #d7edf4; line-height: 1.7; }
+.hoa-filament-auth-rule { width: 3rem; height: 2px; margin: 2.25rem 0 1.25rem; background: #66c7f4; }
+.hoa-filament-auth-note { max-width: 19rem; margin: 0; color: #b7d2dc; font-size: .78rem; line-height: 1.6; }
+
+.hoa-filament-auth-form {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(2rem, 6vw, 5rem);
+}
+.hoa-filament-auth-heading { margin-bottom: 2rem; }
+.hoa-filament-auth-eyebrow { margin: 0 0 .65rem; color: var(--hoa-accent); font-size: .72rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.hoa-filament-auth-heading h1 { margin: 0; color: var(--hoa-ink); font-size: clamp(1.7rem, 4vw, 2.35rem); letter-spacing: -.04em; }
+.hoa-filament-auth-heading > p:last-child { margin: .7rem 0 0; color: var(--hoa-muted); font-size: .9rem; line-height: 1.6; }
+.hoa-filament-auth-error {
+    margin: 0 0 1rem;
+    padding: .8rem 1rem;
+    border: 1px solid #e6a4a4;
+    border-radius: .75rem;
+    background: #fff1f1;
+    color: #9b1c1c;
+    font-size: .85rem;
+    line-height: 1.5;
+}
+.hoa-filament-auth form,
+.hoa-filament-auth form > *,
+.hoa-filament-auth .fi-fo-field-wrp,
+.hoa-filament-auth .fi-input-wrp {
+    min-width: 0;
+    width: 100%;
+}
+.hoa-filament-auth form { gap: 1rem; }
+.hoa-filament-auth button[type='submit'] { min-height: 3rem; border-radius: .75rem; background: var(--hoa-accent); color: #fff; font-weight: 700; transition: transform .2s ease, filter .2s ease; }
+.hoa-filament-auth button[type='submit']:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.hoa-filament-auth-links { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .65rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--hoa-line); color: var(--hoa-muted); font-size: .78rem; }
+.hoa-filament-auth-links a { color: var(--hoa-accent); font-weight: 700; text-decoration: none; }
+.hoa-filament-auth-links a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.hoa-filament-auth-links a,
+.hoa-filament-auth-links span { overflow-wrap: anywhere; }
+.hoa-filament-auth input, .hoa-filament-auth select, .hoa-filament-auth textarea { border-color: var(--hoa-line); background: #fff; color: var(--hoa-ink); }
+.hoa-filament-auth input:focus, .hoa-filament-auth select:focus, .hoa-filament-auth textarea:focus { border-color: var(--hoa-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hoa-accent) 18%, transparent); }
+.hoa-filament-auth .fi-checkbox-input {
+    width: 1.125rem;
+    height: 1.125rem;
+    min-width: 1.125rem;
+    min-height: 1.125rem;
+    margin-top: .15rem;
+    appearance: auto;
+    -webkit-appearance: checkbox;
+    border: 1px solid var(--hoa-accent);
+    border-radius: .25rem;
+    background: transparent;
+    accent-color: var(--hoa-accent);
+    cursor: pointer;
+}
+.hoa-filament-auth .fi-fo-field-label {
+    align-items: flex-start;
+    gap: .65rem;
+    min-height: 2.75rem;
+    cursor: pointer;
+}
+.hoa-filament-auth .fi-checkbox-input:focus-visible {
+    outline: 2px solid var(--hoa-accent);
+    outline-offset: 3px;
+}
+
+.dark .fi-simple-page:has(.hoa-filament-auth) { background: #071d29; }
+.dark .hoa-filament-auth { --hoa-ink: #e7f0f3; --hoa-muted: #a9bec7; --hoa-line: #304c59; border-color: #294553; background: #102832; }
+.dark .hoa-filament-auth-form { background: #102832; }
+.dark .hoa-filament-auth-heading h1 { color: var(--hoa-ink); }
+.dark .hoa-filament-auth-error { border-color: #8b4545; background: #3b2024; color: #ffc4c4; }
+.dark .hoa-filament-auth input, .dark .hoa-filament-auth select, .dark .hoa-filament-auth textarea { border-color: #456271; background: #0c202a; color: var(--hoa-ink); }
+.dark .hoa-filament-auth input::placeholder { color: #8fa8b2; }
+
+@media (max-width: 900px) {
+    .hoa-filament-auth { grid-template-columns: minmax(14rem, .75fr) minmax(0, 1.25fr); }
+    .hoa-filament-auth-intro, .hoa-filament-auth-form { padding: clamp(1.5rem, 4vw, 2.5rem); }
+}
+
+@media (max-width: 720px) {
+    .hoa-filament-auth {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        border-radius: 1rem;
+    }
+    .hoa-filament-auth-intro { padding: 1.5rem; }
+    .hoa-filament-auth-brand { margin-bottom: 2rem; }
+    .hoa-filament-auth-intro h2 { max-width: 30rem; font-size: 1.5rem; }
+    .hoa-filament-auth-support, .hoa-filament-auth-rule, .hoa-filament-auth-note { display: none; }
+    .hoa-filament-auth-form { padding: 1.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hoa-filament-auth button[type='submit'] { transition: none; }
+}

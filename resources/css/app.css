@@ -60,6 +60,13 @@ button, input, select, textarea { font: inherit; }
 .button:active { transform: translateY(1px); }
 .button-primary { background: var(--accent); color: white; }
 .button-primary:hover { background: var(--accent-hover); }
+.password-field { position: relative; }
+.password-field input { inline-size: 100%; padding-inline-end: 3.25rem; }
+.password-toggle { position: absolute; inset-block-start: 50%; inset-inline-end: .55rem; display: inline-grid; width: 2rem; height: 2rem; place-items: center; transform: translateY(-50%); margin: 0; padding: 0; border: 0; border-radius: .45rem; background: transparent; color: var(--accent); cursor: pointer; text-decoration: none; }
+.password-toggle:hover { background: var(--accent-soft); }
+.password-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.password-eye-hide { display: none; }
+.password-eye[hidden] { display: none; }
 .button-secondary { border-color: var(--ink); color: var(--ink); }
 .hero-media { margin: 0; overflow: hidden; border-radius: 1rem; box-shadow: 0 1.5rem 4rem rgb(45 60 70 / .17); }
 .hero-media img { inline-size: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
@@ -141,6 +148,7 @@ button, input, select, textarea { font: inherit; }
 .confirmation-field { margin-block-start: 1.25rem; }
 .confirmation-field label { display: flex; align-items: flex-start; gap: .6rem; font-weight: 600; }
 .confirmation-field input { inline-size: 1.2rem; block-size: 1.2rem; margin-block-start: .1rem; }
+.confirmation-field .hoa-checkbox-label { min-block-size: 2.75rem; font-weight: 600; }
 
 @media (min-width: 48rem) {
     .menu-button { display: none; }

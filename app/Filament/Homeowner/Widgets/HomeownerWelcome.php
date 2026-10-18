@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Filament\Homeowner\Widgets;
 
 use App\Models\User;
+use App\Support\TimeGreeting;
 use Filament\Facades\Filament;
 use Filament\Widgets\Widget;
 
 final class HomeownerWelcome extends Widget
 {
+    protected static ?int $sort = -10;
+
     protected string $view = 'filament.homeowner.widgets.welcome';
 
     protected int|string|array $columnSpan = 'full';
@@ -20,6 +23,10 @@ final class HomeownerWelcome extends Widget
         $user = Filament::auth()->user();
         $homeowner = $user instanceof User ? $user->homeowner()->first() : null;
 
-        return ['user' => $user, 'homeowner' => $homeowner];
+        return [
+            'user' => $user,
+            'homeowner' => $homeowner,
+            'greeting' => TimeGreeting::current(),
+        ];
     }
 }

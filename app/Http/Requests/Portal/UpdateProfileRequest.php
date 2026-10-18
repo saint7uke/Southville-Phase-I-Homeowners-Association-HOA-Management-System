@@ -31,6 +31,18 @@ final class UpdateProfileRequest extends FormRequest
         ];
     }
 
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return app(HomeownerProfileValidator::class)->messages();
+    }
+
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return app(HomeownerProfileValidator::class)->attributes();
+    }
+
     protected function prepareForValidation(): void
     {
         $this->replace([

@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use App\Notifications\HomeownerPasswordReset;
 use Spatie\Permission\Traits\HasRoles;
 
 final class User extends Authenticatable implements FilamentUser, MustVerifyEmailContract
@@ -97,6 +98,11 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
         $this->email = Str::lower(trim($this->email));
     }
 
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new HomeownerPasswordReset($token));
+    }
+
     protected static function booted(): void
     {
         self::saving(function (User $user): void {
@@ -104,6 +110,14 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
             if ($user->exists && $user->isDirty('email')) {
                 $user->email_verified_at = null;
             }
+        });
+
+        self::saved(function (User $user): void {
+            UserEmailReservation::query()->insertOrIgnore([
+                'email' => $user->email,
+                'user_id' => $user->id,
+                'created_at' => now(),
+            ]);
         });
     }
 }

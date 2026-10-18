@@ -16,7 +16,7 @@ final class PaymentsExport implements FromQuery, WithHeadings, WithMapping
 
     public function query(): Builder
     {
-        return Payment::query()->with(['homeowner.user', 'duesSetting', 'recorder'])
+        return Payment::query()->with(['homeowner.user', 'payer.user', 'duesSetting', 'recorder'])
             ->when($this->from, fn (Builder $query) => $query->whereDate('payment_date', '>=', $this->from))
             ->when($this->to, fn (Builder $query) => $query->whereDate('payment_date', '<=', $this->to))
             ->when($this->status, fn (Builder $query) => $query->where('status', $this->status))
@@ -25,11 +25,11 @@ final class PaymentsExport implements FromQuery, WithHeadings, WithMapping
 
     public function headings(): array
     {
-        return ['OR Number', 'Homeowner', 'Address', 'Dues Type', 'Amount Paid', 'Balance', 'Penalty', 'Covered Period', 'Method', 'Status', 'Date', 'Recorded By'];
+        return ['OR Number', 'Liable Resident', 'Actual Payer', 'Address', 'Dues Type', 'Amount Paid', 'Balance', 'Penalty', 'Covered Period', 'Method', 'Reference', 'Payment Status', 'Review Status', 'Date', 'Recorded By'];
     }
 
     public function map($payment): array
     {
-        return [$payment->or_number, $payment->homeowner->user->full_name, $payment->homeowner->full_address, $payment->duesSetting->name, $payment->amount_paid, $payment->balance, $payment->penalty, $payment->covered_period, $payment->payment_method, $payment->status, $payment->payment_date->toDateString(), $payment->recorder->full_name];
+        return [$payment->or_number, $payment->homeowner->user->full_name, $payment->payer?->user?->full_name ?? $payment->homeowner->user->full_name, $payment->homeowner->full_address, $payment->duesSetting->name, $payment->amount_paid, $payment->balance, $payment->penalty, $payment->covered_period, $payment->payment_method, $payment->transaction_reference, $payment->status, $payment->review_status, $payment->payment_date->toDateString(), $payment->recorder->full_name];
     }
 }

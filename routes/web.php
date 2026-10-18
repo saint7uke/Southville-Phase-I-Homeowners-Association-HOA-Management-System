@@ -11,16 +11,23 @@ use App\Http\Controllers\ContactMessageController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\HomeownerProfilePhotoController;
 use App\Http\Controllers\PaymentReceiptController;
+use App\Http\Controllers\Portal\AddressAvailabilityController;
 use App\Http\Controllers\Portal\AnnouncementController;
 use App\Http\Controllers\Portal\AuthController;
 use App\Http\Controllers\Portal\ComplaintAttachmentController;
 use App\Http\Controllers\Portal\ComplaintController;
 use App\Http\Controllers\Portal\DashboardController;
+use App\Http\Controllers\Portal\EmailAvailabilityController;
 use App\Http\Controllers\Portal\EmailVerificationController;
+use App\Http\Controllers\Portal\LandlordAvailabilityController;
+use App\Http\Controllers\Portal\PasswordResetController;
 use App\Http\Controllers\Portal\PaymentProofController;
+use App\Http\Controllers\Portal\ProfileAvailabilityController;
 use App\Http\Controllers\Portal\ProfileController;
 use App\Http\Controllers\Portal\RegisterController;
+use App\Http\Controllers\Portal\RegistrationStatusController;
 use App\Http\Controllers\Portal\ServiceRequestController;
+use App\Http\Controllers\VerificationDocumentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -28,11 +35,49 @@ Route::get('/branding/logo', BrandingLogoController::class)->middleware('throttl
 Route::post('/contact', ContactMessageController::class)->middleware('throttle:5,1')->name('contact.store');
 
 Route::middleware('guest')->prefix('portal')->name('portal.')->group(function (): void {
-    Route::get('/register', [RegisterController::class, 'create'])->name('register');
+    Route::get('/register', fn () => redirect()->route('homeowner.register'))->name('register');
     Route::post('/register', [RegisterController::class, 'store'])->middleware('throttle:5,1')->name('register.store');
-    Route::get('/login', [AuthController::class, 'create'])->name('login');
+    Route::get('/login', fn () => redirect()->route('homeowner.login'))->name('login');
     Route::post('/login', [AuthController::class, 'store'])->middleware('throttle:login')->name('login.store');
 });
+
+Route::post('/homeowner/register', [RegisterController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('homeowner.register.store');
+
+Route::middleware('guest')->prefix('homeowner')->name('homeowner.')->group(function (): void {
+    Route::post('/login', [AuthController::class, 'store'])->middleware('throttle:login')->name('login.store');
+    Route::get('/forgot-password', [PasswordResetController::class, 'request'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'email'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'reset'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'update'])->middleware('throttle:5,1')->name('password.update');
+});
+
+Route::get('/homeowner/register', [RegisterController::class, 'create'])->name('homeowner.register');
+Route::get('/homeowner/register/email-availability', EmailAvailabilityController::class)
+    ->middleware('throttle:30,1')
+    ->name('homeowner.register.email-availability');
+Route::post('/homeowner/register/address-availability', AddressAvailabilityController::class)
+    ->middleware('throttle:30,1')
+    ->name('homeowner.register.address-availability');
+Route::post('/homeowner/register/landlord-availability', LandlordAvailabilityController::class)
+    ->middleware('throttle:30,1')
+    ->name('homeowner.register.landlord-availability');
+
+Route::get('/homeowner/register/submitted', [RegistrationStatusController::class, 'show'])
+    ->middleware('registration.status.link')
+    ->name('homeowner.register.submitted');
+
+Route::get('/homeowner/login', [AuthController::class, 'create'])->name('homeowner.login');
+
+Route::post('/homeowner/my-profile/availability', ProfileAvailabilityController::class)
+    ->middleware(['auth:homeowner', 'throttle:30,1'])
+    ->name('homeowner.profile.availability');
+
+// Filament's homeowner password-reset page still references its panel login name.
+Route::redirect('/homeowner/login/filament', '/homeowner/login')
+    ->middleware('guest')
+    ->name('filament.homeowner.auth.login');
 
 Route::post('/portal/status/resend-verification', [EmailVerificationController::class, 'resend'])
     ->middleware(['auth', 'throttle:3,1'])
@@ -40,7 +85,7 @@ Route::post('/portal/status/resend-verification', [EmailVerificationController::
 
 Route::middleware(['auth', 'portal.auth.session'])->prefix('portal')->name('portal.')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
-    Route::view('/status', 'portal.auth.status')->name('status');
+    Route::get('/status', [RegistrationStatusController::class, 'authenticated'])->name('status');
 
     Route::middleware('homeowner.approved')->group(function (): void {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
@@ -63,6 +108,10 @@ Route::get('/homeowner-profile-photos/{homeowner}', HomeownerProfilePhotoControl
     ->middleware(['profile-photo.auth', 'throttle:60,1'])
     ->name('homeowner.profile-photo');
 
+Route::get('/homeowners/{homeowner}/verification-document', VerificationDocumentController::class)
+    ->middleware(['auth:admin,staff,homeowner,web', 'throttle:60,1'])
+    ->name('homeowners.verification-document');
+
 Route::get('/payments/{payment}/proof', [PaymentProofController::class, 'download'])
     ->middleware(['profile-photo.auth', 'throttle:60,1'])
     ->name('portal.payments.proof.download');
@@ -79,9 +128,9 @@ Route::get('/case-attachments/{caseAttachment}', CaseAttachmentController::class
 Route::get('/admin/reports/payments.xlsx', PaymentExportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:5,1'])->name('admin.reports.payments');
 Route::get('/admin/reports/audit-logs.csv', AuditLogExportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:view_audit_logs', 'throttle:5,1'])->name('admin.reports.audit-logs');
 Route::get('/admin/reports/queued/{reportExport}', QueuedReportDownloadController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:10,1'])->name('admin.reports.queued.download');
-Route::get('/admin/reports/{report}.{format}', HoaReportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:5,1'])->whereIn('format', ['csv', 'pdf'])->name('admin.reports.download');
+Route::get('/admin/reports/{report}.{format}', HoaReportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:5,1'])->whereIn('format', ['csv', 'xlsx', 'pdf'])->name('admin.reports.download');
 Route::get('/admin/reports/{report}/preview', HoaReportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:10,1'])->name('admin.reports.preview');
 Route::get('/staff/reports/payments.xlsx', PaymentExportController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:5,1'])->name('staff.reports.payments');
 Route::get('/staff/reports/queued/{reportExport}', QueuedReportDownloadController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:10,1'])->name('staff.reports.queued.download');
-Route::get('/staff/reports/{report}.{format}', HoaReportController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:5,1'])->whereIn('format', ['csv', 'pdf'])->name('staff.reports.download');
+Route::get('/staff/reports/{report}.{format}', HoaReportController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:5,1'])->whereIn('format', ['csv', 'xlsx', 'pdf'])->name('staff.reports.download');
 Route::get('/staff/reports/{report}/preview', HoaReportController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:10,1'])->name('staff.reports.preview');

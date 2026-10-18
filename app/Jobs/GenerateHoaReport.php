@@ -6,6 +6,8 @@ namespace App\Jobs;
 
 use App\Exports\HoaReportExport;
 use App\Models\ReportExport;
+use App\Models\User;
+use App\Services\Reporting\HoaReportCatalog;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
@@ -40,15 +42,20 @@ final class GenerateHoaReport implements ShouldQueue
         }
         $record->update(['status' => 'Processing', 'failure_reason' => null]);
 
+        $format = in_array($record->format, ['csv', 'xlsx'], true) ? $record->format : 'csv';
         $filters = $record->filters ?? [];
-        $path = sprintf('reports/%d/%d.csv', $record->user_id, $record->id);
+        $path = sprintf('reports/%d/%d.%s', $record->user_id, $record->id, $format);
 
         try {
+            $user = User::query()->findOrFail($record->user_id);
+            $catalog = app(HoaReportCatalog::class);
+            $catalog->authorize($user, $record->panel, $record->report, $format, (string) ($filters['scope'] ?? 'current'));
+            $filters = $catalog->validateFilters($record->report, $filters, $record->panel === 'admin');
             $stored = Excel::store(
-                new HoaReportExport($record->report, $filters['from'] ?? null, $filters['to'] ?? null, $filters['status'] ?? null),
+                new HoaReportExport($record->report, filters: $filters, generatedBy: $user->full_name),
                 $path,
                 'local',
-                ExcelFormat::CSV,
+                $format === 'csv' ? ExcelFormat::CSV : ExcelFormat::XLSX,
             );
             if (! $stored || ! Storage::disk('local')->exists($path)) {
                 throw new RuntimeException('The report file could not be stored.');
@@ -78,7 +85,11 @@ final class GenerateHoaReport implements ShouldQueue
             return;
         }
 
+        if ($record->file_path) {
+            Storage::disk('local')->delete($record->file_path);
+        }
         Storage::disk('local')->delete(sprintf('reports/%d/%d.csv', $record->user_id, $record->id));
+        Storage::disk('local')->delete(sprintf('reports/%d/%d.xlsx', $record->user_id, $record->id));
         $record->update([
             'status' => 'Failed',
             'file_path' => null,

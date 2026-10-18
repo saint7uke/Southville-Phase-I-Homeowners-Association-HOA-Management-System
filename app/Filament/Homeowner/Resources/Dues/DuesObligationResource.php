@@ -8,11 +8,13 @@ use App\Actions\Payments\SubmitPaymentProof;
 use App\Filament\Homeowner\Resources\Dues\Pages\ListDuesObligations;
 use App\Models\DuesObligation;
 use App\Models\User;
+use App\Services\PropertyDuesAccounts;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -23,6 +25,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 
 final class DuesObligationResource extends Resource
 {
@@ -31,6 +34,8 @@ final class DuesObligationResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptPercent;
 
     protected static ?string $navigationLabel = 'Outstanding Dues';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Finance';
 
     public static function table(Table $table): Table
     {
@@ -50,6 +55,8 @@ final class DuesObligationResource extends Resource
                     TextInput::make('amount_paid')->label('Amount paid')->numeric()->prefix('PHP')->required()->minValue(0.01),
                     DatePicker::make('payment_date')->required()->maxDate(today())->default(today()),
                     Select::make('payment_method')->options(['Bank Transfer' => 'Bank Transfer', 'GCash' => 'GCash', 'Maya' => 'Maya'])->required(),
+                    TextInput::make('transaction_reference')->label('Transaction reference')->required()->maxLength(120),
+                    Hidden::make('submission_token')->default(fn (): string => (string) Str::uuid()),
                     Textarea::make('notes')->maxLength(500),
                     FileUpload::make('proof')->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])->maxSize(5120)->storeFiles(false)->required(),
                 ])
@@ -61,8 +68,9 @@ final class DuesObligationResource extends Resource
                     app(SubmitPaymentProof::class)->handle($actor, $record, [
                         'amount_paid' => (string) $data['amount_paid'],
                         'payment_date' => $data['payment_date'],
-                        'covered_period' => sprintf('%04d-%02d', $record->billing_year, $record->billing_month),
                         'payment_method' => $data['payment_method'],
+                        'transaction_reference' => $data['transaction_reference'],
+                        'submission_token' => $data['submission_token'],
                         'notes' => $data['notes'] ?? null,
                     ], $proof);
                     Notification::make()->success()->title('Proof submitted for staff review')->send();
@@ -72,7 +80,17 @@ final class DuesObligationResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->whereHas('homeowner', fn (Builder $query): Builder => $query->where('user_id', Filament::auth()->id()));
+        $resident = Filament::auth()->user()?->homeowner;
+        if ($resident === null) {
+            return parent::getEloquentQuery()->whereRaw('1 = 0');
+        }
+
+        $liable = app(PropertyDuesAccounts::class)->primaryForAddress($resident->address_key);
+        if ($liable === null || ! app(PropertyDuesAccounts::class)->payerIsEligible($resident->loadMissing('user'), $liable->loadMissing('user'))) {
+            return parent::getEloquentQuery()->whereRaw('1 = 0');
+        }
+
+        return parent::getEloquentQuery()->where('homeowner_id', $liable->id);
     }
 
     public static function getPages(): array

@@ -17,7 +17,9 @@ final class PaymentPolicy
 
     public function view(User $user, Payment $payment): Response
     {
-        return $user->can('manage_payments') || $payment->homeowner->user_id === $user->id
+        return $user->can('manage_payments')
+            || $payment->homeowner->user_id === $user->id
+            || $payment->payer?->user_id === $user->id
             ? Response::allow()
             : Response::denyAsNotFound();
     }

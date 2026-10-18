@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Complaints;
 use App\Filament\Resources\Complaints\Pages\CreateComplaint;
 use App\Filament\Resources\Complaints\Pages\EditComplaint;
 use App\Filament\Resources\Complaints\Pages\ListComplaints;
+use App\Filament\Resources\Complaints\Pages\ViewComplaint;
 use App\Filament\Resources\Complaints\Schemas\ComplaintForm;
 use App\Filament\Resources\Complaints\Tables\ComplaintsTable;
 use App\Models\Complaint;
@@ -21,6 +22,8 @@ class ComplaintResource extends Resource
     protected static ?string $model = Complaint::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
 
     public static function form(Schema $schema): Schema
     {
@@ -44,6 +47,7 @@ class ComplaintResource extends Resource
         return [
             'index' => ListComplaints::route('/'),
             'create' => CreateComplaint::route('/create'),
+            'view' => ViewComplaint::route('/{record}'),
             'edit' => EditComplaint::route('/{record}/edit'),
         ];
     }

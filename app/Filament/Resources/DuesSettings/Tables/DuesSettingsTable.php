@@ -2,7 +2,10 @@
 
 namespace App\Filament\Resources\DuesSettings\Tables;
 
+use App\Actions\Dues\CloseDuesSetting;
 use App\Models\DuesSetting;
+use App\Models\User;
+use App\Support\AuthenticatedActor;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -58,10 +61,16 @@ class DuesSettingsTable
             ->recordActions([
                 EditAction::make(),
                 Action::make('deactivate')
+                    ->label('Close schedule')
                     ->requiresConfirmation()
+                    ->modalDescription('The schedule will end after its latest generated billing month and will no longer generate obligations.')
                     ->color('warning')
                     ->visible(fn (DuesSetting $record): bool => $record->is_active)
-                    ->action(fn (DuesSetting $record) => $record->update(['is_active' => false])),
+                    ->action(function (DuesSetting $record): void {
+                        $actor = app(AuthenticatedActor::class)->user();
+                        abort_unless($actor instanceof User, 403);
+                        app(CloseDuesSetting::class)->handle($record, $actor);
+                    }),
                 DeleteAction::make()->visible(fn (): bool => Filament::getCurrentPanel()?->getId() === 'admin'),
             ])
             ->toolbarActions([

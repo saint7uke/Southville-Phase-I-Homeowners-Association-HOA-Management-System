@@ -11,7 +11,7 @@
     --hoa-muted: #586d78;
     --hoa-line: #d8e2e7;
     min-width: 0;
-    overflow: clip;
+    overflow-x: clip;
     background: #fff;
     color: var(--hoa-ink);
     font-family: 'Poppins', system-ui, sans-serif;
@@ -217,4 +217,137 @@
 
 @media (prefers-reduced-transparency: reduce) {
     .hoa-navbar.is-scrolled { background: #fff; backdrop-filter: none; }
+}
+/* Authentication surfaces extend the landing page tokens and controls. */
+.hoa-auth-shell { min-height: 100svh; display: grid; place-items: center; padding: clamp(1rem, 4vw, 3rem); position: relative; background: var(--hoa-navy); }
+.hoa-auth-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgb(5 38 57 / .95), rgb(8 44 66 / .78)), url('/images/southville-community-hero.webp') center / cover; }
+.hoa-auth-card { position: relative; z-index: 2; width: min(100%, 32rem); padding: clamp(1.5rem, 5vw, 3rem); border: 1px solid rgb(255 255 255 / .25); border-radius: 20px; background: #fff; box-shadow: 0 25px 50px rgb(2 16 24 / .25); }
+.hoa-auth-card-confirmation { text-align: center; }
+.hoa-auth-brand { display: flex; flex-direction: column; align-items: center; gap: .65rem; margin-bottom: 2rem; color: var(--hoa-ink); text-align: center; }
+.hoa-auth-brand .hoa-brand-mark { width: 48px; height: 48px; color: var(--hoa-navy); background: #e3f5fc; border-color: transparent; }
+.hoa-auth-brand-title { font-size: 1rem; font-weight: 700; letter-spacing: -.02em; }
+.hoa-auth-card h1 { margin: 0; color: var(--hoa-ink); font-size: clamp(1.7rem, 4vw, 2.2rem); line-height: 1.1; letter-spacing: -.04em; }
+.hoa-auth-lead { margin: .8rem 0 1.5rem; color: var(--hoa-muted); font-size: .9rem; }
+.hoa-auth-form { display: grid; gap: 1rem; }
+.hoa-auth-form .hoa-field { display: grid; gap: .4rem; }
+.hoa-auth-form label, .hoa-field label { color: var(--hoa-ink); font-size: .78rem; font-weight: 700; }
+.hoa-auth-form input, .hoa-field input, .hoa-field select { width: 100%; min-height: 46px; padding: .65rem .9rem; border: 1px solid var(--hoa-line); border-radius: 8px; background: #fff; color: var(--hoa-ink); font: inherit; }
+.hoa-auth-form input:focus, .hoa-field input:focus, .hoa-field select:focus { outline: none; border-color: var(--hoa-blue-dark); box-shadow: 0 0 0 3px rgb(102 199 244 / .2); }
+.hoa-login-options { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: .5rem; }
+.hoa-button-block { width: 100%; }
+.hoa-button-secondary { border-color: var(--hoa-line); background: #fff; color: var(--hoa-blue-dark) !important; }
+.hoa-button-secondary:hover { border-color: var(--hoa-blue); background: #f2fbff; }
+.hoa-auth-actions { margin-top: 1.5rem; }
+.hoa-auth-footer { display: grid; gap: .7rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--hoa-line); color: var(--hoa-muted); text-align: center; font-size: .85rem; }
+.hoa-auth-footer p { margin: 0; }
+.hoa-status-icon { display: grid; width: 3.5rem; height: 3.5rem; place-items: center; margin: 0 auto 1.25rem; border-radius: 50%; background: #e3f5fc; color: var(--hoa-blue-dark); font-size: 1.5rem; font-weight: 700; }
+.hoa-status-pill { display: inline-flex; align-items: center; gap: .5rem; margin: .25rem 0 1rem; padding: .55rem .9rem; border-radius: 999px; background: #fff4d6; color: #76530a; font-size: .78rem; font-weight: 700; }
+.hoa-status-pill span { width: .5rem; height: .5rem; border-radius: 50%; background: #d99500; }
+.hoa-status-pill-approved { background: #e6f7ed; color: #176b3a; }
+.hoa-status-pill-approved span { background: #28a35a; }
+.hoa-status-pill-rejected { background: #ffeded; color: #9d2929; }
+.hoa-status-pill-rejected span { background: #d64545; }
+.hoa-auth-alert { margin: 1rem 0; padding: .9rem 1rem; border: 1px solid #f1b6b6; border-radius: 10px; background: #fff5f5; color: #7d2020; text-align: left; font-size: .88rem; }
+.hoa-auth-alert p { margin: .35rem 0 0; }
+.hoa-role-card { width: 100%; border: 2px solid var(--hoa-line); border-radius: 12px; background: #fff; }
+.hoa-role-card:focus-visible { outline: 3px solid #f3b743; outline-offset: 3px; }
+.hoa-role-icon { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: 50%; background: #e3f5fc; color: var(--hoa-blue-dark); font-size: 1.2rem; font-weight: 700; }
+.hoa-auth-logo { display: grid; width: 84px; height: 84px; place-items: center; margin-bottom: .65rem; border-radius: 50%; background: #e3f5fc; box-shadow: 0 12px 24px rgb(8 121 173 / .12); }
+.hoa-auth-logo img { width: 100%; height: 100%; object-fit: contain; border-radius: inherit; }
+.hoa-auth-kicker { color: var(--hoa-blue-dark); font-size: .7rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.hoa-password-field { position: relative; }
+.hoa-password-field input { width: 100%; padding-right: 3.25rem !important; }
+.hoa-password-toggle { position: absolute; top: 50%; right: .5rem; display: inline-grid; width: 2.5rem; height: 2.5rem; place-items: center; transform: translateY(-50%); border: 0; border-radius: .5rem; background: transparent; color: var(--hoa-blue-dark); cursor: pointer; }
+.hoa-password-toggle:hover { background: rgb(102 199 244 / .14); color: var(--hoa-navy); }
+.hoa-password-toggle:focus-visible { outline: 3px solid #f3b743; outline-offset: 2px; }
+.password-eye { width: 1.1rem; height: 1.1rem; }
+.password-eye-hide { display: none; }
+.password-eye[hidden] { display: none; }
+.hoa-auth-switch { margin-top: .5rem !important; font-size: .78rem; }
+.hoa-auth-switch a { color: var(--hoa-blue-dark); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.hoa-auth-page { overflow: visible; }
+.hoa-auth-shell { align-content: start; padding-block: clamp(2rem, 7vw, 5rem); }
+.hoa-auth-card { margin-block: auto; }
+
+@media (max-width: 640px) {
+    .hoa-login-options { align-items: flex-start; flex-direction: column; }
+    .hoa-auth-actions .hoa-button, .hoa-auth-footer .hoa-button { width: 100%; }
+}
+
+.hoa-portal-auth {
+    --hoa-auth-accent: #0879ad;
+    --hoa-auth-ink: #173140;
+    --hoa-auth-muted: #617784;
+    --hoa-auth-line: #d9e5ea;
+    display: grid;
+    grid-template-columns: minmax(16rem, .85fr) minmax(20rem, 1.15fr);
+    width: min(100%, 62rem);
+    min-height: min(44rem, calc(100svh - 3rem));
+    margin: auto;
+    overflow: hidden;
+    border: 1px solid rgb(8 48 66 / .12);
+    border-radius: 1.5rem;
+    background: #fff;
+    box-shadow: 0 1.5rem 4rem rgb(5 29 42 / .18);
+    color: var(--hoa-auth-ink);
+}
+.hoa-auth-page:has(.hoa-portal-auth) { display: grid; min-height: 100svh; background: #eef4f6; }
+.hoa-auth-shell.hoa-portal-auth { place-items: stretch; padding: 0; background: transparent; }
+.hoa-portal-auth-intro { display: flex; flex-direction: column; justify-content: center; padding: clamp(2rem, 5vw, 4rem); background: linear-gradient(155deg, #0a3850, #0b607e); color: #f5fbfd; }
+.hoa-portal-auth-brand { display: inline-flex; align-items: center; gap: .75rem; width: fit-content; margin-bottom: 3.5rem; color: #fff; font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.hoa-portal-auth-brand:hover { color: #fff; }
+.hoa-portal-auth-logo { display: grid; width: 3rem; height: 3rem; place-items: center; border-radius: 1rem; background: #fff; }
+.hoa-portal-auth-logo img { width: 2.4rem; height: 2.4rem; object-fit: contain; }
+.hoa-portal-auth-portal, .hoa-portal-auth-eyebrow { margin: 0 0 .75rem; color: #0879ad; font-size: .72rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.hoa-portal-auth-portal { color: #bce7f7; }
+.hoa-portal-auth-intro h1 { max-width: 19rem; margin: 0; color: #fff; font-size: clamp(1.7rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -.04em; }
+.hoa-portal-auth-support { max-width: 19rem; margin: 1.25rem 0 0; color: #d7edf4; line-height: 1.7; }
+.hoa-portal-auth-rule { width: 3rem; height: 2px; margin: 2.25rem 0 1.25rem; background: #66c7f4; }
+.hoa-portal-auth-note { max-width: 19rem; margin: 0; color: #b7d2dc; font-size: .78rem; line-height: 1.6; }
+.hoa-portal-auth-form { display: flex; flex-direction: column; justify-content: center; padding: clamp(2rem, 6vw, 5rem); }
+.hoa-portal-auth-form.hoa-auth-card { position: relative; z-index: 2; width: auto; max-width: none; border-radius: 0; box-shadow: none; }
+.hoa-auth-shell.hoa-portal-auth .hoa-auth-card.is-wide { width: auto; max-width: none; }
+.hoa-portal-auth .hoa-auth-overlay { display: none; }
+.hoa-portal-auth .hoa-auth-brand { margin-bottom: 2rem; }
+.hoa-portal-auth .hoa-auth-actions { gap: 1rem; }
+.hoa-portal-auth .hoa-auth-actions .hoa-button { min-height: 3rem; border-radius: .75rem; }
+.hoa-portal-auth .hoa-auth-footer { margin-top: 1.5rem; padding-top: 1.25rem; }
+.hoa-portal-auth .hoa-form-grid-2 { min-width: 0; }
+.hoa-portal-auth-heading { margin-bottom: 2rem; }
+.hoa-portal-auth-heading h2 { margin: 0; color: var(--hoa-auth-ink); font-size: clamp(1.7rem, 4vw, 2.35rem); letter-spacing: -.04em; }
+.hoa-portal-auth-heading > p:last-child { margin: .7rem 0 0; color: var(--hoa-auth-muted); font-size: .9rem; line-height: 1.6; }
+.hoa-portal-auth-fields { display: grid; gap: 1rem; }
+.hoa-portal-auth-fields .hoa-field { display: grid; gap: .4rem; }
+.hoa-portal-auth-fields label { color: var(--hoa-auth-ink); font-size: .78rem; font-weight: 700; }
+.hoa-portal-auth-fields input { width: 100%; min-height: 3rem; padding: .65rem .9rem; border: 1px solid var(--hoa-auth-line); border-radius: .7rem; background: #fff; color: var(--hoa-auth-ink); font: inherit; }
+.hoa-portal-auth-fields input:focus { outline: none; border-color: var(--hoa-auth-accent); box-shadow: 0 0 0 3px rgb(8 121 173 / .16); }
+.hoa-portal-auth-options { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: .25rem; color: var(--hoa-auth-muted); font-size: .78rem; }
+.hoa-checkbox-label { display: inline-flex; align-items: flex-start; gap: .65rem; min-block-size: 2.75rem; margin: 0; color: var(--hoa-auth-ink); cursor: pointer; font-size: .82rem; line-height: 1.45; }
+.hoa-checkbox-input { width: 1.125rem !important; min-width: 1.125rem; height: 1.125rem; min-height: 1.125rem !important; flex: 0 0 1.125rem; margin: .15rem 0 0; padding: 0 !important; accent-color: var(--hoa-auth-accent); cursor: pointer; }
+.hoa-checkbox-input:focus-visible { outline: 2px solid var(--hoa-auth-accent); outline-offset: 3px; }
+.hoa-checkbox-label > span { min-width: 0; }
+.hoa-portal-auth-options a, .hoa-portal-auth-links a { color: var(--hoa-auth-accent); font-weight: 700; text-decoration: none; }
+.hoa-portal-auth-options a:hover, .hoa-portal-auth-links a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.hoa-portal-auth-submit { width: 100%; min-height: 3rem; margin-top: .75rem; border-radius: .75rem; }
+.hoa-portal-auth-links { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .65rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--hoa-auth-line); color: var(--hoa-auth-muted); font-size: .78rem; }
+.hoa-portal-auth-alert { margin: 0 0 1.25rem; }
+.hoa-portal-auth-alert ul { margin: .5rem 0 0; padding-left: 1.2rem; font-size: .8rem; }
+
+@media (prefers-color-scheme: dark) {
+    .hoa-auth-page:has(.hoa-portal-auth) { background: #071d29; }
+    .hoa-portal-auth { --hoa-auth-ink: #e7f0f3; --hoa-auth-muted: #a9bec7; --hoa-auth-line: #304c59; border-color: #294553; background: #102832; }
+    .hoa-portal-auth-form { background: #102832; }
+    .hoa-portal-auth-heading h2, .hoa-portal-auth-fields label { color: var(--hoa-auth-ink); }
+    .hoa-portal-auth-fields input { border-color: #456271; background: #0c202a; color: var(--hoa-auth-ink); }
+    .hoa-checkbox-label { color: var(--hoa-auth-ink); }
+}
+
+@media (max-width: 720px) {
+    .hoa-portal-auth { grid-template-columns: 1fr; min-height: auto; border-radius: 1rem; }
+    .hoa-portal-auth-intro { padding: 1.5rem; }
+    .hoa-portal-auth-brand { margin-bottom: 2rem; }
+    .hoa-portal-auth-intro h1 { max-width: 30rem; font-size: 1.5rem; }
+    .hoa-portal-auth-support, .hoa-portal-auth-rule, .hoa-portal-auth-note { display: none; }
+    .hoa-portal-auth-form { padding: 1.5rem; }
+    .hoa-portal-auth-form.hoa-auth-card { padding: 1.5rem; }
 }

@@ -40,6 +40,8 @@ final class MyProfile extends Page
 
     protected static ?string $navigationLabel = 'My Profile';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'My Home';
+
     protected static ?string $slug = 'my-profile';
 
     protected static ?int $navigationSort = 10;
@@ -53,6 +55,9 @@ final class MyProfile extends Page
 
     /** @var array<string, mixed> */
     public array $passwordData = [];
+
+    /** @var list<array{name: string, contact: string, lease_start: string, lease_end: string, status: string}> */
+    public array $tenantSummaries = [];
 
     public static function canAccess(): bool
     {
@@ -68,6 +73,7 @@ final class MyProfile extends Page
     {
         abort_unless(self::canAccess(), 404);
         $this->fillProfileForm();
+        $this->loadTenantSummaries();
         $this->passwordForm->fill();
     }
 
@@ -78,27 +84,27 @@ final class MyProfile extends Page
                 Section::make('Personal information')
                     ->description('Keep your legal and contact details accurate. Changing your email requires verification.')
                     ->schema([
-                        TextInput::make('first_name')->label('First name')->required()->maxLength(100)->autocomplete('given-name'),
-                        TextInput::make('middle_name')->label('Middle name')->maxLength(100)->autocomplete('additional-name'),
-                        TextInput::make('last_name')->label('Last name')->required()->maxLength(100)->autocomplete('family-name'),
-                        Select::make('suffix')->options(['Jr.' => 'Jr.', 'Sr.' => 'Sr.', 'II' => 'II', 'III' => 'III', 'IV' => 'IV', 'N/A' => 'N/A'])->placeholder('Select an option'),
-                        Select::make('sex')->options(['Male' => 'Male', 'Female' => 'Female', 'Prefer not to say' => 'Prefer not to say'])->required()->placeholder('Select an option'),
-                        DatePicker::make('date_of_birth')->label('Date of birth')->required()->maxDate(today())->live(),
+                        TextInput::make('first_name')->label('First name')->required()->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('given-name')->extraFieldWrapperAttributes(self::validationAttributes('first_name')),
+                        TextInput::make('middle_name')->label('Middle name')->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('additional-name')->extraFieldWrapperAttributes(self::validationAttributes('middle_name')),
+                        TextInput::make('last_name')->label('Last name')->required()->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('family-name')->extraFieldWrapperAttributes(self::validationAttributes('last_name')),
+                        Select::make('suffix')->options(['Jr.' => 'Jr.', 'Sr.' => 'Sr.', 'II' => 'II', 'III' => 'III', 'IV' => 'IV', 'N/A' => 'N/A'])->placeholder('Select an option')->extraFieldWrapperAttributes(self::validationAttributes('suffix')),
+                        Select::make('sex')->options(['Male' => 'Male', 'Female' => 'Female', 'Prefer not to say' => 'Prefer not to say'])->required()->placeholder('Select an option')->extraFieldWrapperAttributes(self::validationAttributes('sex')),
+                        DatePicker::make('date_of_birth')->label('Date of birth')->required()->maxDate(today()->subDay())->live()->extraFieldWrapperAttributes(self::validationAttributes('date_of_birth')),
                         Placeholder::make('age')->content(fn (Get $get): string => filled($get('date_of_birth')) ? Carbon::parse($get('date_of_birth'))->age.' years old' : 'Calculated from date of birth'),
-                        TextInput::make('contact_number')->label('Contact number')->tel()->required()->length(11)->regex('/^09\d{9}$/')->autocomplete('tel')->helperText('Use an 11-digit Philippine mobile number beginning with 09.'),
-                        TextInput::make('email')->label('Email address')->email()->required()->maxLength(255)->autocomplete('email')->helperText('A verification link is sent if this changes.'),
+                        TextInput::make('contact_number')->label('Contact number')->tel()->required()->maxLength(20)->regex('/^09\d{9}$/')->dehydrateStateUsing(self::normalizePhone(...))->autocomplete('tel')->helperText('Use an 11-digit Philippine mobile number beginning with 09. Spaces, periods, and hyphens are accepted.')->extraFieldWrapperAttributes(self::validationAttributes('contact_number')),
+                        TextInput::make('email')->label('Email address')->email()->required()->maxLength(255)->autocomplete('email')->helperText('A verification link is sent if this changes.')->extraFieldWrapperAttributes(self::validationAttributes('email')),
                     ])->columns(2),
                 Section::make('Property and emergency contact')
                     ->schema([
-                        TextInput::make('house_number')->label('House number')->required()->maxLength(50)->autocomplete('address-line1'),
-                        TextInput::make('street')->required()->maxLength(100)->autocomplete('address-line2'),
-                        TextInput::make('block')->required()->maxLength(20),
-                        TextInput::make('lot')->required()->maxLength(20),
-                        TextInput::make('phase')->required()->maxLength(50),
-                        DatePicker::make('residency_date')->label('Move-in date')->required()->maxDate(today()),
-                        Select::make('ownership_type')->label('Occupancy type')->options(['Owner' => 'Owner', 'Tenant' => 'Tenant', 'Co-owner' => 'Co-owner'])->required()->placeholder('Select an option'),
-                        TextInput::make('emergency_contact_name')->label('Emergency contact name')->required()->maxLength(100)->autocomplete('name'),
-                        TextInput::make('emergency_contact_number')->label('Emergency contact number')->tel()->required()->length(11)->regex('/^09\d{9}$/')->autocomplete('tel'),
+                        TextInput::make('house_number')->label('House number')->required()->maxLength(50)->autocomplete('address-line1')->extraFieldWrapperAttributes(self::validationAttributes('house_number')),
+                        TextInput::make('street')->required()->maxLength(100)->autocomplete('address-line2')->extraFieldWrapperAttributes(self::validationAttributes('street')),
+                        TextInput::make('block')->required()->maxLength(20)->extraFieldWrapperAttributes(self::validationAttributes('block')),
+                        TextInput::make('lot')->required()->maxLength(20)->extraFieldWrapperAttributes(self::validationAttributes('lot')),
+                        TextInput::make('phase')->required()->maxLength(50)->disabled()->dehydrated()->helperText('Contact the HOA to change the registered phase.'),
+                        DatePicker::make('residency_date')->label('Move-in date')->required()->maxDate(today())->afterOrEqual('date_of_birth')->extraFieldWrapperAttributes(self::validationAttributes('residency_date')),
+                        Select::make('ownership_type')->label('Occupancy type')->options(['Owner' => 'Owner', 'Tenant' => 'Tenant', 'Co-owner' => 'Co-owner'])->required()->disabled()->dehydrated()->helperText('Contact the HOA to change the occupancy type.'),
+                        TextInput::make('emergency_contact_name')->label('Emergency contact name')->required()->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('name')->extraFieldWrapperAttributes(self::validationAttributes('emergency_contact_name')),
+                        TextInput::make('emergency_contact_number')->label('Emergency contact number')->tel()->required()->maxLength(20)->regex('/^09\d{9}$/')->dehydrateStateUsing(self::normalizePhone(...))->autocomplete('tel')->extraFieldWrapperAttributes(self::validationAttributes('emergency_contact_number')),
                     ])->columns(2),
                 Section::make('Profile photo')
                     ->description('JPEG, PNG, or WebP; 100–4000 pixels per side; maximum 2 MB. Location metadata is removed before private storage.')
@@ -109,7 +115,8 @@ final class MyProfile extends Page
                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                             ->maxSize(2048)
                             ->storeFiles(false)
-                            ->imagePreviewHeight('180'),
+                            ->imagePreviewHeight('180')
+                            ->extraFieldWrapperAttributes(self::validationAttributes('profile_photo_upload')),
                     ]),
             ])
             ->statePath('profileData');
@@ -122,9 +129,9 @@ final class MyProfile extends Page
                 Section::make('Change password')
                     ->description('You will be signed out from every device after a successful password change.')
                     ->schema([
-                        TextInput::make('current_password')->label('Current password')->password()->revealable()->required()->maxLength(255)->autocomplete('current-password'),
-                        TextInput::make('password')->label('New password')->password()->revealable()->required()->rule(Password::default())->same('password_confirmation')->autocomplete('new-password'),
-                        TextInput::make('password_confirmation')->label('Confirm new password')->password()->revealable()->required()->autocomplete('new-password'),
+                        TextInput::make('current_password')->label('Current password')->password()->revealable()->required()->maxLength(255)->autocomplete('current-password')->extraFieldWrapperAttributes(self::passwordValidationAttributes('current_password')),
+                        TextInput::make('password')->label('New password')->password()->revealable()->required()->maxLength(255)->rule(Password::default())->same('password_confirmation')->autocomplete('new-password')->helperText('At least 12 characters with uppercase, lowercase, number, and symbol.')->extraFieldWrapperAttributes(self::passwordValidationAttributes('password')),
+                        TextInput::make('password_confirmation')->label('Confirm new password')->password()->revealable()->required()->maxLength(255)->autocomplete('new-password')->extraFieldWrapperAttributes(self::passwordValidationAttributes('password_confirmation')),
                     ]),
             ])
             ->statePath('passwordData');
@@ -199,6 +206,29 @@ final class MyProfile extends Page
         ]);
     }
 
+    private function loadTenantSummaries(): void
+    {
+        $homeowner = $this->user()->homeowner;
+        if (! in_array($homeowner->ownership_type, ['Owner', 'Co-owner'], true)) {
+            $this->tenantSummaries = [];
+
+            return;
+        }
+
+        $this->tenantSummaries = $homeowner->tenants()
+            ->with('user')
+            ->orderBy('lease_start_date')
+            ->get()
+            ->map(fn ($tenant): array => [
+                'name' => $tenant->user->full_name,
+                'contact' => $tenant->user->contact_number,
+                'lease_start' => $tenant->lease_start_date?->toFormattedDateString() ?? 'Not provided',
+                'lease_end' => $tenant->lease_end_date?->toFormattedDateString() ?? 'Not provided',
+                'status' => (string) $tenant->user->account_status,
+            ])
+            ->all();
+    }
+
     private function user(): User
     {
         $user = Filament::auth()->user();
@@ -207,6 +237,23 @@ final class MyProfile extends Page
         abort_unless($user->homeowner !== null, 404);
 
         return $user;
+    }
+
+    /** @return array<string, string> */
+    private static function validationAttributes(string $field): array
+    {
+        return ['data-profile-field-wrapper' => $field];
+    }
+
+    /** @return array<string, string> */
+    private static function passwordValidationAttributes(string $field): array
+    {
+        return ['data-password-field-wrapper' => $field];
+    }
+
+    private static function normalizePhone(?string $value): string
+    {
+        return (string) preg_replace('/[\s().-]+/u', '', trim((string) $value));
     }
 
     private function checkRateLimit(): bool

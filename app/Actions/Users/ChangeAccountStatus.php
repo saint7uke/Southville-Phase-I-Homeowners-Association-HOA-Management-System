@@ -78,8 +78,13 @@ final class ChangeAccountStatus
             ];
 
             if ($to === UserAccountStatus::Active) {
-                $attributes['approved_at'] = $lockedUser->approved_at ?? now();
+                $approvedAt = $lockedUser->approved_at ?? now();
+                $attributes['approved_at'] = $approvedAt;
                 $attributes['approved_by'] = $lockedUser->approved_by ?? $actor->id;
+
+                if ($from === UserAccountStatus::Pending && $lockedUser->hasRole('homeowner')) {
+                    $attributes['email_verified_at'] = $approvedAt;
+                }
             }
 
             $lockedUser->forceFill($attributes);

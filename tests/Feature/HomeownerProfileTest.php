@@ -8,14 +8,17 @@ use App\Actions\Homeowners\UpdateOwnProfile;
 use App\Filament\Homeowner\Pages\MyProfile;
 use App\Models\Homeowner;
 use App\Models\User;
+use App\Models\UserEmailReservation;
+use App\Services\PropertyAddressAvailability;
+use App\Validation\HomeownerProfileValidator;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Auth\Notifications\VerifyEmail;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
@@ -72,6 +75,184 @@ final class HomeownerProfileTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_profile_normalizes_formatted_phones_and_rejects_letters(): void
+    {
+        [$resident] = $this->homeowner();
+
+        app(UpdateOwnProfile::class)->handle($resident, $this->profilePayload([
+            'contact_number' => '0917-123-4567',
+            'emergency_contact_number' => '0998 765 4321',
+        ]));
+
+        $this->assertSame('09171234567', $resident->refresh()->contact_number);
+        $this->assertSame('09987654321', $resident->homeowner->emergency_contact_number);
+
+        try {
+            app(UpdateOwnProfile::class)->handle($resident, $this->profilePayload([
+                'contact_number' => 'call 09171234567',
+            ]));
+            $this->fail('Letters in a mobile number should be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('contact_number', $exception->errors());
+        }
+    }
+
+    public function test_email_availability_allows_own_history_and_rejects_other_reservations_privately(): void
+    {
+        [$resident] = $this->homeowner();
+        [$other] = $this->homeowner();
+        UserEmailReservation::query()->create(['email' => 'my-old@example.test', 'user_id' => $resident->id]);
+        UserEmailReservation::query()->create(['email' => 'other-old@example.test', 'user_id' => $other->id]);
+
+        $this->actingAs($resident, 'homeowner')
+            ->postJson(route('homeowner.profile.availability'), ['field' => 'email', 'email' => ' MY-OLD@EXAMPLE.TEST '])
+            ->assertExactJson(['valid' => true, 'message' => HomeownerProfileValidator::EMAIL_AVAILABLE_MESSAGE]);
+
+        $response = $this->postJson(route('homeowner.profile.availability'), [
+            'field' => 'email',
+            'email' => 'other-old@example.test',
+        ])->assertOk()->assertExactJson([
+            'valid' => false,
+            'message' => HomeownerProfileValidator::EMAIL_UNAVAILABLE_MESSAGE,
+        ]);
+
+        $this->assertArrayNotHasKey('id', $response->json());
+        $this->assertStringNotContainsString($other->full_name, $response->getContent());
+    }
+
+    public function test_profile_availability_validates_address_conflicts_and_relationships(): void
+    {
+        [$existing, $existingHomeowner] = $this->homeowner([], ['block' => 'B 20', 'lot' => 'L 20']);
+        [$resident] = $this->homeowner([], ['block' => 'B 21', 'lot' => 'L 21']);
+
+        $this->actingAs($resident, 'homeowner')->postJson(route('homeowner.profile.availability'), [
+            'field' => 'address',
+            'house_number' => $existingHomeowner->house_number,
+            'street' => $existingHomeowner->street,
+            'block' => $existingHomeowner->block,
+            'lot' => $existingHomeowner->lot,
+        ])->assertExactJson([
+            'valid' => false,
+            'message' => PropertyAddressAvailability::UNAVAILABLE_MESSAGE,
+        ]);
+
+        [, $landlord] = $this->homeowner(['email' => 'landlord-profile@example.test'], ['block' => 'B 30', 'lot' => 'L 30']);
+        [$tenant, $tenantRecord] = $this->homeowner(['email' => 'tenant-profile@example.test'], [
+            'house_number' => $landlord->house_number,
+            'street' => $landlord->street,
+            'block' => 'B 30',
+            'lot' => 'L 30',
+            'ownership_type' => 'Tenant',
+            'landlord_homeowner_id' => $landlord->id,
+        ]);
+
+        $this->actingAs($tenant, 'homeowner')->postJson(route('homeowner.profile.availability'), [
+            'field' => 'address',
+            'house_number' => '99',
+            'street' => 'New Street',
+            'block' => 'B 99',
+            'lot' => 'L 99',
+        ])->assertExactJson([
+            'valid' => false,
+            'message' => HomeownerProfileValidator::LINKED_ADDRESS_MESSAGE,
+        ]);
+
+        $this->assertSame($existing->id, $existingHomeowner->user_id);
+        $this->assertSame($landlord->id, $tenantRecord->landlord_homeowner_id);
+    }
+
+    public function test_profile_availability_requires_homeowner_authentication_and_is_throttled(): void
+    {
+        $this->postJson(route('homeowner.profile.availability'), ['field' => 'email', 'email' => 'new@example.test'])
+            ->assertUnauthorized();
+
+        $middleware = Route::getRoutes()->getByName('homeowner.profile.availability')->gatherMiddleware();
+        $this->assertContains('auth:homeowner', $middleware);
+        $this->assertContains('throttle:30,1', $middleware);
+    }
+
+    public function test_profile_availability_enforces_its_request_limit(): void
+    {
+        [$resident] = $this->homeowner();
+        $this->actingAs($resident, 'homeowner');
+
+        for ($request = 0; $request < 30; $request++) {
+            $this->postJson(route('homeowner.profile.availability'), [
+                'field' => 'email',
+                'email' => "available-{$request}@example.test",
+            ])->assertOk();
+        }
+
+        $this->postJson(route('homeowner.profile.availability'), [
+            'field' => 'email',
+            'email' => 'rate-limited@example.test',
+        ])->assertTooManyRequests();
+    }
+
+    public function test_homeowner_cannot_forge_phase_or_occupancy_changes(): void
+    {
+        [$resident] = $this->homeowner();
+
+        foreach ([
+            ['phase' => 'Another Phase'],
+            ['ownership_type' => 'Tenant'],
+        ] as $override) {
+            try {
+                app(UpdateOwnProfile::class)->handle($resident, $this->profilePayload($override));
+                $this->fail('HOA-controlled profile fields should not be homeowner-editable.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey(array_key_first($override), $exception->errors());
+            }
+        }
+    }
+
+    public function test_move_in_date_cannot_precede_birth_date(): void
+    {
+        [$resident] = $this->homeowner();
+
+        try {
+            app(UpdateOwnProfile::class)->handle($resident, $this->profilePayload([
+                'date_of_birth' => '2000-01-01',
+                'residency_date' => '1999-12-31',
+            ]));
+            $this->fail('A move-in date before birth should be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('residency_date', $exception->errors());
+        }
+    }
+
+    public function test_shared_profile_validator_rejects_invalid_values_for_every_editable_text_and_date_field(): void
+    {
+        [$resident, $homeowner] = $this->homeowner();
+        $validator = app(HomeownerProfileValidator::class);
+        $invalidValues = [
+            'first_name' => '123',
+            'middle_name' => '456',
+            'last_name' => '<script>',
+            'suffix' => 'V',
+            'sex' => 'Unknown',
+            'date_of_birth' => today()->toDateString(),
+            'contact_number' => '08123456789',
+            'email' => 'not-an-email',
+            'house_number' => '   ',
+            'street' => '   ',
+            'block' => '   ',
+            'lot' => '   ',
+            'residency_date' => today()->addDay()->toDateString(),
+            'emergency_contact_name' => '987',
+            'emergency_contact_number' => '09123',
+        ];
+
+        foreach ($invalidValues as $field => $value) {
+            try {
+                $validator->validate($resident, $homeowner, $this->profilePayload([$field => $value]));
+                $this->fail("The {$field} field should reject its invalid value.");
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey($field, $exception->errors());
+            }
+        }
+    }
+
     public function test_unverified_portal_homeowner_can_resend_and_complete_email_verification(): void
     {
         Notification::fake();
@@ -93,7 +274,7 @@ final class HomeownerProfileTest extends TestCase
         $this->assertNotNull($resident->refresh()->email_verified_at);
     }
 
-    public function test_normalized_phase_block_and_lot_must_be_unique(): void
+    public function test_owner_cannot_move_to_another_current_accounts_full_normalized_address(): void
     {
         [, $existing] = $this->homeowner([], [
             'block' => 'B 1',
@@ -106,23 +287,29 @@ final class HomeownerProfileTest extends TestCase
 
         try {
             app(UpdateOwnProfile::class)->handle($resident, $this->profilePayload([
+                'house_number' => $existing->house_number,
+                'street' => ' mahogany st. ',
                 'block' => ' b   1 ',
                 'lot' => ' l 2 ',
                 'phase' => $existing->phase,
             ]));
             $this->fail('A duplicate normalized property address should be rejected.');
         } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('lot', $exception->errors());
+            $this->assertArrayHasKey('house_number', $exception->errors());
         }
     }
 
-    public function test_database_unique_constraint_protects_property_address_races(): void
+    public function test_existing_shared_tenant_addresses_remain_valid(): void
     {
-        $this->homeowner([], ['block' => 'B 7', 'lot' => 'L 8']);
-        [, $second] = $this->homeowner([], ['block' => 'B 9', 'lot' => 'L 9']);
+        [, $first] = $this->homeowner([], [
+            'house_number' => '12', 'street' => 'Narra Street', 'block' => 'B 7', 'lot' => 'L 8', 'ownership_type' => 'Tenant',
+        ]);
+        [, $second] = $this->homeowner([], [
+            'house_number' => 'No. 12', 'street' => 'Narra St.', 'block' => 'Block 7', 'lot' => 'Lot 8', 'ownership_type' => 'Tenant',
+        ]);
 
-        $this->expectException(QueryException::class);
-        $second->update(['block' => 'B 7', 'lot' => 'L 8']);
+        $this->assertSame($first->address_key, $second->address_key);
+        $this->assertSame(2, Homeowner::query()->where('address_key', $first->address_key)->count());
     }
 
     public function test_existing_homeowner_cannot_be_reassigned_to_another_user(): void
@@ -246,7 +433,9 @@ final class HomeownerProfileTest extends TestCase
             ->assertFormSet([
                 'first_name' => $resident->first_name,
                 'email' => $resident->email,
-            ], 'profileForm');
+            ], 'profileForm')
+            ->assertFormFieldDisabled('phase', 'profileForm')
+            ->assertFormFieldDisabled('ownership_type', 'profileForm');
 
         $orphan = $this->roleUser('homeowner');
         $this->actingAs($orphan, 'homeowner')->get('/homeowner/my-profile')->assertNotFound();

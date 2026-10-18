@@ -16,6 +16,7 @@ use App\Filament\Homeowner\Widgets\HomeownerOverview;
 use App\Filament\Homeowner\Widgets\HomeownerWelcome;
 use App\Filament\Homeowner\Widgets\LatestAnnouncements;
 use App\Filament\Homeowner\Widgets\RecentPayments;
+use App\Filament\Widgets\DashboardAccount;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\EnsurePanelIsEnabled;
 use App\Http\Middleware\MigrateLegacyPanelSession;
@@ -26,7 +27,6 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -46,11 +46,22 @@ final class HomeownerPanelProvider extends PanelProvider
             ->login()
             ->passwordReset(requestAction: RequestPasswordReset::class)
             ->emailVerification()
+            ->darkMode()
+            ->themeSwitcher()
+            ->viteTheme(['resources/css/filament.css', 'resources/css/filament-auth.css'])
             ->brandName('Southville Phase I HOA Homeowner')
+            ->brandLogo(asset('images/HOA.png'))
+            ->brandLogoHeight('2.75rem')
             ->favicon(asset('images/HOA.png'))
             ->colors([
-                'primary' => Color::hex('#d90b46'),
+                'primary' => Color::hex('#0879ad'),
                 'info' => Color::hex('#267ca4'),
+            ])
+            ->navigationGroups([
+                'My Home',
+                'Requests & Concerns',
+                'Finance',
+                'Community',
             ])
             ->pages([
                 Dashboard::class,
@@ -69,7 +80,7 @@ final class HomeownerPanelProvider extends PanelProvider
                 HomeownerOverview::class,
                 RecentPayments::class,
                 LatestAnnouncements::class,
-                AccountWidget::class,
+                DashboardAccount::class,
             ])
             ->middleware([
                 EncryptCookies::class,

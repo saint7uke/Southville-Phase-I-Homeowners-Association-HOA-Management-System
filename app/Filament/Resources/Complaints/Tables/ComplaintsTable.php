@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\Complaints\Tables;
 
+use App\Filament\Resources\Complaints\Actions\ReopenComplaintAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
@@ -66,7 +68,9 @@ class ComplaintsTable
                 TrashedFilter::make()->visible(fn (): bool => Filament::auth()->user()?->hasRole('hoa_admin') ?? false),
             ])
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
+                ReopenComplaintAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -16,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 final class Complaint extends Model
 {
     use HasFactory, SoftDeletes;
+
+    private bool $isReopening = false;
 
     protected $fillable = ['homeowner_id', 'ticket_number', 'subject', 'description', 'attachment', 'attachment_name', 'category', 'priority', 'status', 'admin_remarks', 'handled_by', 'resolved_at'];
 
@@ -39,10 +42,53 @@ final class Complaint extends Model
         return $this->hasMany(CaseAttachment::class);
     }
 
+    public function auditLogs(): MorphMany
+    {
+        return $this->morphMany(AuditLog::class, 'auditable');
+    }
+
+    public function reopen(): bool
+    {
+        if ($this->status !== 'Resolved' || $this->trashed()) {
+            throw ValidationException::withMessages(['status' => 'Only a resolved complaint can be reopened.']);
+        }
+
+        $this->isReopening = true;
+
+        try {
+            return $this->forceFill([
+                'status' => 'Under Review',
+                'resolved_at' => null,
+            ])->save();
+        } finally {
+            $this->isReopening = false;
+        }
+    }
+
     protected static function booted(): void
     {
         self::creating(fn (Complaint $complaint) => $complaint->ticket_number ??= 'CMP-'.now()->format('Y').'-'.Str::upper(Str::random(8)));
+        self::deleting(function (Complaint $complaint): void {
+            if (in_array($complaint->status, ['Resolved', 'Rejected', 'Closed', 'Dismissed'], true)) {
+                throw ValidationException::withMessages(['status' => 'Finalized complaints cannot be deleted.']);
+            }
+        });
         self::updating(function (Complaint $complaint): void {
+            $from = (string) $complaint->getOriginal('status');
+
+            if (in_array($from, ['Resolved', 'Rejected', 'Closed', 'Dismissed'], true)) {
+                if (! $complaint->isReopening) {
+                    throw ValidationException::withMessages(['status' => 'Finalized complaints are read-only. Reopen a resolved complaint before making changes.']);
+                }
+
+                $unexpectedChanges = array_diff(array_keys($complaint->getDirty()), ['status', 'resolved_at', 'updated_at']);
+                if ($from !== 'Resolved' || $complaint->status !== 'Under Review' || $complaint->resolved_at !== null || $unexpectedChanges !== []) {
+                    throw ValidationException::withMessages(['status' => 'The complaint could not be reopened safely.']);
+                }
+
+                return;
+            }
+
             if (! $complaint->isDirty('status')) {
                 return;
             }
@@ -50,12 +96,11 @@ final class Complaint extends Model
             $allowed = [
                 'Pending' => ['Under Review', 'Rejected', 'Dismissed'],
                 'Under Review' => ['Resolved', 'Rejected', 'Closed', 'Dismissed'],
-                'Resolved' => ['Closed'],
+                'Resolved' => [],
                 'Rejected' => [],
                 'Closed' => [],
                 'Dismissed' => [],
             ];
-            $from = (string) $complaint->getOriginal('status');
 
             if (! in_array($complaint->status, $allowed[$from] ?? [], true)) {
                 throw ValidationException::withMessages(['status' => "Status cannot move from {$from} to {$complaint->status}."]);

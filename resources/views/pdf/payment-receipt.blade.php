@@ -28,12 +28,14 @@
     <p class="receipt-number">Official receipt: {{ $payment->or_number }}</p>
 
     <table>
-        <tr><th>Resident</th><td>{{ $payment->homeowner->user->full_name }}</td></tr>
+        <tr><th>Liable resident</th><td>{{ $payment->homeowner->user->full_name }}</td></tr>
+        <tr><th>Actual payer</th><td>{{ $payment->payer?->user?->full_name ?? $payment->homeowner->user->full_name }}</td></tr>
         <tr><th>Property</th><td>{{ $payment->homeowner->full_address }}</td></tr>
         <tr><th>Dues type</th><td>{{ $payment->duesSetting->name }}</td></tr>
         <tr><th>Covered period</th><td>{{ $payment->covered_period }}</td></tr>
         <tr><th>Payment date</th><td>{{ $payment->payment_date->format('F d, Y') }}</td></tr>
         <tr><th>Method</th><td>{{ $payment->payment_method }}</td></tr>
+        @if($payment->transaction_reference)<tr><th>Transaction reference</th><td>{{ $payment->transaction_reference }}</td></tr>@endif
         <tr><th>Reviewed by</th><td>{{ $payment->reviewer?->full_name ?? $payment->recorder?->full_name ?? 'HOA Office' }}</td></tr>
     </table>
 

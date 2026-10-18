@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use App\Exports\HoaReportExport;
 use App\Jobs\GenerateHoaReport;
 use App\Models\AuditLog;
 use App\Models\ReportExport;
+use App\Models\User;
+use App\Services\Reporting\HoaReportCatalog;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\WithPagination;
+use Throwable;
 
 final class Reports extends Page
 {
@@ -26,12 +27,17 @@ final class Reports extends Page
 
     protected static ?string $navigationLabel = 'Reports & Exports';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Administration';
+
     protected static ?string $slug = 'reports';
 
     protected string $view = 'filament.pages.reports';
 
     public string $selectedCategory = 'all';
 
+    public string $catalogSearch = '';
+
+    /** @var array<string, array<string, mixed>> */
     public array $filters = [];
 
     public string $sortColumn = 'title';
@@ -39,6 +45,25 @@ final class Reports extends Page
     public string $sortDirection = 'asc';
 
     public int $perPage = 10;
+
+    public ?string $previewSlug = null;
+
+    public string $previewTitle = '';
+
+    /** @var list<string> */
+    public array $previewHeadings = [];
+
+    /** @var list<array<int, mixed>> */
+    public array $previewRows = [];
+
+    /** @var array<string, string|int> */
+    public array $previewSummary = [];
+
+    public int $previewPage = 1;
+
+    public int $previewPerPage = 10;
+
+    public bool $previewHasMore = false;
 
     public static function canAccess(): bool
     {
@@ -48,47 +73,30 @@ final class Reports extends Page
     public function mount(): void
     {
         $this->selectedCategory = request()->query('category', 'all');
-        $this->filters = [];
     }
 
     public function getCategories(): array
     {
-        $categories = collect(HoaReportExport::CATEGORIES)
-            ->unique()
-            ->mapWithKeys(fn (string $label) => [$label => $label])
-            ->prepend('All', 'all')
-            ->toArray();
-
-        return $categories;
+        return collect($this->availableDefinitions())
+            ->pluck('category')->unique()->sort()->mapWithKeys(fn (string $label) => [$label => $label])
+            ->prepend('All', 'all')->all();
     }
 
     public function getReportsForCategory(string $category): Collection
     {
-        $panel = Filament::getCurrentPanel()?->getId() ?? 'admin';
+        $search = mb_strtolower(trim($this->catalogSearch));
 
-        $reports = collect(HoaReportExport::TITLES)
-            ->when($panel === 'staff', fn ($items) => $items->except('payment-history'))
-            ->filter(fn (string $title, string $slug) => $category === 'all' || (HoaReportExport::CATEGORIES[$slug] ?? '') === $category)
-            ->map(fn (string $title, string $slug): array => [
-                'slug' => $slug,
-                'title' => $title,
-                'description' => HoaReportExport::DESCRIPTIONS[$slug] ?? '',
-                'category' => HoaReportExport::CATEGORIES[$slug] ?? '',
-                'formats' => HoaReportExport::FORMATS[$slug] ?? ['csv'],
-                'statuses' => HoaReportExport::STATUS_FILTERS[$slug] ?? [],
-            ])
-            ->values();
-
-        return $reports
+        return collect($this->availableDefinitions())
+            ->filter(fn (array $definition) => $category === 'all' || $definition['category'] === $category)
+            ->filter(fn (array $definition) => $search === '' || str_contains(mb_strtolower($definition['title'].' '.$definition['description']), $search))
+            ->map(fn (array $definition, string $slug): array => ['slug' => $slug, ...$definition])
             ->sortBy(in_array($this->sortColumn, ['title', 'category', 'description'], true) ? $this->sortColumn : 'title', SORT_REGULAR, $this->sortDirection === 'desc')
             ->values();
     }
 
     public function getPaginatedReports(): Collection
     {
-        $reports = $this->getReportsForCategory($this->selectedCategory);
-
-        return $reports->forPage($this->getPage(), $this->perPage);
+        return $this->getReportsForCategory($this->selectedCategory)->forPage($this->getPage(), $this->perPage)->values();
     }
 
     public function sortBy(string $column): void
@@ -96,25 +104,28 @@ final class Reports extends Page
         if (! in_array($column, ['title', 'category', 'description'], true)) {
             return;
         }
-
         if ($this->sortColumn === $column) {
             $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
             $this->sortColumn = $column;
             $this->sortDirection = 'asc';
         }
-
         $this->resetPage();
     }
 
+    /** @return array<string, mixed> */
     public function getReportFilters(string $slug): array
     {
-        return $this->filters[$slug] ?? ['from' => null, 'to' => null, 'status' => null];
+        return $this->filters[$slug] ?? [];
     }
 
     public function updatedSelectedCategory(): void
     {
-        $this->filters = [];
+        $this->resetPage();
+    }
+
+    public function updatedCatalogSearch(): void
+    {
         $this->resetPage();
     }
 
@@ -126,125 +137,160 @@ final class Reports extends Page
         $this->resetPage();
     }
 
+    /** @param array<string, mixed>|null $filters */
     public function downloadReport(string $slug, string $format, ?array $filters = null): void
     {
-        $filters ??= $this->getReportFilters($slug);
-        $panel = Filament::getCurrentPanel()?->getId() ?? 'admin';
-        $routeName = $panel === 'staff' ? 'staff.reports.download' : 'admin.reports.download';
-
-        $url = route($routeName, [
-            'report' => $slug,
-            'format' => $format,
-            'from' => $filters['from'] ?? null,
-            'to' => $filters['to'] ?? null,
-            'status' => $filters['status'] ?? null,
-        ]);
-
-        $this->redirect($url);
+        $context = $this->context();
+        $catalog = app(HoaReportCatalog::class);
+        $filters = $catalog->validateFilters($slug, $filters ?? $this->getReportFilters($slug), $context['panel'] === 'admin');
+        $catalog->authorize($context['user'], $context['panel'], $slug, $format, $filters['scope']);
+        $route = $context['panel'] === 'staff' ? 'staff.reports.download' : 'admin.reports.download';
+        $this->redirect(route($route, ['report' => $slug, 'format' => $format, ...$filters]));
     }
 
-    public function queueReport(string $slug, ?array $filters = null): void
+    /** @param string|array<string, mixed>|null $format */
+    public function queueReport(string $slug, string|array|null $format = 'csv'): void
     {
-        $filters ??= $this->getReportFilters($slug);
-        $panel = Filament::getCurrentPanel()?->getId() ?? 'admin';
-        $user = Filament::auth()->user();
-        abort_unless($user?->can('export_reports'), 403);
-        abort_unless(isset(HoaReportExport::TITLES[$slug]) && in_array('csv', HoaReportExport::FORMATS[$slug], true), 404);
-        abort_if($panel === 'staff' && $slug === 'payment-history', 403);
+        if (is_array($format)) {
+            $this->filters[$slug] = $format;
+            $format = 'csv';
+        }
+        $format ??= 'csv';
+        $context = $this->context();
+        abort_unless(in_array($format, ['csv', 'xlsx'], true), 404);
+        $catalog = app(HoaReportCatalog::class);
+        $filters = $catalog->validateFilters($slug, $this->getReportFilters($slug), $context['panel'] === 'admin');
+        $catalog->authorize($context['user'], $context['panel'], $slug, $format, $filters['scope']);
 
-        $validated = Validator::make($filters, [
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date', 'after_or_equal:from'],
-            'status' => ['nullable', Rule::in(HoaReportExport::STATUS_FILTERS[$slug] ?? [])],
-        ])->validate();
-
-        $reportExport = ReportExport::query()->create([
-            'user_id' => $user->id,
-            'panel' => $panel,
+        $export = ReportExport::query()->create([
+            'user_id' => $context['user']->id,
+            'panel' => $context['panel'],
             'report' => $slug,
-            'format' => 'csv',
-            'filters' => array_filter($validated, fn ($value): bool => filled($value)),
+            'format' => $format,
+            'filters' => array_filter($filters, fn ($value): bool => filled($value)),
             'status' => 'Pending',
         ]);
-
-        GenerateHoaReport::dispatch($reportExport->id);
+        GenerateHoaReport::dispatch($export->id);
         AuditLog::query()->create([
-            'user_id' => $user->id,
-            'panel' => $panel,
+            'user_id' => $context['user']->id,
+            'panel' => $context['panel'],
             'action' => 'Report.'.$slug.'_queued',
-            'new_values' => ['report_export_id' => $reportExport->id, ...($reportExport->filters ?? [])],
+            'new_values' => ['report_export_id' => $export->id, 'format' => $format, ...$filters],
             'ip_address' => request()->ip(),
             'user_agent' => mb_substr((string) request()->userAgent(), 0, 500),
         ]);
-
-        Notification::make()
-            ->title('CSV export queued')
-            ->body('Refresh this page shortly to download the completed private export.')
-            ->success()
-            ->send();
+        Notification::make()->success()->title(strtoupper($format).' export queued')->body('The private export will appear under My queued exports when complete.')->send();
     }
 
+    /** @param array<string, mixed>|null $filters */
     public function previewReport(string $slug, ?array $filters = null): void
     {
-        $filters ??= $this->getReportFilters($slug);
-        $panel = Filament::getCurrentPanel()?->getId() ?? 'admin';
-        abort_unless(isset(HoaReportExport::TITLES[$slug]), 404);
-        abort_if($panel === 'staff' && $slug === 'payment-history', 403);
-
-        try {
-            $validated = Validator::make($filters, [
-                'from' => ['nullable', 'date'],
-                'to' => ['nullable', 'date', 'after_or_equal:from'],
-                'status' => ['nullable', Rule::in(HoaReportExport::STATUS_FILTERS[$slug] ?? [])],
-            ])->validate();
-
-            $export = new HoaReportExport(
-                $slug,
-                $validated['from'] ?? null,
-                $validated['to'] ?? null,
-                $validated['status'] ?? null
-            );
-
-            $records = $export->query()->limit(11)->get();
-            $rows = $records->take(10)->map(fn ($record): array => $export->map($record))->all();
-
-            $this->dispatch('report-preview',
-                title: $export->title(),
-                headings: $export->headings(),
-                rows: $rows,
-                hasMore: $records->count() > 10,
-                triggerId: 'report-preview-'.$slug,
-            );
-        } catch (\Throwable $e) {
-            Notification::make()
-                ->title('Preview failed')
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
+        if ($filters !== null) {
+            $this->filters[$slug] = $filters;
         }
+        $this->previewSlug = $slug;
+        $this->previewPage = 1;
+        $this->loadPreview();
+    }
+
+    public function previewPage(int $page): void
+    {
+        $this->previewPage = max(1, $page);
+        $this->loadPreview();
+    }
+
+    public function closePreview(): void
+    {
+        $triggerId = 'report-preview-'.$this->previewSlug;
+        $this->reset(['previewSlug', 'previewTitle', 'previewHeadings', 'previewRows', 'previewSummary', 'previewHasMore']);
+        $this->previewPage = 1;
+        $this->dispatch('report-preview-closed', triggerId: $triggerId);
+    }
+
+    private function loadPreview(): void
+    {
+        if ($this->previewSlug === null) {
+            return;
+        }
+        try {
+            $context = $this->context();
+            $catalog = app(HoaReportCatalog::class);
+            $filters = $catalog->validateFilters($this->previewSlug, $this->getReportFilters($this->previewSlug), $context['panel'] === 'admin');
+            $catalog->authorize($context['user'], $context['panel'], $this->previewSlug, null, $filters['scope']);
+            $records = $catalog->query($this->previewSlug, $filters)
+                ->offset(($this->previewPage - 1) * $this->previewPerPage)
+                ->limit($this->previewPerPage + 1)->get();
+            if ($records->isEmpty() && $this->previewPage > 1) {
+                $this->previewPage--;
+                $this->loadPreview();
+
+                return;
+            }
+            $definition = $catalog->definitions()[$this->previewSlug];
+            $this->previewTitle = $definition['title'];
+            $this->previewHeadings = $catalog->headings($this->previewSlug);
+            $this->previewRows = $records->take($this->previewPerPage)->map(fn ($record): array => $catalog->map($this->previewSlug, $record))->all();
+            $this->previewHasMore = $records->count() > $this->previewPerPage;
+            $this->previewSummary = $catalog->summary($this->previewSlug, $filters);
+            AuditLog::query()->create([
+                'user_id' => $context['user']->id,
+                'panel' => $context['panel'],
+                'action' => 'Report.'.$this->previewSlug.'_previewed',
+                'new_values' => [...$filters, 'page' => $this->previewPage],
+                'ip_address' => request()->ip(),
+                'user_agent' => mb_substr((string) request()->userAgent(), 0, 500),
+            ]);
+            // Preserve the previous event contract for integrations while the
+            // dialog itself uses server-side Livewire pagination.
+            $this->dispatch('report-preview',
+                title: $this->previewTitle,
+                headings: $this->previewHeadings,
+                rows: $this->previewRows,
+                hasMore: $this->previewHasMore,
+                summary: $this->previewSummary,
+                triggerId: 'report-preview-'.$this->previewSlug,
+            );
+            $this->dispatch('report-preview-opened');
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            report($exception);
+            Notification::make()->danger()->title('Preview failed')->body('The report could not be loaded. Please review the filters and try again.')->send();
+        }
+    }
+
+    /** @return array{user: User, panel: string} */
+    private function context(): array
+    {
+        $user = Filament::auth()->user();
+        abort_unless($user instanceof User, 403);
+
+        return ['user' => $user, 'panel' => Filament::getCurrentPanel()?->getId() ?? 'admin'];
+    }
+
+    /** @return array<string, array<string, mixed>> */
+    private function availableDefinitions(): array
+    {
+        $context = $this->context();
+
+        return app(HoaReportCatalog::class)->availableFor($context['user'], $context['panel']);
     }
 
     /** @return array<string, mixed> */
     protected function getViewData(): array
     {
-        $panel = Filament::getCurrentPanel()?->getId() ?? 'admin';
+        $context = $this->context();
         $reports = $this->getReportsForCategory($this->selectedCategory);
-        $paginatedReports = $reports->forPage($this->getPage(), $this->perPage);
 
         return [
             'title' => self::$title ?? 'Reports & Exports',
-            'panel' => $panel,
+            'panel' => $context['panel'],
             'categories' => $this->getCategories(),
-            'reports' => $paginatedReports,
             'allReports' => $reports,
             'selectedCategory' => $this->selectedCategory,
             'sortColumn' => $this->sortColumn,
             'sortDirection' => $this->sortDirection,
-            'recentExports' => ReportExport::query()
-                ->where('user_id', Filament::auth()->id())
-                ->latest()
-                ->limit(5)
-                ->get(),
+            'recentExports' => ReportExport::query()->where('user_id', $context['user']->id)->latest()->limit(10)->get(),
         ];
     }
 }

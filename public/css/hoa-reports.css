@@ -61,8 +61,8 @@
 
 .hoa-reports__controls {
     display: grid;
-    inline-size: min(100%, 28rem);
-    grid-template-columns: minmax(0, 1fr) minmax(7rem, .55fr);
+    inline-size: min(100%, 42rem);
+    grid-template-columns: minmax(10rem, 1.4fr) minmax(8rem, 1fr) minmax(7rem, .65fr);
     gap: .75rem;
 }
 
@@ -77,6 +77,7 @@
 }
 
 .hoa-reports__control select,
+.hoa-reports__control input,
 .hoa-reports__filter input,
 .hoa-reports__filter select {
     inline-size: 100%;
@@ -265,7 +266,13 @@
     white-space: nowrap;
 }
 
+.hoa-reports__button:disabled {
+    opacity: .55;
+    cursor: wait;
+}
+
 .hoa-reports__button--csv { background: #167345; }
+.hoa-reports__button--xlsx { background: #126b3a; }
 .hoa-reports__button--pdf { background: #b42332; }
 .hoa-reports__button--queue { grid-column: 1 / -1; background: #245b94; }
 .hoa-reports__button--preview { grid-column: 1 / -1; }
@@ -320,6 +327,16 @@
     text-align: center !important;
 }
 
+.hoa-reports__error {
+    border: 1px solid #dc2626;
+    border-radius: .75rem;
+    background: #fef2f2;
+    padding: 1rem 1.25rem;
+    color: #991b1b;
+}
+
+.hoa-reports__error ul { margin: .4rem 0 0 1.25rem; }
+
 .hoa-reports__link {
     color: rgb(var(--primary-700));
     font-weight: 700;
@@ -338,6 +355,8 @@
 }
 
 .hoa-report-dialog__panel {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
     inline-size: min(100%, 72rem);
     max-block-size: min(80dvh, 46rem);
     overflow: clip;
@@ -371,9 +390,34 @@
 }
 
 .hoa-report-dialog__body {
-    max-block-size: calc(min(80dvh, 46rem) - 4.75rem);
+    min-block-size: 0;
     overflow: auto;
 }
+
+.hoa-report-dialog__summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    padding: .85rem 1.25rem;
+    border-block-end: 1px solid var(--reports-border);
+    background: var(--reports-soft);
+}
+
+.hoa-report-dialog__summary div { display: grid; gap: .15rem; min-inline-size: 8rem; }
+.hoa-report-dialog__summary span { color: var(--reports-muted); font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+.hoa-report-dialog__summary strong { color: var(--reports-text); font-size: 1rem; }
+
+.hoa-report-dialog__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .8rem 1.25rem;
+    border-block-start: 1px solid var(--reports-border);
+    color: var(--reports-muted);
+}
+
+.hoa-report-dialog__footer > div { display: flex; gap: .5rem; }
 
 .hoa-report-dialog__table {
     inline-size: 100%;
@@ -413,6 +457,7 @@
 
 .dark .hoa-reports__card,
 .dark .hoa-reports__control select,
+.dark .hoa-reports__control input,
 .dark .hoa-reports__filter input,
 .dark .hoa-reports__filter select,
 .dark .hoa-reports__page-button,
@@ -420,6 +465,8 @@
     background: #171c24;
     color: var(--reports-text);
 }
+
+.dark .hoa-reports__error { border-color: #f87171; background: #451a1a; color: #fecaca; }
 
 .dark .hoa-reports__table tbody tr:hover { background: #202630; }
 .dark .hoa-reports__badge { background: #253f59; color: #dbeafe; }

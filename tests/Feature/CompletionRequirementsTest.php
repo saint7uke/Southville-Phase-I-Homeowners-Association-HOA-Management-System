@@ -148,7 +148,7 @@ final class CompletionRequirementsTest extends TestCase
             'emergency_contact_number' => '09123456789',
             'status' => 'Active',
         ]);
-        $setting = DuesSetting::query()->create(['name' => 'Test dues '.$user->id, 'amount' => $amount, 'frequency' => 'Monthly', 'is_active' => true]);
+        $setting = DuesSetting::query()->create(['name' => 'Test dues '.$user->id, 'amount' => $amount, 'frequency' => 'Monthly', 'starts_on' => today(), 'is_active' => true]);
 
         return DuesObligation::query()->create([
             'homeowner_id' => $homeowner->id,

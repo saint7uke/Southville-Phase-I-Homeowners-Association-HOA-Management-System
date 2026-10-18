@@ -12,6 +12,8 @@ use Filament\Widgets\TableWidget;
 
 final class StaffRecentPayments extends TableWidget
 {
+    protected static ?int $sort = 20;
+
     protected static ?string $heading = 'My recently recorded payments';
 
     protected int|string|array $columnSpan = 'full';

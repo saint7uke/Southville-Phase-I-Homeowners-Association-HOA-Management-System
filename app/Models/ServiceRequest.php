@@ -18,14 +18,13 @@ final class ServiceRequest extends Model
 {
     use HasFactory, SoftDeletes;
 
-    public const CERTIFICATE_TYPES = [
+    public const DEFAULT_CERTIFICATE_TYPES = [
         'Certificate of Residency',
         'Certificate of Good Standing',
         'Community Clearance',
     ];
 
-    public const TYPES = [
-        ...self::CERTIFICATE_TYPES,
+    public const NON_CERTIFICATE_TYPES = [
         'Repair/Maintenance',
         'Other',
     ];

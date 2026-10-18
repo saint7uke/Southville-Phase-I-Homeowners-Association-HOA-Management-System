@@ -17,7 +17,6 @@ final class PaymentProofController extends Controller
 {
     public function store(SubmitPaymentProofRequest $request, DuesObligation $duesObligation, SubmitPaymentProof $submit): RedirectResponse
     {
-        abort_unless($request->user()->homeowner?->id === $duesObligation->homeowner_id, 404);
         $submit->handle($request->user(), $duesObligation, $request->validated(), $request->file('proof'));
 
         return back()->with('success', __('Payment proof submitted for staff review. Your balance changes only after approval.'));

@@ -16,6 +16,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 final class HoaOverview extends StatsOverviewWidget
 {
+    protected static ?int $sort = -5;
+
     protected int|string|array $columnSpan = 'full';
 
     protected function getStats(): array

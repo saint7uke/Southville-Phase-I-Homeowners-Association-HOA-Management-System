@@ -14,6 +14,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 final class HomeownerOverview extends StatsOverviewWidget
 {
+    protected static ?int $sort = -5;
+
     protected int|string|array $columnSpan = 'full';
 
     protected function getStats(): array

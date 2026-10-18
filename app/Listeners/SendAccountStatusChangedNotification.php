@@ -6,8 +6,9 @@ namespace App\Listeners;
 
 use App\Events\UserAccountStatusChanged;
 use App\Notifications\HomeownerAccountStatusChanged;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
-final class SendAccountStatusChangedNotification
+final class SendAccountStatusChangedNotification implements ShouldQueue
 {
     public function handle(UserAccountStatusChanged $event): void
     {
@@ -19,9 +20,5 @@ final class SendAccountStatusChangedNotification
             $event->to->value,
             $event->reason,
         ));
-
-        if ($event->to->value === 'Active' && ! $event->user->hasVerifiedEmail()) {
-            $event->user->sendEmailVerificationNotification();
-        }
     }
 }

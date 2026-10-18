@@ -65,7 +65,7 @@ final class HomeownerPanelResourcesTest extends TestCase
         $other = $this->homeowner();
         $admin = User::factory()->create(['account_status' => 'Active']);
         $admin->assignRole('hoa_admin');
-        $setting = DuesSetting::query()->create(['name' => 'Monthly Dues', 'amount' => '100.00', 'frequency' => 'Monthly', 'is_active' => true]);
+        $setting = DuesSetting::query()->create(['name' => 'Monthly Dues', 'amount' => '100.00', 'frequency' => 'Monthly', 'starts_on' => today(), 'is_active' => true]);
         $obligation = DuesObligation::query()->create(['homeowner_id' => $other->id, 'dues_setting_id' => $setting->id, 'billing_year' => 2026, 'billing_month' => 9, 'due_date' => '2026-09-10', 'amount_due' => '100.00', 'penalty_amount' => '0.00', 'amount_paid' => '0.00', 'status' => 'Pending']);
         $payment = Payment::query()->create(['homeowner_id' => $other->id, 'dues_setting_id' => $setting->id, 'dues_obligation_id' => $obligation->id, 'amount_paid' => '10.00', 'penalty' => '0.00', 'payment_date' => '2026-09-01', 'covered_period' => '2026-09', 'payment_method' => 'Cash', 'recorded_by' => $admin->id]);
         Certificate::query()->create(['homeowner_id' => $other->id, 'certificate_number' => 'CERT-2026-OTHER', 'type' => 'HOA Clearance', 'status' => 'Issued', 'issued_at' => now(), 'issued_by' => $admin->id]);
@@ -74,6 +74,35 @@ final class HomeownerPanelResourcesTest extends TestCase
         $this->actingAs($owner->user, 'homeowner')->get('/homeowner/payments')->assertOk()->assertDontSee($payment->or_number);
         $this->actingAs($owner->user, 'homeowner')->get('/homeowner/certificates')->assertOk()->assertDontSee('CERT-2026-OTHER');
         $this->actingAs($owner->user, 'homeowner')->get('/homeowner/announcements')->assertOk()->assertSee('Residents only');
+    }
+
+    public function test_homeowner_announcement_detail_uses_the_readable_article_layout_and_marks_it_read(): void
+    {
+        $owner = $this->homeowner();
+        $admin = User::factory()->create(['account_status' => 'Active']);
+        $admin->assignRole('hoa_admin');
+        $announcement = Announcement::query()->create([
+            'title' => 'Scheduled water service interruption',
+            'content' => "Water service will pause from 8:00 AM to 11:00 AM.\nPlease store enough water in advance.",
+            'category' => 'Urgent',
+            'audience' => 'Residents',
+            'status' => 'Published',
+            'published_at' => now(),
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($owner->user, 'homeowner')
+            ->get('/homeowner/announcements/'.$announcement->id)
+            ->assertOk()
+            ->assertSee('hoa-announcement-detail', false)
+            ->assertSee('Back to announcements')
+            ->assertSee('Scheduled water service interruption')
+            ->assertSee('Please store enough water in advance.');
+
+        $this->assertDatabaseHas('announcement_reads', [
+            'announcement_id' => $announcement->id,
+            'user_id' => $owner->user_id,
+        ]);
     }
 
     public function test_homeowner_case_views_show_outcomes_and_linked_certificate(): void

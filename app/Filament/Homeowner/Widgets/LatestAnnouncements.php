@@ -11,6 +11,8 @@ use Filament\Widgets\TableWidget;
 
 final class LatestAnnouncements extends TableWidget
 {
+    protected static ?int $sort = 20;
+
     protected static ?string $heading = 'Latest announcements';
 
     protected int|string|array $columnSpan = 'full';

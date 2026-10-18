@@ -7,10 +7,12 @@ namespace App\Http\Controllers\Admin;
 use App\Exports\HoaReportExport;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\User;
+use App\Services\Reporting\HoaReportCatalog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,68 +21,63 @@ final class HoaReportController extends Controller
 {
     public function __invoke(Request $request, string $report, ?string $format = null): BinaryFileResponse|Response|JsonResponse
     {
-        abort_unless(isset(HoaReportExport::TITLES[$report]), 404);
-        $isPreview = $format === null && ($request->route()->getName() ?? '')->endsWith('.preview');
-        $isDownload = $format !== null;
-
-        if ($isDownload) {
-            abort_unless(in_array($format, HoaReportExport::FORMATS[$report], true), 404);
-        }
-        abort_if($request->is('staff/*') && $report === 'payment-history', 403);
-
-        $data = $request->validate([
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date', 'after_or_equal:from'],
-            'status' => ['nullable', Rule::in(HoaReportExport::STATUS_FILTERS[$report] ?? [])],
-        ]);
-        $export = new HoaReportExport($report, $data['from'] ?? null, $data['to'] ?? null, $data['status'] ?? null);
+        $catalog = app(HoaReportCatalog::class);
+        abort_unless($catalog->exists($report), 404);
         $panel = $request->is('staff/*') ? 'staff' : 'admin';
+        $user = $request->user();
+        abort_unless($user instanceof User, 403);
+        $isPreview = $format === null && str_ends_with((string) $request->route()?->getName(), '.preview');
+        $catalog->authorize($user, $panel, $report, $isPreview ? null : $format, (string) $request->query('scope', 'current'));
+        $filters = $catalog->validateFilters($report, $request->query(), $panel === 'admin');
+        $export = new HoaReportExport($report, filters: $filters, generatedBy: $user->full_name);
 
         if ($isPreview) {
-            AuditLog::query()->create([
-                'user_id' => $request->user()?->id,
-                'panel' => $panel,
-                'action' => 'Report.'.$report.'_previewed',
-                'new_values' => $data,
-                'ip_address' => $request->ip(),
-                'user_agent' => mb_substr((string) $request->userAgent(), 0, 500),
-            ]);
-
-            $records = $export->query()->limit(10)->get();
-            $rows = $records->map(fn ($record): array => $export->map($record))->all();
+            $records = $export->query()->limit(11)->get();
+            $this->audit($request, $panel, $report, 'previewed', $filters);
 
             return response()->json([
                 'title' => $export->title(),
                 'headings' => $export->headings(),
-                'rows' => $rows,
-                'hasMore' => $records->count() >= 10,
+                'rows' => $records->take(10)->map(fn ($record): array => $export->map($record))->all(),
+                'hasMore' => $records->count() > 10,
+                'summary' => $catalog->summary($report, $filters),
             ]);
         }
 
-        AuditLog::query()->create([
-            'user_id' => $request->user()?->id,
-            'panel' => $panel,
-            'action' => 'Report.'.$report.'_exported',
-            'new_values' => [...$data, 'format' => $format],
-            'ip_address' => $request->ip(),
-            'user_agent' => mb_substr((string) $request->userAgent(), 0, 500),
-        ]);
-
         $filename = $report.'-'.today()->toDateString().'.'.$format;
-        if ($format === 'csv') {
-            return Excel::download($export, $filename, \Maatwebsite\Excel\Excel::CSV);
+        if (in_array($format, ['csv', 'xlsx'], true)) {
+            $response = Excel::download($export, $filename, $format === 'csv' ? ExcelFormat::CSV : ExcelFormat::XLSX);
+            $this->audit($request, $panel, $report, 'exported', [...$filters, 'format' => $format]);
+
+            return $response;
         }
 
         $records = $export->query()->limit(2001)->get();
-        abort_if($records->count() > 2000, 422, 'This PDF exceeds 2,000 rows. Narrow the date/status filters or export CSV for chunked processing.');
-        $rows = $records->map(fn ($record): array => $export->map($record))->all();
+        abort_if($records->count() > 2000, 422, 'This PDF exceeds 2,000 rows. Narrow the filters or use a queued CSV/XLSX export.');
 
-        return Pdf::loadView('pdf.report', [
+        $response = Pdf::loadView('pdf.report', [
             'title' => $export->title(),
             'headings' => $export->headings(),
-            'rows' => $rows,
-            'filters' => $data,
-            'generatedBy' => $request->user()?->full_name ?? 'System',
+            'rows' => $records->map(fn ($record): array => $export->map($record))->all(),
+            'filters' => $filters,
+            'summary' => $catalog->summary($report, $filters),
+            'generatedBy' => $user->full_name,
         ])->setPaper('a4', 'landscape')->download($filename);
+        $this->audit($request, $panel, $report, 'exported', [...$filters, 'format' => $format]);
+
+        return $response;
+    }
+
+    /** @param array<string, mixed> $values */
+    private function audit(Request $request, string $panel, string $report, string $action, array $values): void
+    {
+        AuditLog::query()->create([
+            'user_id' => $request->user()?->id,
+            'panel' => $panel,
+            'action' => 'Report.'.$report.'_'.$action,
+            'new_values' => $values,
+            'ip_address' => $request->ip(),
+            'user_agent' => mb_substr((string) $request->userAgent(), 0, 500),
+        ]);
     }
 }

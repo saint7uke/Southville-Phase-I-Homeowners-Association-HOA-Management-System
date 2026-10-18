@@ -9,7 +9,7 @@ use Filament\Widgets\ChartWidget;
 
 final class ComplaintStatusChart extends ChartWidget
 {
-    protected static ?int $sort = 100;
+    protected static ?int $sort = 20;
 
     protected ?string $heading = 'Complaint status breakdown';
 

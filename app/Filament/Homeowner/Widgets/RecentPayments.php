@@ -13,6 +13,8 @@ use Filament\Widgets\TableWidget;
 
 final class RecentPayments extends TableWidget
 {
+    protected static ?int $sort = 10;
+
     protected static ?string $heading = 'Recent payment history';
 
     protected int|string|array $columnSpan = 'full';

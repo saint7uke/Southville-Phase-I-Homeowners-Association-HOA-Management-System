@@ -50,7 +50,10 @@ final class WorkflowNotificationObserver
 
         $settings = SystemSetting::current();
         if ($model instanceof Complaint && $settings->complaint_notifications) {
-            $model->homeowner()->with('user')->firstOrFail()->user->notify(new WorkflowStatusChanged('complaint', $model->ticket_number, $model->status, $model->admin_remarks));
+            $remarks = $model->getOriginal('status') === 'Resolved' && $model->status === 'Under Review'
+                ? null
+                : $model->admin_remarks;
+            $model->homeowner()->with('user')->firstOrFail()->user->notify(new WorkflowStatusChanged('complaint', $model->ticket_number, $model->status, $remarks));
         }
         if ($model instanceof ServiceRequest && $settings->request_notifications) {
             $model->homeowner()->with('user')->firstOrFail()->user->notify(new WorkflowStatusChanged('request', $model->ticket_number, $model->status, $model->admin_remarks));

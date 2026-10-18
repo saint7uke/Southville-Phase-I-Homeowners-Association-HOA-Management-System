@@ -27,6 +27,8 @@ final class SystemSettingResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Administration';
+
     protected static ?string $navigationLabel = 'System Settings';
 
     public static function form(Schema $schema): Schema
@@ -52,6 +54,7 @@ final class SystemSettingResource extends Resource
             Section::make('Email notifications')->schema([
                 Toggle::make('complaint_notifications'),
                 Toggle::make('request_notifications'),
+                Toggle::make('payment_notifications'),
                 Toggle::make('announcement_notifications'),
                 Toggle::make('certificate_notifications'),
                 Toggle::make('delinquency_notifications'),

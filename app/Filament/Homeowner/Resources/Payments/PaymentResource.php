@@ -23,6 +23,8 @@ final class PaymentResource extends Resource
 
     protected static ?string $navigationLabel = 'Payment History';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Finance';
+
     public static function table(Table $table): Table
     {
         return $table->columns([
@@ -34,13 +36,18 @@ final class PaymentResource extends Resource
             TextColumn::make('status')->badge(),
             TextColumn::make('payment_date')->date()->sortable(),
         ])->defaultSort('payment_date', 'desc')->recordActions([
-            Action::make('receipt')->url(fn (Payment $record): string => route('payments.receipt.download', $record))->openUrlInNewTab()->visible(fn (Payment $record): bool => in_array($record->review_status, ['Approved', 'Recorded'], true) && $record->status === 'Paid'),
+            Action::make('receipt')->url(fn (Payment $record): string => route('payments.receipt.download', $record))->openUrlInNewTab()->visible(fn (Payment $record): bool => in_array($record->review_status, ['Approved', 'Recorded'], true) && in_array($record->status, ['Paid', 'Partial'], true)),
         ]);
     }
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->whereHas('homeowner', fn (Builder $query): Builder => $query->where('user_id', Filament::auth()->id()));
+        $residentId = Filament::auth()->user()?->homeowner?->id;
+
+        return parent::getEloquentQuery()->where(function (Builder $query) use ($residentId): void {
+            $query->where('payer_homeowner_id', $residentId)
+                ->orWhereHas('homeowner', fn (Builder $query): Builder => $query->where('user_id', Filament::auth()->id()));
+        });
     }
 
     public static function getPages(): array

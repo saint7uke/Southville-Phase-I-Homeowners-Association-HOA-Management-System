@@ -8,6 +8,8 @@ use App\Filament\Homeowner\Resources\ServiceRequests\Pages\CreateServiceRequest;
 use App\Filament\Homeowner\Resources\ServiceRequests\Pages\ListServiceRequests;
 use App\Filament\Homeowner\Resources\ServiceRequests\Pages\ViewServiceRequest;
 use App\Models\ServiceRequest;
+use App\Services\CertificateTypeCatalog;
+use App\Validation\CaseAttachmentRules;
 use BackedEnum;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
@@ -31,13 +33,15 @@ final class ServiceRequestResource extends Resource
 
     protected static ?string $navigationLabel = 'My Requests';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Requests & Concerns';
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Select::make('request_type')->options(array_combine(ServiceRequest::TYPES, ServiceRequest::TYPES))->required(),
+            Select::make('request_type')->options(fn (): array => app(CertificateTypeCatalog::class)->requestOptions())->required(),
             TextInput::make('subject')->required()->maxLength(160),
             Textarea::make('details')->label('Description')->required()->maxLength(3000)->columnSpanFull(),
-            FileUpload::make('attachments')->label('Supporting attachments')->multiple()->maxFiles(3)->storeFiles(false)->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])->maxSize(5120)->columnSpanFull(),
+            FileUpload::make('attachments')->label('Supporting attachments')->multiple()->maxFiles(3)->storeFiles(false)->acceptedFileTypes(CaseAttachmentRules::MIME_TYPES)->maxSize(5120)->columnSpanFull(),
             Placeholder::make('status_summary')->label('Current status')->content(fn (?ServiceRequest $record): string => $record?->status ?? '-')->visible(fn (string $operation): bool => $operation === 'view'),
             Placeholder::make('handler_summary')->label('Handled by')->content(fn (?ServiceRequest $record): string => $record?->handler?->full_name ?? 'Not yet assigned')->visible(fn (string $operation): bool => $operation === 'view'),
             Placeholder::make('response_summary')->label('Response notes')->content(fn (?ServiceRequest $record): string => $record?->admin_remarks ?: 'No response notes yet.')->visible(fn (string $operation): bool => $operation === 'view')->columnSpanFull(),

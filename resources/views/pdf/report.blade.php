@@ -8,6 +8,10 @@
         body { color: #13293d; font-family: DejaVu Sans, sans-serif; font-size: 9px; }
         h1 { color: #0b5f8a; font-size: 18px; margin: 0 0 4px; }
         .meta { color: #4c6575; margin-bottom: 14px; }
+        .summary { display: table; margin: 0 0 14px; width: 100%; }
+        .summary-item { background: #eef6fa; border: 1px solid #c6d9e3; display: table-cell; padding: 7px; }
+        .summary-label { color: #4c6575; display: block; font-size: 8px; }
+        .summary-value { color: #13293d; display: block; font-size: 11px; font-weight: bold; margin-top: 2px; }
         table { border-collapse: collapse; table-layout: fixed; width: 100%; }
         thead { display: table-header-group; }
         tr { page-break-inside: avoid; }
@@ -26,7 +30,17 @@
             | Period: {{ $filters['from'] ?? 'Beginning' }} to {{ $filters['to'] ?? 'Present' }}
         @endif
         @if(!empty($filters['status'])) | Status: {{ $filters['status'] }} @endif
+        @if(!empty($filters['q'])) | Search: {{ $filters['q'] }} @endif
+        @if(($filters['scope'] ?? 'current') !== 'current') | Scope: {{ ucfirst($filters['scope']) }} @endif
+        | Sort: {{ $filters['sort'] ?? 'default' }} {{ strtoupper($filters['direction'] ?? 'asc') }}
     </div>
+    @if(!empty($summary))
+        <div class="summary">
+            @foreach($summary as $label => $value)
+                <div class="summary-item"><span class="summary-label">{{ $label }}</span><span class="summary-value">{{ $value }}</span></div>
+            @endforeach
+        </div>
+    @endif
     <table>
         <thead><tr>@foreach($headings as $heading)<th>{{ $heading }}</th>@endforeach</tr></thead>
         <tbody>

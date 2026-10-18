@@ -7,11 +7,15 @@ namespace Tests\Feature;
 use App\Models\Announcement;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Filament\Auth\Pages\Login as AdminLogin;
+use App\Filament\Auth\Pages\StaffLogin;
 use App\Support\AuthenticatedActor;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Auth\Pages\Login as HomeownerLogin;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -197,6 +201,30 @@ final class PanelFoundationTest extends TestCase
 
         $this->assertAuthenticatedAs($homeowner, 'web');
         $this->assertGuest('homeowner');
+    }
+
+    /** @return array<string, array{string, class-string}> */
+    public static function panelLoginValidationProvider(): array
+    {
+        return [
+            'admin' => ['admin', AdminLogin::class],
+            'staff' => ['staff', StaffLogin::class],
+            'homeowner' => ['homeowner', HomeownerLogin::class],
+        ];
+    }
+
+    #[DataProvider('panelLoginValidationProvider')]
+    public function test_panel_login_shows_validation_for_wrong_credentials(string $panel, string $loginPage): void
+    {
+        Filament::setCurrentPanel($panel);
+
+        Livewire::test($loginPage)
+            ->fillForm([
+                'email' => 'missing@example.test',
+                'password' => 'wrong-password',
+            ])
+            ->call('authenticate')
+            ->assertHasErrors('data.email');
     }
 
     public function test_inactive_homeowner_is_forbidden_from_homeowner_panel(): void

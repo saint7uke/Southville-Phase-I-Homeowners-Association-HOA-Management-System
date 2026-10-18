@@ -26,6 +26,8 @@ final class AnnouncementResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMegaphone;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Community';
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

@@ -22,6 +22,8 @@ class ServiceRequestResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+
     public static function form(Schema $schema): Schema
     {
         return ServiceRequestForm::configure($schema);

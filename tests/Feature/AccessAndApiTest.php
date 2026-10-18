@@ -73,6 +73,7 @@ final class AccessAndApiTest extends TestCase
             'name' => 'Annual dues',
             'amount' => '1200.00',
             'frequency' => 'Annual',
+            'starts_on' => today(),
             'is_active' => true,
         ]);
         $this->get("/staff/dues-settings/{$dues->id}/edit")->assertOk()->assertDontSee('Delete');

@@ -24,6 +24,8 @@ final class RoleResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Administration';
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

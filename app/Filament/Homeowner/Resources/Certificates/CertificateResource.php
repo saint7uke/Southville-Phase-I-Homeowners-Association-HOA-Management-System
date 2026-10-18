@@ -22,6 +22,8 @@ final class CertificateResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentCheck;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'My Home';
+
     public static function table(Table $table): Table
     {
         return $table->columns([

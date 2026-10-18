@@ -16,6 +16,8 @@ use Filament\Widgets\TableWidget;
 
 final class StaffRecentActivity extends TableWidget
 {
+    protected static ?int $sort = 10;
+
     protected static ?string $heading = 'Recent operational activity';
 
     protected int|string|array $columnSpan = 'full';

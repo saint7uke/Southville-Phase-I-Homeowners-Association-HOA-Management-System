@@ -104,7 +104,8 @@
                 ] as $field => [$label, $value, $autocomplete, $max])
                     <div class="field">
                         <label for="{{ $field }}">{{ $label }}</label>
-                        <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $value) }}" maxlength="{{ $max }}" required autocomplete="{{ $autocomplete }}" @error($field) aria-invalid="true" aria-describedby="{{ $field }}-error" @enderror>
+                        <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $value) }}" maxlength="{{ $max }}" required autocomplete="{{ $autocomplete }}" @if($field === 'phase') readonly aria-readonly="true" @endif @error($field) aria-invalid="true" aria-describedby="{{ $field }}-error" @enderror>
+                        @if ($field === 'phase')<p class="hint">Contact the HOA to change the registered phase.</p>@endif
                         @error($field)<p id="{{ $field }}-error" class="error">{{ $message }}</p>@enderror
                     </div>
                 @endforeach
@@ -115,12 +116,14 @@
                 </div>
                 <div class="field">
                     <label for="ownership_type">Occupancy type</label>
-                    <select id="ownership_type" name="ownership_type" required @error('ownership_type') aria-invalid="true" aria-describedby="ownership_type-error" @enderror>
+                    <select id="ownership_type" disabled aria-disabled="true" @error('ownership_type') aria-invalid="true" aria-describedby="ownership_type-error" @enderror>
                         <option value="">Select an option</option>
                         @foreach (['Owner', 'Tenant', 'Co-owner'] as $type)
                             <option value="{{ $type }}" @selected(old('ownership_type', $user->homeowner->ownership_type) === $type)>{{ $type }}</option>
                         @endforeach
                     </select>
+                    <input type="hidden" name="ownership_type" value="{{ $user->homeowner->ownership_type }}">
+                    <p class="hint">Contact the HOA to change the occupancy type.</p>
                     @error('ownership_type')<p id="ownership_type-error" class="error">{{ $message }}</p>@enderror
                 </div>
                 <div class="field">
@@ -143,7 +146,9 @@
         </fieldset>
 
         <div class="field confirmation-field">
-            <label for="confirm_profile_update"><input id="confirm_profile_update" name="confirm_profile_update" type="checkbox" value="1" required> I confirm that these profile details are accurate.</label>
+            <x-auth.checkbox name="confirm_profile_update" id="confirm_profile_update" value="1" required>
+                I confirm that these profile details are accurate.
+            </x-auth.checkbox>
         </div>
         <div class="form-actions"><button class="button button-primary" type="submit">Save profile</button></div>
     </form>
@@ -156,21 +161,27 @@
         <div class="form-grid">
             <div class="field">
                 <label for="current_password">Current password</label>
-                <input id="current_password" name="current_password" type="password" required maxlength="255" autocomplete="current-password" @error('current_password') aria-invalid="true" aria-describedby="current_password-error" @enderror>
-                <button class="password-toggle" type="button" data-password-toggle="current_password" aria-pressed="false">Show password</button>
+                <div class="password-field">
+                    <input id="current_password" name="current_password" type="password" required maxlength="255" autocomplete="current-password" @error('current_password') aria-invalid="true" aria-describedby="current_password-error" @enderror>
+                    <button class="password-toggle" type="button" data-password-toggle="current_password" aria-label="Show password" aria-pressed="false"><svg class="password-eye password-eye-show" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.5"/></svg><svg class="password-eye password-eye-hide" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.2 18.2 0 0 1-3.1 3.9M6.2 6.2C3.5 8.2 2 12 2 12s3.5 7 10 7a10.8 10.8 0 0 0 3.1-.5"/></svg></button>
+                </div>
                 @error('current_password')<p id="current_password-error" class="error">{{ $message }}</p>@enderror
             </div>
             <div class="field">
                 <label for="password">New password</label>
-                <input id="password" name="password" type="password" required autocomplete="new-password" aria-describedby="password-hint @error('password') password-error @enderror" @error('password') aria-invalid="true" @enderror>
-                <button class="password-toggle" type="button" data-password-toggle="password" aria-pressed="false">Show password</button>
+                <div class="password-field">
+                    <input id="password" name="password" type="password" required autocomplete="new-password" aria-describedby="password-hint @error('password') password-error @enderror" @error('password') aria-invalid="true" @enderror>
+                    <button class="password-toggle" type="button" data-password-toggle="password" aria-label="Show password" aria-pressed="false"><svg class="password-eye password-eye-show" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.5"/></svg><svg class="password-eye password-eye-hide" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.2 18.2 0 0 1-3.1 3.9M6.2 6.2C3.5 8.2 2 12 2 12s3.5 7 10 7a10.8 10.8 0 0 0 3.1-.5"/></svg></button>
+                </div>
                 <p id="password-hint" class="hint">At least 12 characters, including letters and numbers.</p>
                 @error('password')<p id="password-error" class="error">{{ $message }}</p>@enderror
             </div>
             <div class="field">
                 <label for="password_confirmation">Confirm new password</label>
-                <input id="password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password">
-                <button class="password-toggle" type="button" data-password-toggle="password_confirmation" aria-pressed="false">Show password</button>
+                <div class="password-field">
+                    <input id="password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password">
+                    <button class="password-toggle" type="button" data-password-toggle="password_confirmation" aria-label="Show password" aria-pressed="false"><svg class="password-eye password-eye-show" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.5"/></svg><svg class="password-eye password-eye-hide" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.2 18.2 0 0 1-3.1 3.9M6.2 6.2C3.5 8.2 2 12 2 12s3.5 7 10 7a10.8 10.8 0 0 0 3.1-.5"/></svg></button>
+                </div>
             </div>
         </div>
         <div class="form-actions"><button class="button button-primary" type="submit">Change password and sign out</button></div>

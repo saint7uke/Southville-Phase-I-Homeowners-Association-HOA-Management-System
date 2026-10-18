@@ -3,6 +3,14 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\Pages\RequestPasswordReset;
+use App\Filament\Auth\Pages\Login;
+use App\Filament\Widgets\ComplaintStatusChart;
+use App\Filament\Widgets\DashboardAccount;
+use App\Filament\Widgets\HoaOverview;
+use App\Filament\Widgets\MonthlyRevenueChart;
+use App\Filament\Widgets\OverdueAccounts;
+use App\Filament\Widgets\PortalWelcome;
+use App\Filament\Widgets\RecentPayments;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\MigrateLegacyPanelSession;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -12,7 +20,6 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -30,13 +37,25 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->authGuard('admin')
             ->authPasswordBroker('users')
-            ->login()
+            ->login(Login::class)
             ->passwordReset(requestAction: RequestPasswordReset::class)
+            ->darkMode()
+            ->themeSwitcher()
+            ->viteTheme(['resources/css/filament.css', 'resources/css/filament-auth.css'])
             ->brandName('Southville Phase I HOA')
+            ->brandLogo(asset('images/HOA.png'))
+            ->brandLogoHeight('2.75rem')
             ->favicon(asset('images/HOA.png'))
             ->colors([
-                'primary' => Color::hex('#d90b46'),
+                'primary' => Color::hex('#0879ad'),
                 'info' => Color::hex('#267ca4'),
+            ])
+            ->navigationGroups([
+                'Community',
+                'Operations',
+                'Finance',
+                'Communication',
+                'Administration',
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
@@ -45,7 +64,13 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                AccountWidget::class,
+                PortalWelcome::class,
+                HoaOverview::class,
+                MonthlyRevenueChart::class,
+                ComplaintStatusChart::class,
+                OverdueAccounts::class,
+                RecentPayments::class,
+                DashboardAccount::class,
             ])
             ->middleware([
                 EncryptCookies::class,

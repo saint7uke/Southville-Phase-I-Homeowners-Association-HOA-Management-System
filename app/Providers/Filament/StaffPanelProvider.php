@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\Pages\RequestPasswordReset;
+use App\Filament\Auth\Pages\StaffLogin;
 use App\Filament\Pages\Reports;
 use App\Filament\Resources\Announcements\AnnouncementResource;
 use App\Filament\Resources\Certificates\CertificateResource;
@@ -17,6 +18,8 @@ use App\Filament\Resources\ServiceRequests\ServiceRequestResource;
 use App\Filament\Staff\Widgets\StaffOverview;
 use App\Filament\Staff\Widgets\StaffRecentActivity;
 use App\Filament\Staff\Widgets\StaffRecentPayments;
+use App\Filament\Widgets\PortalWelcome;
+use App\Filament\Widgets\DashboardAccount;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\EnsurePanelIsEnabled;
 use App\Http\Middleware\MigrateLegacyPanelSession;
@@ -27,7 +30,6 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -44,13 +46,24 @@ final class StaffPanelProvider extends PanelProvider
             ->path('staff')
             ->authGuard('staff')
             ->authPasswordBroker('users')
-            ->login()
+            ->login(StaffLogin::class)
             ->passwordReset(requestAction: RequestPasswordReset::class)
+            ->darkMode()
+            ->themeSwitcher()
+            ->viteTheme(['resources/css/filament.css', 'resources/css/filament-auth.css'])
             ->brandName('Southville Phase I HOA Staff')
+            ->brandLogo(asset('images/HOA.png'))
+            ->brandLogoHeight('2.75rem')
             ->favicon(asset('images/HOA.png'))
             ->colors([
-                'primary' => Color::hex('#176b57'),
+                'primary' => Color::hex('#0879ad'),
                 'info' => Color::hex('#267ca4'),
+            ])
+            ->navigationGroups([
+                'Community',
+                'Operations',
+                'Finance',
+                'Communication',
             ])
             ->resources([
                 HomeownerResource::class,
@@ -67,10 +80,11 @@ final class StaffPanelProvider extends PanelProvider
                 Reports::class,
             ])
             ->widgets([
+                PortalWelcome::class,
                 StaffOverview::class,
                 StaffRecentActivity::class,
                 StaffRecentPayments::class,
-                AccountWidget::class,
+                DashboardAccount::class,
             ])
             ->middleware([
                 EncryptCookies::class,

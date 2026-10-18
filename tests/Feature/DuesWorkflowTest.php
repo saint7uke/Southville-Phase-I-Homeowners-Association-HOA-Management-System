@@ -24,6 +24,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -40,8 +41,8 @@ final class DuesWorkflowTest extends TestCase
     public function test_monthly_generation_is_idempotent_and_snapshots_the_setting_amount(): void
     {
         $homeowner = $this->homeowner();
-        DuesSetting::query()->create(['name' => 'Association Dues', 'amount' => '350.00', 'frequency' => 'Monthly', 'is_active' => true]);
-        DuesSetting::query()->create(['name' => 'Inactive Fee', 'amount' => '100.00', 'frequency' => 'Monthly', 'is_active' => false]);
+        DuesSetting::query()->create(['name' => 'Association Dues', 'amount' => '350.00', 'frequency' => 'Monthly', 'starts_on' => '2026-01-01', 'is_active' => true]);
+        DuesSetting::query()->create(['name' => 'Inactive Fee', 'amount' => '100.00', 'frequency' => 'Monthly', 'starts_on' => '2026-01-01', 'is_active' => false]);
 
         $period = CarbonImmutable::create(2026, 9, 1);
         $this->assertSame(1, app(GenerateMonthlyObligations::class)->handle($period));
@@ -130,6 +131,7 @@ final class DuesWorkflowTest extends TestCase
             'payment_date' => now()->toDateString(),
             'covered_period' => 'September 2026',
             'payment_method' => 'GCash',
+            'transaction_reference' => (string) Str::uuid(),
         ], UploadedFile::fake()->create('proof.pdf', 200, 'application/pdf'));
 
         $this->assertSame('Pending Review', $payment->status);
@@ -144,6 +146,7 @@ final class DuesWorkflowTest extends TestCase
             'payment_date' => now()->toDateString(),
             'covered_period' => 'September 2026',
             'payment_method' => 'GCash',
+            'transaction_reference' => (string) Str::uuid(),
         ], UploadedFile::fake()->create('other.pdf', 200, 'application/pdf'));
     }
 
@@ -160,6 +163,7 @@ final class DuesWorkflowTest extends TestCase
                     'payment_date' => now()->toDateString(),
                     'covered_period' => 'September 2026',
                     'payment_method' => 'GCash',
+                    'transaction_reference' => (string) Str::uuid(),
                 ], UploadedFile::fake()->create('proof.pdf', 200, 'application/pdf'));
                 $this->fail("Amount {$amount} should have been rejected.");
             } catch (ValidationException) {
@@ -180,6 +184,7 @@ final class DuesWorkflowTest extends TestCase
             'payment_date' => now()->toDateString(),
             'covered_period' => 'September 2026',
             'payment_method' => 'GCash',
+            'transaction_reference' => (string) Str::uuid(),
         ], UploadedFile::fake()->create('script.php', 10, 'text/x-php'));
     }
 
@@ -195,6 +200,7 @@ final class DuesWorkflowTest extends TestCase
             'payment_date' => now()->toDateString(),
             'covered_period' => 'September 2026',
             'payment_method' => 'GCash',
+            'transaction_reference' => (string) Str::uuid(),
         ], UploadedFile::fake()->create('proof.pdf', 200, 'application/pdf'));
 
         $approved = app(ReviewPaymentProof::class)->approve($payment, $admin);
@@ -219,6 +225,7 @@ final class DuesWorkflowTest extends TestCase
             'payment_date' => now()->toDateString(),
             'covered_period' => 'September 2026',
             'payment_method' => 'GCash',
+            'transaction_reference' => (string) Str::uuid(),
         ], UploadedFile::fake()->create('proof.pdf', 200, 'application/pdf'));
         $payment = app(ReviewPaymentProof::class)->approve($payment, $admin);
 
@@ -237,7 +244,7 @@ final class DuesWorkflowTest extends TestCase
         Notification::fake();
         SystemSetting::current()->update(['delinquency_months' => 3, 'delinquency_notifications' => true]);
         $homeowner = $this->homeowner();
-        $setting = DuesSetting::query()->create(['name' => 'Consecutive dues', 'amount' => '100.00', 'frequency' => 'Monthly', 'is_active' => true]);
+        $setting = DuesSetting::query()->create(['name' => 'Consecutive dues', 'amount' => '100.00', 'frequency' => 'Monthly', 'starts_on' => '2026-01-01', 'is_active' => true]);
         foreach ([7, 8, 9] as $month) {
             DuesObligation::query()->create([
                 'homeowner_id' => $homeowner->id,
@@ -262,7 +269,7 @@ final class DuesWorkflowTest extends TestCase
     private function obligation(array $attributes = []): DuesObligation
     {
         $homeowner = $this->homeowner();
-        $setting = DuesSetting::query()->create(['name' => 'Monthly Dues '.DuesSetting::query()->count(), 'amount' => '100.00', 'frequency' => 'Monthly', 'is_active' => true]);
+        $setting = DuesSetting::query()->create(['name' => 'Monthly Dues '.DuesSetting::query()->count(), 'amount' => '100.00', 'frequency' => 'Monthly', 'starts_on' => '2026-01-01', 'is_active' => true]);
 
         return DuesObligation::query()->create([
             'homeowner_id' => $homeowner->id,

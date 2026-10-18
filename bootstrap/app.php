@@ -3,6 +3,7 @@
 use App\Http\Middleware\AuthenticatePortalSession;
 use App\Http\Middleware\AuthenticateProfilePhoto;
 use App\Http\Middleware\EnsureHomeownerIsApproved;
+use App\Http\Middleware\ValidateRegistrationStatusSignature;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'profile-photo.auth' => AuthenticateProfilePhoto::class,
             'portal.auth.session' => AuthenticatePortalSession::class,
             'homeowner.approved' => EnsureHomeownerIsApproved::class,
+            'registration.status.link' => ValidateRegistrationStatusSignature::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
         ]);

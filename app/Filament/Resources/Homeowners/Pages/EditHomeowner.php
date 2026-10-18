@@ -32,7 +32,15 @@ class EditHomeowner extends EditRecord
         unset($data['user_email'], $data['user_contact_number']);
 
         if (Filament::getCurrentPanel()?->getId() === 'staff') {
-            $data = Arr::only($data, ['emergency_contact_name', 'emergency_contact_number']);
+            $data = Arr::only($data, [
+                'emergency_contact_name',
+                'emergency_contact_number',
+                'landlord_homeowner_id',
+                'landlord_name',
+                'landlord_contact',
+                'lease_start_date',
+                'lease_end_date',
+            ]);
         }
 
         return DB::transaction(function () use ($record, $data, $userData): Model {

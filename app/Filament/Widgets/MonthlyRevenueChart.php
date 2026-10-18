@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
 
 final class MonthlyRevenueChart extends ChartWidget
 {
+    protected static ?int $sort = 10;
+
     protected ?string $heading = 'Monthly payment collection trend';
 
     protected int|string|array $columnSpan = 1;
@@ -31,8 +33,8 @@ final class MonthlyRevenueChart extends ChartWidget
             'datasets' => [[
                 'label' => 'Collections (PHP)',
                 'data' => $months->map(fn ($month): float => (float) ($totals[$month->format('Y-m')] ?? 0))->all(),
-                'borderColor' => '#ff1053',
-                'backgroundColor' => 'rgba(255, 16, 83, .14)',
+                'borderColor' => '#0879ad',
+                'backgroundColor' => 'rgba(8, 121, 173, .14)',
                 'fill' => true,
                 'tension' => 0.3,
             ]],

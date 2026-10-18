@@ -11,6 +11,8 @@ use Filament\Widgets\TableWidget;
 
 final class OverdueAccounts extends TableWidget
 {
+    protected static ?int $sort = 30;
+
     protected static ?string $heading = 'Most overdue accounts';
 
     protected int|string|array $columnSpan = 1;

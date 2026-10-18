@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ServiceRequests\Tables;
 use App\Actions\Certificates\IssueCertificate;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Services\CertificateTypeCatalog;
 use App\Support\AuthenticatedActor;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -58,7 +59,7 @@ class ServiceRequestsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('request_type')->options(array_combine(ServiceRequest::TYPES, ServiceRequest::TYPES)),
+                SelectFilter::make('request_type')->options(fn (): array => app(CertificateTypeCatalog::class)->requestOptions()),
                 SelectFilter::make('status')->options(['Pending' => 'Pending', 'Processing' => 'Processing', 'Approved' => 'Approved', 'Rejected' => 'Rejected', 'Completed' => 'Completed']),
                 Filter::make('created_at')->schema([
                     DatePicker::make('from')->label('Submitted from'),
@@ -74,7 +75,7 @@ class ServiceRequestsTable
                     ->icon('heroicon-o-document-check')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn (ServiceRequest $record): bool => $record->status === 'Approved' && in_array($record->request_type, ServiceRequest::CERTIFICATE_TYPES, true))
+                    ->visible(fn (ServiceRequest $record): bool => $record->status === 'Approved' && app(CertificateTypeCatalog::class)->isCertificateType($record->request_type))
                     ->action(function (ServiceRequest $record): void {
                         $actor = app(AuthenticatedActor::class)->user();
                         abort_unless($actor instanceof User, 403);

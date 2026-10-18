@@ -43,7 +43,14 @@ final class DatabaseSeeder extends Seeder
         $resident->syncRoles(['homeowner']);
         $resident->homeowner()->firstOrCreate([], ['house_number' => '18', 'street' => 'Mahogany Street', 'block' => '4', 'lot' => '12', 'residency_date' => '2020-06-01', 'ownership_type' => 'Owner', 'status' => 'Active']);
 
-        DuesSetting::query()->firstOrCreate(['name' => 'Monthly Association Dues'], ['amount' => 500, 'frequency' => 'Monthly', 'is_active' => true]);
+        DuesSetting::query()->firstOrCreate(['name' => 'Monthly Association Dues'], [
+            'amount' => 500,
+            'frequency' => 'Monthly',
+            'due_day' => 10,
+            'starts_on' => now()->startOfMonth()->toDateString(),
+            'is_active' => true,
+            'created_by' => $admin->id,
+        ]);
         Announcement::query()->firstOrCreate(['title' => 'Community clean-up drive'], [
             'content' => 'Join your neighbors for our community clean-up drive this Saturday at 7:00 AM. Assembly is at the HOA office.',
             'category' => 'Event', 'status' => 'Published', 'published_at' => now()->subDay(), 'created_by' => $admin->id,

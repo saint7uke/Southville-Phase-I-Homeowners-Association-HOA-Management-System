@@ -7,7 +7,9 @@ namespace Tests\Feature;
 use App\Actions\Users\ChangeAccountStatus;
 use App\Actions\Users\CreatePendingUser;
 use App\Enums\UserAccountStatus;
+use App\Events\UserAccountStatusChanged;
 use App\Filament\Auth\Pages\RequestPasswordReset;
+use App\Listeners\SendAccountStatusChangedNotification;
 use App\Models\Homeowner;
 use App\Models\User;
 use App\Notifications\HomeownerAccountStatusChanged;
@@ -18,10 +20,12 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Database\Eloquent\MassAssignmentException;
+use Illuminate\Events\CallQueuedListener;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -40,6 +44,7 @@ final class AccountLifecycleTest extends TestCase
     public function test_admin_activates_pending_homeowner_and_notification_waits_for_commit(): void
     {
         Notification::fake();
+        Queue::fake();
         $admin = $this->userWithRole('hoa_admin');
         [$resident, $homeowner] = $this->homeowner(UserAccountStatus::Pending);
 
@@ -53,9 +58,26 @@ final class AccountLifecycleTest extends TestCase
         $this->assertSame(UserAccountStatus::Active->value, $resident->account_status);
         $this->assertSame($admin->id, $resident->approved_by);
         $this->assertNotNull($resident->approved_at);
+        $this->assertTrue($resident->email_verified_at?->equalTo($resident->approved_at));
         $this->assertSame('Active', $homeowner->refresh()->status);
+        Queue::assertPushed(CallQueuedListener::class);
+        Notification::assertNothingSent();
+    }
+
+    public function test_approval_notification_does_not_send_a_redundant_email_verification_link(): void
+    {
+        Notification::fake();
+        [$resident] = $this->homeowner(UserAccountStatus::Pending);
+
+        app(SendAccountStatusChangedNotification::class)->handle(new UserAccountStatusChanged(
+            $resident,
+            UserAccountStatus::Pending,
+            UserAccountStatus::Active,
+            null,
+        ));
+
         Notification::assertSentTo($resident, HomeownerAccountStatusChanged::class);
-        Notification::assertSentTo($resident, VerifyEmail::class);
+        Notification::assertNotSentTo($resident, VerifyEmail::class);
     }
 
     public function test_suspension_requires_reason_and_reactivation_clears_suspension_fields(): void
@@ -262,6 +284,93 @@ final class AccountLifecycleTest extends TestCase
 
         $this->assertAuthenticatedAs($resident, 'web');
         $this->assertSame('portal', $resident->refresh()->last_login_panel);
+    }
+
+    public function test_approved_homeowner_login_uses_panel_guard_and_opens_homeowner_dashboard(): void
+    {
+        Notification::fake();
+        $admin = $this->userWithRole('hoa_admin');
+        [$resident] = $this->homeowner(UserAccountStatus::Pending);
+
+        $resident = app(ChangeAccountStatus::class)->handle($resident, UserAccountStatus::Active, $admin);
+        $this->assertNotNull($resident->email_verified_at);
+
+        $response = $this->post('/homeowner/login', ['email' => $resident->email, 'password' => 'password']);
+        $response->assertRedirect(route('filament.homeowner.pages.dashboard'));
+        $this->assertNotSame(route('home'), $response->headers->get('Location'));
+
+        $this->assertAuthenticatedAs($resident, 'homeowner');
+        $this->assertGuest('web');
+        $this->get('/homeowner')
+            ->assertOk()
+            ->assertDontSee('/homeowner/email-verification/prompt');
+    }
+
+    public function test_reactivating_an_unverified_homeowner_does_not_verify_their_email(): void
+    {
+        Notification::fake();
+        $admin = $this->userWithRole('hoa_admin');
+        [$resident] = $this->homeowner(UserAccountStatus::Inactive);
+        $resident->forceFill(['email_verified_at' => null])->save();
+
+        $resident = app(ChangeAccountStatus::class)->handle($resident, UserAccountStatus::Active, $admin);
+
+        $this->assertNull($resident->email_verified_at);
+        $this->actingAs($resident, 'homeowner')
+            ->get('/homeowner')
+            ->assertRedirect('/homeowner/email-verification/prompt');
+    }
+
+    public function test_homeowner_dashboard_session_survives_refresh_and_logout_returns_to_login(): void
+    {
+        [$resident] = $this->homeowner(UserAccountStatus::Active);
+        $this->post('/homeowner/login', ['email' => $resident->email, 'password' => 'password']);
+
+        $this->get('/homeowner')->assertOk();
+        $this->post('/homeowner/logout')
+            ->assertRedirect('/homeowner/login/filament');
+
+        $this->assertGuest('homeowner');
+        $this->get('/homeowner')
+            ->assertRedirect('/homeowner/login/filament');
+    }
+
+    /** @return array<string, array{UserAccountStatus, string}> */
+    public static function blockedHomeownerLoginProvider(): array
+    {
+        return [
+            'pending' => [UserAccountStatus::Pending, 'Your application is still pending approval.'],
+            'rejected' => [UserAccountStatus::Rejected, 'Your homeowner application was rejected.'],
+            'suspended' => [UserAccountStatus::Suspended, 'Your homeowner account is suspended.'],
+            'inactive' => [UserAccountStatus::Inactive, 'Your homeowner account is inactive.'],
+        ];
+    }
+
+    #[DataProvider('blockedHomeownerLoginProvider')]
+    public function test_blocked_homeowner_accounts_cannot_login_to_panel(UserAccountStatus $status, string $message): void
+    {
+        [$resident] = $this->homeowner($status);
+
+        $this->from('/homeowner/login')
+            ->post('/homeowner/login', ['email' => $resident->email, 'password' => 'password'])
+            ->assertRedirect('/homeowner/login')
+            ->assertSessionHasErrors(['email' => $message]);
+
+        $this->assertGuest('homeowner');
+        $this->get('/homeowner')
+            ->assertRedirect('/homeowner/login/filament');
+    }
+
+    public function test_invalid_homeowner_credentials_stay_on_homeowner_login(): void
+    {
+        [$resident] = $this->homeowner(UserAccountStatus::Active);
+
+        $this->from('/homeowner/login')
+            ->post('/homeowner/login', ['email' => $resident->email, 'password' => 'wrong-password'])
+            ->assertRedirect('/homeowner/login')
+            ->assertSessionHasErrors('email');
+
+        $this->assertGuest('homeowner');
     }
 
     /** @return array<string, array{UserAccountStatus}> */

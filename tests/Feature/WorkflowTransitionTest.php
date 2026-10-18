@@ -10,6 +10,7 @@ use App\Models\ServiceRequest;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -61,6 +62,51 @@ final class WorkflowTransitionTest extends TestCase
 
         $request->update(['status' => 'Rejected', 'admin_remarks' => 'Please provide the visitor dates.']);
         $this->assertSame('Rejected', $request->refresh()->status);
+    }
+
+    public function test_assigned_staff_can_progress_complaints_through_the_workflow(): void
+    {
+        $staff = User::factory()->create(['account_status' => 'Active']);
+        $staff->assignRole('hoa_staff');
+        $complaint = Complaint::query()->create([
+            'homeowner_id' => $this->homeowner()->id,
+            'handled_by' => $staff->id,
+            'subject' => 'Streetlight concern',
+            'description' => 'The streetlight near the entrance is not working.',
+            'category' => 'Common Area',
+            'priority' => 'High',
+            'status' => 'Pending',
+        ]);
+
+        $this->assertTrue(Gate::forUser($staff)->allows('update', $complaint));
+
+        $this->actingAs($staff);
+        $complaint->update(['status' => 'Under Review']);
+        $complaint->update(['status' => 'Resolved', 'admin_remarks' => 'The bulb was replaced.']);
+
+        $this->assertSame('Resolved', $complaint->refresh()->status);
+        $this->assertSame($staff->id, $complaint->handled_by);
+        $this->assertNotNull($complaint->resolved_at);
+    }
+
+    public function test_only_assigned_staff_or_admin_can_update_a_complaint(): void
+    {
+        $assigned = User::factory()->create(['account_status' => 'Active']);
+        $assigned->assignRole('hoa_staff');
+        $otherStaff = User::factory()->create(['account_status' => 'Active']);
+        $otherStaff->assignRole('hoa_staff');
+        $complaint = Complaint::query()->create([
+            'homeowner_id' => $this->homeowner()->id,
+            'handled_by' => $assigned->id,
+            'subject' => 'Assigned complaint',
+            'description' => 'This complaint is assigned to one staff member.',
+            'category' => 'Security',
+            'priority' => 'Medium',
+            'status' => 'Under Review',
+        ]);
+
+        $this->assertTrue(Gate::forUser($assigned)->allows('update', $complaint));
+        $this->assertFalse(Gate::forUser($otherStaff)->allows('update', $complaint));
     }
 
     private function homeowner(): Homeowner

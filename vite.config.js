@@ -8,7 +8,15 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/react/main.jsx'],
+            input: [
+                'resources/css/app.css',
+                'resources/css/filament.css',
+                'resources/css/filament-auth.css',
+                'resources/css/landing.css',
+                'resources/js/app.js',
+                'resources/js/homeowner-profile-validation.js',
+                'resources/js/react/main.jsx',
+            ],
             refresh: true,
         }),
         tailwindcss(),

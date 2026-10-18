@@ -17,7 +17,7 @@ final class Payment extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['homeowner_id', 'dues_setting_id', 'dues_obligation_id', 'or_number', 'amount_paid', 'balance', 'penalty', 'payment_date', 'covered_period', 'payment_method', 'status', 'notes', 'proof_path', 'proof_original_name', 'proof_mime_type', 'proof_size', 'reviewed_at', 'reviewed_by', 'review_status', 'recorded_by'];
+    protected $fillable = ['homeowner_id', 'payer_homeowner_id', 'dues_setting_id', 'dues_obligation_id', 'or_number', 'amount_paid', 'balance', 'penalty', 'payment_date', 'covered_period', 'payment_method', 'transaction_reference', 'transaction_reference_key', 'submission_token', 'status', 'notes', 'proof_path', 'proof_original_name', 'proof_mime_type', 'proof_size', 'reviewed_at', 'reviewed_by', 'review_status', 'review_notes', 'recorded_by'];
 
     protected function casts(): array
     {
@@ -27,6 +27,11 @@ final class Payment extends Model
     public function homeowner(): BelongsTo
     {
         return $this->belongsTo(Homeowner::class)->withTrashed();
+    }
+
+    public function payer(): BelongsTo
+    {
+        return $this->belongsTo(Homeowner::class, 'payer_homeowner_id')->withTrashed();
     }
 
     public function duesSetting(): BelongsTo

@@ -8,6 +8,7 @@ use App\Models\CaseAttachment;
 use App\Models\Complaint;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Validation\CaseAttachmentRules;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -29,13 +30,21 @@ final class StoreCaseAttachments
 
         try {
             foreach ($files as $file) {
-                if (! $file instanceof UploadedFile || ! $file->isValid() || $file->getSize() > 5 * 1024 * 1024 || ! in_array($file->getMimeType(), ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'], true)) {
+                if (! $file instanceof UploadedFile
+                    || ! $file->isValid()
+                    || $file->getSize() > 5 * 1024 * 1024
+                    || ! in_array($file->getMimeType(), CaseAttachmentRules::MIME_TYPES, true)
+                    || ! in_array(strtolower($file->getClientOriginalExtension()), CaseAttachmentRules::EXTENSIONS, true)) {
                     throw ValidationException::withMessages(['attachments' => __('Every attachment must be a valid PDF, JPEG, PNG, DOC, or DOCX file no larger than 5 MB.')]);
                 }
 
                 $path = 'case-attachments/'.now()->format('Y/m').'/'.Str::ulid().'.'.$file->extension();
-                Storage::disk('local')->putFileAs(dirname($path), $file, basename($path));
                 $storedPaths[] = $path;
+                $storedPath = Storage::disk('local')->putFileAs(dirname($path), $file, basename($path));
+                if ($storedPath !== $path || ! Storage::disk('local')->exists($path)) {
+                    throw ValidationException::withMessages(['attachments' => __('The attachment could not be stored. Please try again.')]);
+                }
+
                 $attachments->push(CaseAttachment::query()->create([
                     $record instanceof Complaint ? 'complaint_id' : 'service_request_id' => $record->id,
                     'disk' => 'local',

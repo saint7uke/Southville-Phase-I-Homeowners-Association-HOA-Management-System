@@ -20,8 +20,9 @@ final class SubmitPaymentProofRequest extends FormRequest
         return [
             'amount_paid' => ['required', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
-            'covered_period' => ['required', 'string', 'max:40'],
             'payment_method' => ['required', 'in:Bank Transfer,GCash,Maya'],
+            'transaction_reference' => ['required', 'string', 'max:120'],
+            'submission_token' => ['nullable', 'uuid'],
             'notes' => ['nullable', 'string', 'max:500'],
             'proof' => ['required', File::types(['pdf', 'jpg', 'jpeg', 'png'])->max('5mb')],
         ];

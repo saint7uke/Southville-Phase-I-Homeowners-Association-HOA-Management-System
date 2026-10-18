@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DuesSettings\Schemas;
 
+use App\Models\DuesSetting;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -17,23 +18,30 @@ class DuesSettingForm
             ->components([
                 TextInput::make('name')
                     ->maxLength(120)
+                    ->disabled(fn (?DuesSetting $record): bool => $record?->obligations()->exists() ?? false)->dehydrated()
                     ->required(),
                 TextInput::make('amount')
                     ->prefix('PHP')
                     ->minValue(0.01)
+                    ->disabled(fn (?DuesSetting $record): bool => $record?->obligations()->exists() ?? false)->dehydrated()
                     ->required()
                     ->numeric(),
                 Select::make('frequency')
                     ->label('Type')
                     ->options(['Monthly' => 'Monthly', 'Annual' => 'Annual', 'Special Assessment' => 'Special Assessment'])
                     ->default('Monthly')
+                    ->disabled(fn (?DuesSetting $record): bool => $record?->obligations()->exists() ?? false)->dehydrated()
                     ->required(),
-                TextInput::make('due_day')->label('Due day of month')->integer()->minValue(1)->maxValue(31)->default(10)->required(),
-                DatePicker::make('starts_on')->label('Effective from')->native(false),
-                DatePicker::make('ends_on')->label('Effective until')->native(false)->afterOrEqual('starts_on'),
+                TextInput::make('due_day')->label('Due day of month')->integer()->minValue(1)->maxValue(31)->default(10)
+                    ->disabled(fn (?DuesSetting $record): bool => $record?->obligations()->exists() ?? false)->dehydrated()->required(),
+                DatePicker::make('starts_on')->label('Effective from')->native(false)
+                    ->disabled(fn (?DuesSetting $record): bool => $record?->obligations()->exists() ?? false)->dehydrated()->required(),
+                DatePicker::make('ends_on')->label('Effective until')->native(false)->afterOrEqual('starts_on')
+                    ->disabled(fn (?DuesSetting $record): bool => $record?->obligations()->exists() ?? false)->dehydrated(),
                 Textarea::make('description')->maxLength(2000)->columnSpanFull(),
                 Toggle::make('is_active')
                     ->default(true)
+                    ->disabled(fn (?DuesSetting $record): bool => $record?->obligations()->exists() ?? false)->dehydrated()
                     ->required(),
             ]);
     }

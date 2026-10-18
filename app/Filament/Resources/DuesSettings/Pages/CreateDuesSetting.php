@@ -2,24 +2,40 @@
 
 namespace App\Filament\Resources\DuesSettings\Pages;
 
+use App\Actions\Dues\SaveDuesSetting;
 use App\Filament\Resources\DuesSettings\DuesSettingResource;
-use App\Jobs\GenerateDuesForSetting;
-use Filament\Facades\Filament;
+use App\Models\User;
+use App\Support\AuthenticatedActor;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Model;
 
 class CreateDuesSetting extends CreateRecord
 {
     protected static string $resource = DuesSettingResource::class;
 
-    protected function mutateFormDataBeforeCreate(array $data): array
+    protected function getCreateFormAction(): Action
     {
-        $data['created_by'] = Filament::auth()->id();
-
-        return $data;
+        return parent::getCreateFormAction()
+            ->requiresConfirmation()
+            ->modalHeading('Create dues schedule?')
+            ->modalDescription('Review the amount and effective billing period. Financial terms become locked after obligations are generated.');
     }
 
-    protected function afterCreate(): void
+    /** @param array<string, mixed> $data */
+    protected function handleRecordCreation(array $data): Model
     {
-        GenerateDuesForSetting::dispatch((int) $this->record->getKey(), now()->startOfMonth()->toDateString());
+        $actor = app(AuthenticatedActor::class)->user();
+        if (! $actor instanceof User) {
+            throw new AuthorizationException;
+        }
+
+        return app(SaveDuesSetting::class)->create($data, $actor);
+    }
+
+    protected function getCreatedNotificationTitle(): ?string
+    {
+        return 'Dues schedule created successfully';
     }
 }

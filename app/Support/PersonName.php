@@ -22,4 +22,17 @@ final class PersonName
             $titleCased,
         );
     }
+
+    public static function key(mixed $value): string
+    {
+        $value = (string) $value;
+        if (class_exists(\Normalizer::class)) {
+            $value = \Normalizer::normalize($value, \Normalizer::FORM_KC) ?: $value;
+        }
+
+        $value = mb_strtoupper($value, 'UTF-8');
+        $value = (string) preg_replace('/[^\pL\pN]+/u', ' ', $value);
+
+        return trim((string) preg_replace('/\s+/u', ' ', $value));
+    }
 }

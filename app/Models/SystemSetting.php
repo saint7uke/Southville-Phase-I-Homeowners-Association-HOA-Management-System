@@ -12,7 +12,7 @@ final class SystemSetting extends Model
 {
     protected $fillable = [
         'hoa_name', 'contact_email', 'address', 'logo_path', 'delinquency_months',
-        'complaint_notifications', 'request_notifications', 'announcement_notifications',
+        'complaint_notifications', 'request_notifications', 'payment_notifications', 'announcement_notifications',
         'certificate_notifications', 'delinquency_notifications', 'contact_notifications',
         'staff_panel_enabled', 'homeowner_panel_enabled',
     ];
@@ -23,6 +23,7 @@ final class SystemSetting extends Model
             'delinquency_months' => 'integer',
             'complaint_notifications' => 'boolean',
             'request_notifications' => 'boolean',
+            'payment_notifications' => 'boolean',
             'announcement_notifications' => 'boolean',
             'certificate_notifications' => 'boolean',
             'delinquency_notifications' => 'boolean',

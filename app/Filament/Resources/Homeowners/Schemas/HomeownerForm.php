@@ -7,8 +7,10 @@ namespace App\Filament\Resources\Homeowners\Schemas;
 use App\Models\Homeowner;
 use App\Models\User;
 use App\Support\PersonName;
+use App\Support\PropertyAddress;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
@@ -75,14 +77,41 @@ final class HomeownerForm
                 ->maxLength(20)
                 ->required()
                 ->disabled($lockedForStaff)
-                ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? mb_strtoupper(trim(preg_replace('/\s+/u', ' ', $state)), 'UTF-8') : null)
-                ->rule(fn (Get $get, ?Homeowner $record): mixed => Rule::unique('homeowners', 'lot')
-                    ->where(fn (\Illuminate\Database\Query\Builder $query): \Illuminate\Database\Query\Builder => $query
-                        ->where('block', (string) $get('block')))
-                    ->ignore($record?->id)),
+                ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? mb_strtoupper(trim(preg_replace('/\s+/u', ' ', $state)), 'UTF-8') : null),
             TextInput::make('phase')->maxLength(50)->required()->default('Southville Phase I')->disabled($lockedForStaff),
-            DatePicker::make('residency_date')->maxDate(today())->required()->disabled($lockedForStaff),
-            Select::make('ownership_type')->options(['Owner' => 'Owner', 'Tenant' => 'Tenant', 'Co-owner' => 'Co-owner'])->required()->disabled($lockedForStaff),
+            Select::make('ownership_type')->options(['Owner' => 'Owner', 'Tenant' => 'Tenant', 'Co-owner' => 'Co-owner'])->required()->disabled($lockedForStaff)->reactive(),
+            DatePicker::make('residency_date')->maxDate(today())->disabled($lockedForStaff)->visible(fn (Get $get) => in_array($get('ownership_type'), ['Owner', 'Co-owner'])),
+            Select::make('landlord_homeowner_id')
+                ->label('Registered landlord')
+                ->options(function (Get $get, ?Homeowner $record): array {
+                    $addressKey = PropertyAddress::key([
+                        'house_number' => $get('house_number'),
+                        'street' => $get('street'),
+                        'block' => $get('block'),
+                        'lot' => $get('lot'),
+                        'phase' => $get('phase'),
+                    ]);
+
+                    return Homeowner::query()
+                        ->where('address_key', $addressKey)
+                        ->whereIn('ownership_type', ['Owner', 'Co-owner'])
+                        ->where('status', 'Active')
+                        ->whereHas('user', fn (Builder $query): Builder => $query->where('account_status', 'Active'))
+                        ->when($record !== null, fn (Builder $query): Builder => $query->whereKeyNot($record->id))
+                        ->with('user')
+                        ->get()
+                        ->mapWithKeys(fn (Homeowner $homeowner): array => [$homeowner->id => $homeowner->user->full_name])
+                        ->all();
+                })
+                ->searchable()
+                ->live()
+                ->helperText('Only active Owners or Co-owners registered at this address are listed.')
+                ->visible(fn (Get $get): bool => $get('ownership_type') === 'Tenant'),
+            TextInput::make('landlord_name')->label('Landlord name snapshot')->maxLength(100)->visible(fn (Get $get) => $get('ownership_type') === 'Tenant'),
+            TextInput::make('landlord_contact')->tel()->length(11)->regex('/^09\d{9}$/')->visible(fn (Get $get) => $get('ownership_type') === 'Tenant'),
+            DatePicker::make('lease_start_date')->visible(fn (Get $get) => $get('ownership_type') === 'Tenant'),
+            DatePicker::make('lease_end_date')->visible(fn (Get $get) => $get('ownership_type') === 'Tenant')->after('lease_start_date'),
+            FileUpload::make('verification_document_path')->label('Verification Document')->disk('local')->directory('verification_documents')->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png']),
             TextInput::make('emergency_contact_name')->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->required()->dehydrateStateUsing(fn (?string $state): ?string => PersonName::normalize($state)),
             TextInput::make('emergency_contact_number')->tel()->length(11)->regex('/^09\d{9}$/')->required(),
             Select::make('status')->options(['Active' => 'Active', 'Inactive' => 'Inactive', 'Delinquent' => 'Delinquent'])->required()->disabled($lockedForStaff),

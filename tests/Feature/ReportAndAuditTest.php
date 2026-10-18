@@ -132,7 +132,7 @@ final class ReportAndAuditTest extends TestCase
             ->set('perPage', 5)
             ->call('setPage', 2)
             ->assertSet('paginators.page', 2)
-            ->assertSee('Showing 6–8 of 8 reports')
+            ->assertSee('Showing 6–10 of 13 reports')
             ->call('sortBy', 'title')
             ->assertSet('sortDirection', 'desc')
             ->assertSet('paginators.page', 1)
@@ -247,6 +247,7 @@ final class ReportAndAuditTest extends TestCase
             'name' => 'Historical dues',
             'amount' => '500.00',
             'frequency' => 'Monthly',
+            'starts_on' => '2026-01-01',
             'is_active' => false,
         ]);
         Payment::query()->create([

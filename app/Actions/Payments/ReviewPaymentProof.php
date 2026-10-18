@@ -6,7 +6,9 @@ namespace App\Actions\Payments;
 
 use App\Models\DuesObligation;
 use App\Models\Payment;
+use App\Models\SystemSetting;
 use App\Models\User;
+use App\Notifications\PaymentReviewCompleted;
 use App\Support\Money;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -20,13 +22,18 @@ final class ReviewPaymentProof
             throw new AuthorizationException;
         }
 
-        return DB::transaction(function () use ($payment, $reviewer): Payment {
+        $reviewed = DB::transaction(function () use ($payment, $reviewer): Payment {
+            $snapshot = Payment::query()->findOrFail($payment->id);
+            if ($snapshot->dues_obligation_id === null) {
+                throw ValidationException::withMessages(['payment' => __('Only a pending payment proof can be approved.')]);
+            }
+            $obligation = DuesObligation::query()->lockForUpdate()->findOrFail($snapshot->dues_obligation_id);
             $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             if ($lockedPayment->review_status !== 'Pending' || $lockedPayment->dues_obligation_id === null) {
                 throw ValidationException::withMessages(['payment' => __('Only a pending payment proof can be approved.')]);
             }
+            $obligation->payments()->where('review_status', 'Pending')->orderBy('id')->lockForUpdate()->get();
 
-            $obligation = DuesObligation::query()->lockForUpdate()->findOrFail($lockedPayment->dues_obligation_id);
             $totalDue = Money::toMinor((string) $obligation->amount_due) + Money::toMinor((string) $obligation->penalty_amount);
             $alreadyPaid = Money::toMinor((string) $obligation->amount_paid);
             $received = Money::toMinor((string) $lockedPayment->amount_paid);
@@ -51,25 +58,59 @@ final class ReviewPaymentProof
 
             return $lockedPayment->refresh();
         });
+
+        $this->notifyParties($reviewed);
+
+        return $reviewed;
     }
 
-    public function reject(Payment $payment, User $reviewer): Payment
+    public function reject(Payment $payment, User $reviewer, string $reason): Payment
     {
         if (! $reviewer->can('manage_payments')) {
             throw new AuthorizationException;
         }
 
-        if ($payment->review_status !== 'Pending') {
-            throw ValidationException::withMessages(['payment' => __('Only a pending payment proof can be rejected.')]);
+        $reason = trim($reason);
+        if ($reason === '' || mb_strlen($reason) > 1000) {
+            throw ValidationException::withMessages(['review_notes' => __('A rejection reason of no more than 1,000 characters is required.')]);
         }
 
-        $payment->update([
-            'status' => 'Rejected',
-            'review_status' => 'Rejected',
-            'reviewed_at' => now(),
-            'reviewed_by' => $reviewer->id,
-        ]);
+        $reviewed = DB::transaction(function () use ($payment, $reviewer, $reason): Payment {
+            $snapshot = Payment::query()->findOrFail($payment->id);
+            if ($snapshot->dues_obligation_id !== null) {
+                $obligation = DuesObligation::query()->lockForUpdate()->findOrFail($snapshot->dues_obligation_id);
+                $obligation->payments()->where('review_status', 'Pending')->orderBy('id')->lockForUpdate()->get();
+            }
+            $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            if ($locked->review_status !== 'Pending') {
+                throw ValidationException::withMessages(['payment' => __('Only a pending payment proof can be rejected.')]);
+            }
+            $locked->update([
+                'status' => 'Rejected',
+                'review_status' => 'Rejected',
+                'review_notes' => $reason,
+                'reviewed_at' => now(),
+                'reviewed_by' => $reviewer->id,
+            ]);
 
-        return $payment->refresh();
+            return $locked->refresh();
+        });
+
+        $this->notifyParties($reviewed);
+
+        return $reviewed;
+    }
+
+    private function notifyParties(Payment $payment): void
+    {
+        if (! SystemSetting::current()->payment_notifications) {
+            return;
+        }
+
+        $payment->loadMissing(['homeowner.user', 'payer.user']);
+        collect([$payment->payer?->user, $payment->homeowner?->user])
+            ->filter()
+            ->unique('id')
+            ->each(fn (User $user) => $user->notify(new PaymentReviewCompleted($payment)));
     }
 }

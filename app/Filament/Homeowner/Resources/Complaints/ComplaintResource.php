@@ -8,6 +8,8 @@ use App\Filament\Homeowner\Resources\Complaints\Pages\CreateComplaint;
 use App\Filament\Homeowner\Resources\Complaints\Pages\ListComplaints;
 use App\Filament\Homeowner\Resources\Complaints\Pages\ViewComplaint;
 use App\Models\Complaint;
+use App\Validation\CaseAttachmentRules;
+use App\Validation\ComplaintSubmissionValidator;
 use BackedEnum;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
@@ -31,14 +33,16 @@ final class ComplaintResource extends Resource
 
     protected static ?string $navigationLabel = 'My Complaints';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Requests & Concerns';
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
             TextInput::make('subject')->required()->maxLength(160),
-            Select::make('category')->options(array_combine($categories = ['Noise', 'Property Damage', 'Neighbor Dispute', 'Common Area', 'Security', 'Others'], $categories))->required(),
-            Select::make('priority')->options(['Low' => 'Low', 'Medium' => 'Medium', 'High' => 'High', 'Urgent' => 'Urgent'])->required()->default('Medium'),
+            Select::make('category')->options(array_combine(ComplaintSubmissionValidator::CATEGORIES, ComplaintSubmissionValidator::CATEGORIES))->required(),
+            Select::make('priority')->options(array_combine(ComplaintSubmissionValidator::PRIORITIES, ComplaintSubmissionValidator::PRIORITIES))->required()->default('Medium'),
             Textarea::make('description')->required()->minLength(20)->maxLength(5000)->columnSpanFull(),
-            FileUpload::make('attachments')->label('Supporting attachments')->multiple()->maxFiles(3)->storeFiles(false)->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])->maxSize(5120)->columnSpanFull(),
+            FileUpload::make('attachments')->label('Supporting attachments')->multiple()->maxFiles(3)->storeFiles(false)->acceptedFileTypes(CaseAttachmentRules::MIME_TYPES)->maxSize(5120)->columnSpanFull(),
             Placeholder::make('status_summary')->label('Current status')->content(fn (?Complaint $record): string => $record?->status ?? '-')->visible(fn (string $operation): bool => $operation === 'view'),
             Placeholder::make('handler_summary')->label('Handled by')->content(fn (?Complaint $record): string => $record?->handler?->full_name ?? 'Not yet assigned')->visible(fn (string $operation): bool => $operation === 'view'),
             Placeholder::make('timeline_summary')->label('Status timeline')->content(fn (?Complaint $record): string => $record === null ? '-' : 'Submitted '.$record->created_at->format('M d, Y g:i A').' · Last updated '.$record->updated_at->format('M d, Y g:i A').($record->resolved_at ? ' · Closed '.$record->resolved_at->format('M d, Y g:i A') : ''))->visible(fn (string $operation): bool => $operation === 'view')->columnSpanFull(),

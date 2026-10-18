@@ -14,9 +14,9 @@ final class PaymentReceiptController extends Controller
     public function __invoke(Payment $payment): Response
     {
         Gate::forUser(request()->user())->authorize('view', $payment);
-        abort_unless(in_array($payment->review_status, ['Approved', 'Recorded'], true) && $payment->status === 'Paid', 404);
+        abort_unless(in_array($payment->review_status, ['Approved', 'Recorded'], true) && in_array($payment->status, ['Paid', 'Partial'], true), 404);
 
-        $payment->loadMissing(['homeowner.user', 'duesSetting', 'recorder', 'reviewer']);
+        $payment->loadMissing(['homeowner.user', 'payer.user', 'duesSetting', 'recorder', 'reviewer']);
 
         return Pdf::loadView('pdf.payment-receipt', ['payment' => $payment])
             ->setPaper('a4')

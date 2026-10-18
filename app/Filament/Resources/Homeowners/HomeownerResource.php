@@ -6,6 +6,7 @@ use App\Filament\Resources\Homeowners\Pages\CreateHomeowner;
 use App\Filament\Resources\Homeowners\Pages\EditHomeowner;
 use App\Filament\Resources\Homeowners\Pages\ListHomeowners;
 use App\Filament\Resources\Homeowners\Pages\ViewHomeowner;
+use App\Filament\Resources\Homeowners\RelationManagers\TenantsRelationManager;
 use App\Filament\Resources\Homeowners\Schemas\HomeownerForm;
 use App\Filament\Resources\Homeowners\Tables\HomeownersTable;
 use App\Models\Homeowner;
@@ -24,6 +25,8 @@ class HomeownerResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Community';
+
     public static function form(Schema $schema): Schema
     {
         return HomeownerForm::configure($schema);
@@ -37,7 +40,7 @@ class HomeownerResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            TenantsRelationManager::class,
         ];
     }
 
