@@ -26,7 +26,7 @@ final class PaymentPolicy
 
     public function create(User $user): bool
     {
-        return $user->can('manage_payments');
+        return ! $user->trashed() && $user->account_status === 'Active' && $user->can('manage_payments');
     }
 
     public function update(User $user, Payment $payment): bool

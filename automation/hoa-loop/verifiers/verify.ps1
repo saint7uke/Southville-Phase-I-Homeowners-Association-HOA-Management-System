@@ -7,8 +7,14 @@ param(
 $ErrorActionPreference = 'Stop'
 $loopRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $workspace = (Resolve-Path (Join-Path $loopRoot '..\..')).Path
-$php = 'F:\Xampp 8\php\php.exe'
-$composerPhar = 'C:\ProgramData\ComposerSetup\bin\composer.phar'
+$php = if ($env:HOA_PHP_BINARY) { $env:HOA_PHP_BINARY } else { (Get-Command php -ErrorAction Stop).Source }
+$composerPhar = if ($env:HOA_COMPOSER_PHAR) {
+    $env:HOA_COMPOSER_PHAR
+} elseif (Test-Path -LiteralPath (Join-Path $workspace 'composer.phar')) {
+    Join-Path $workspace 'composer.phar'
+} else {
+    'C:\ProgramData\ComposerSetup\bin\composer.phar'
+}
 $baseline = Get-Content -LiteralPath (Join-Path $loopRoot 'baseline.json') -Raw | ConvertFrom-Json
 
 function Invoke-Checked([string] $label, [scriptblock] $command) {

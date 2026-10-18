@@ -26,6 +26,7 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: cp .env.example .env
       - run: php artisan key:generate
+      - run: php artisan test --filter=ViteConfigurationIntegrityTest
       - run: npm ci
       - run: npm run build
       - run: vendor/bin/pint --test
@@ -119,6 +120,7 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: cp .env.example .env
       - run: php artisan key:generate
+      - run: php artisan test --filter=ViteConfigurationIntegrityTest
       - run: npm ci
       - run: npm run build
       - run: php artisan migrate --force
@@ -209,6 +211,7 @@ jobs:
           HOA_BROWSER_HOMEOWNER_PASSWORD: Southville2026!
       - run: php artisan db:seed --force
         env: *browser-env
+      - run: php artisan test --filter=ViteConfigurationIntegrityTest
       - run: npm ci
       - run: npm run build
       - run: npx playwright install --with-deps ${{ matrix.browser }}

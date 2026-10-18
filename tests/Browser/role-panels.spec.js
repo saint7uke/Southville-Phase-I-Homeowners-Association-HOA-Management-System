@@ -82,7 +82,7 @@ for (const role of roles) {
 
         const emailInput = page.getByLabel('Email address');
         const passwordInput = page.locator('input[type="password"]');
-        const signIn = page.getByRole('button', { name: 'Sign in', exact: true });
+        const signIn = page.locator('button[type="submit"]');
 
         await tabTo(page, emailInput);
         await expectVisibleFocus(emailInput);

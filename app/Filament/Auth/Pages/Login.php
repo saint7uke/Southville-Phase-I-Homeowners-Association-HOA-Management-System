@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Auth\Pages;
 
-use Filament\Auth\Pages\Login as BaseLogin;
 use Filament\Actions\Action;
+use Filament\Auth\Pages\Login as BaseLogin;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
 
@@ -27,17 +27,17 @@ class Login extends BaseLogin
 
     protected static string $portalSupport = 'Use your HOA credentials to continue.';
 
-    public function getTitle(): string | Htmlable
+    public function getTitle(): string|Htmlable
     {
         return static::$portalTitle;
     }
 
-    public function getHeading(): string | Htmlable | null
+    public function getHeading(): string|Htmlable|null
     {
         return static::$portalTitle;
     }
 
-    public function getSubheading(): string | Htmlable | null
+    public function getSubheading(): string|Htmlable|null
     {
         return new HtmlString(static::$portalSubtitle);
     }

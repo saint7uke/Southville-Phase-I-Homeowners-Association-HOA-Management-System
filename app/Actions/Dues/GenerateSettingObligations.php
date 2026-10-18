@@ -33,6 +33,11 @@ final class GenerateSettingObligations
             }
             $seenProperties[$homeowner->address_key] = true;
             $created += DB::transaction(function () use ($homeowner, $setting, $period): int {
+                DB::table('property_address_registry')->insertOrIgnore([
+                    'address_key' => $homeowner->address_key,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
                 DB::table('property_address_registry')->where('address_key', $homeowner->address_key)->lockForUpdate()->first();
                 $exists = DuesObligation::query()
                     ->where('dues_setting_id', $setting->id)
@@ -63,7 +68,7 @@ final class GenerateSettingObligations
         return $created;
     }
 
-    private function appliesToPeriod(DuesSetting $setting, CarbonImmutable $period): bool
+    public function appliesToPeriod(DuesSetting $setting, CarbonImmutable $period): bool
     {
         if ($setting->starts_on && $period->endOfMonth()->isBefore($setting->starts_on)) {
             return false;

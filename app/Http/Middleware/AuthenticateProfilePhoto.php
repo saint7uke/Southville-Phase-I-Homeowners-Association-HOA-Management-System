@@ -17,6 +17,8 @@ final class AuthenticateProfilePhoto
             if (Auth::guard($guard)->check()) {
                 Auth::shouldUse($guard);
 
+                abort_unless(Auth::guard($guard)->user()?->account_status === 'Active', 403);
+
                 return $next($request);
             }
         }

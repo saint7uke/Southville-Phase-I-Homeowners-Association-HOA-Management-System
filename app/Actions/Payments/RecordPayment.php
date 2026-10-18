@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Payments;
 
+use App\Actions\Dues\GenerateSettingObligations;
 use App\Models\DuesObligation;
 use App\Models\DuesSetting;
 use App\Models\Homeowner;
@@ -16,6 +17,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -30,22 +32,57 @@ final class RecordPayment
     public function handle(array $data, User $recorder): Payment
     {
         Gate::forUser($recorder)->authorize('create', Payment::class);
+
+        // Legacy obligation creation must roll back with validation or payment failures.
+        return DB::transaction(fn (): Payment => $this->record($data, $recorder), 3);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function record(array $data, User $recorder): Payment
+    {
+        Gate::forUser($recorder)->authorize('create', Payment::class);
         if (blank($data['dues_obligation_id'] ?? null) && filled($data['homeowner_id'] ?? null) && filled($data['dues_setting_id'] ?? null)) {
+            Validator::make($data, [
+                'homeowner_id' => ['required', 'integer', 'exists:homeowners,id'],
+                'dues_setting_id' => ['required', 'integer', 'exists:dues_settings,id'],
+                'payment_date' => ['required', 'date', 'before_or_equal:today'],
+            ])->validate();
             $period = CarbonImmutable::parse((string) $data['payment_date'])->startOfMonth();
             $setting = DuesSetting::query()->findOrFail($data['dues_setting_id']);
-            $obligation = DuesObligation::query()->firstOrCreate([
-                'homeowner_id' => $data['homeowner_id'],
-                'dues_setting_id' => $setting->id,
-                'billing_year' => $period->year,
-                'billing_month' => $period->month,
-            ], [
-                'due_date' => $period->day(min((int) ($setting->due_day ?: 10), $period->daysInMonth)),
-                'amount_due' => $setting->amount,
-                'penalty_amount' => '0.00',
-                'amount_paid' => '0.00',
-                'status' => 'Pending',
+            $resident = Homeowner::query()->with('user')->findOrFail($data['homeowner_id']);
+            DB::table('property_address_registry')->insertOrIgnore([
+                'address_key' => $resident->address_key, 'created_at' => now(), 'updated_at' => now(),
             ]);
-            $data['dues_obligation_id'] = $obligation->id;
+            DB::table('property_address_registry')->where('address_key', $resident->address_key)->lockForUpdate()->first();
+            $liable = $this->accounts->primaryForAddress($resident->address_key);
+            if ($liable === null || ! $this->accounts->payerIsEligible($resident, $liable)) {
+                throw ValidationException::withMessages(['homeowner_id' => __('Select an active resident associated with a liable property account.')]);
+            }
+            $data['payer_homeowner_id'] ??= $resident->id;
+            $existingObligation = DuesObligation::query()
+                ->where('dues_setting_id', $setting->id)->where('billing_year', $period->year)->where('billing_month', $period->month)
+                ->whereHas('homeowner', fn ($query) => $query->where('address_key', $resident->address_key))
+                ->orderBy('id')->first();
+            if ($existingObligation !== null) {
+                $data['dues_obligation_id'] = $existingObligation->id;
+            } elseif (! $setting->is_active || ! app(GenerateSettingObligations::class)->appliesToPeriod($setting, $period)) {
+                throw ValidationException::withMessages(['dues_setting_id' => __('This schedule does not apply to the selected billing month.')]);
+            }
+            if ($existingObligation === null) {
+                $obligation = DuesObligation::query()->firstOrCreate([
+                    'homeowner_id' => $liable->id,
+                    'dues_setting_id' => $setting->id,
+                    'billing_year' => $period->year,
+                    'billing_month' => $period->month,
+                ], [
+                    'due_date' => $period->day(min((int) ($setting->due_day ?: 10), $period->daysInMonth)),
+                    'amount_due' => $setting->amount,
+                    'penalty_amount' => '0.00',
+                    'amount_paid' => '0.00',
+                    'status' => 'Pending',
+                ]);
+                $data['dues_obligation_id'] = $obligation->id;
+            }
         }
         $data['submission_token'] ??= (string) Str::uuid();
         $validated = $this->validator->validate($data);
@@ -57,6 +94,9 @@ final class RecordPayment
         try {
             return DB::transaction(function () use ($validated, $recorder): Payment {
                 $obligation = DuesObligation::query()->lockForUpdate()->with(['homeowner.user'])->findOrFail($validated['dues_obligation_id']);
+                if ($existing = Payment::withTrashed()->where('submission_token', $validated['submission_token'])->lockForUpdate()->first()) {
+                    return $this->idempotentResult($existing, $validated);
+                }
                 if (! in_array($obligation->status, ['Pending', 'Partial', 'Overdue'], true)) {
                     throw ValidationException::withMessages(['dues_obligation_id' => __('Select an open dues obligation.')]);
                 }
@@ -83,7 +123,7 @@ final class RecordPayment
                 $obligation->update([
                     'penalty_amount' => Money::fromMinor($existingPenalty + $penalty),
                     'amount_paid' => Money::fromMinor($newPaid),
-                    'status' => $balance === 0 ? 'Paid' : ($obligation->due_date->isPast() ? 'Overdue' : 'Partial'),
+                    'status' => $balance === 0 ? 'Paid' : ($obligation->due_date->isBefore(today()) ? 'Overdue' : 'Partial'),
                 ]);
 
                 return Payment::query()->create([
@@ -110,12 +150,12 @@ final class RecordPayment
                 ]);
             }, 3);
         } catch (QueryException $exception) {
+            if ($existing = Payment::withTrashed()->where('submission_token', $validated['submission_token'])->first()) {
+                return $this->idempotentResult($existing, $validated);
+            }
             if ($validated['transaction_reference_key'] !== null
                 && Payment::withTrashed()->where('transaction_reference_key', $validated['transaction_reference_key'])->exists()) {
                 throw ValidationException::withMessages(['transaction_reference' => __('This transaction reference has already been used.')]);
-            }
-            if ($existing = Payment::withTrashed()->where('submission_token', $validated['submission_token'])->first()) {
-                return $this->idempotentResult($existing, $validated);
             }
             throw $exception;
         }
@@ -124,13 +164,16 @@ final class RecordPayment
     /** @param array<string, mixed> $data */
     private function idempotentResult(Payment $payment, array $data): Payment
     {
-        $matches = $payment->dues_obligation_id === (int) $data['dues_obligation_id']
+        $matches = ! $payment->trashed()
+            && $payment->review_status === 'Recorded'
+            && $payment->proof_path === null
+            && $payment->dues_obligation_id === (int) $data['dues_obligation_id']
             && Money::toMinor((string) $payment->amount_paid) === Money::toMinor((string) $data['amount_paid'])
             && Money::toMinor((string) $payment->penalty) === Money::toMinor((string) ($data['penalty'] ?? '0.00'))
             && $payment->payment_date?->toDateString() === CarbonImmutable::parse($data['payment_date'])->toDateString()
             && $payment->payment_method === $data['payment_method']
             && $payment->transaction_reference_key === $data['transaction_reference_key']
-            && ($data['payer_homeowner_id'] === null || $payment->payer_homeowner_id === (int) $data['payer_homeowner_id']);
+            && (($data['payer_homeowner_id'] ?? null) === null || $payment->payer_homeowner_id === (int) $data['payer_homeowner_id']);
         if (! $matches) {
             throw ValidationException::withMessages(['submission_token' => __('This submission token has already been used for a different payment.')]);
         }

@@ -14,6 +14,7 @@ use App\Models\Payment;
 use App\Models\ReportExport;
 use App\Models\User;
 use App\Services\Reporting\HoaReportCatalog;
+use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -64,9 +65,9 @@ final class AdminReportingExpansionTest extends TestCase
         $filters = $catalog->validateFilters('payment-homeowner', [], true);
         $row = $catalog->query('payment-homeowner', $filters)->sole();
 
-        $this->assertSame('1000.1', (string) $row->total_assessed);
-        $this->assertSame('400.3', (string) $row->total_paid);
-        $this->assertSame('650', (string) $row->total_outstanding);
+        $this->assertSame(100010, Money::toMinor((string) $row->total_assessed));
+        $this->assertSame(40030, Money::toMinor((string) $row->total_paid));
+        $this->assertSame(65000, Money::toMinor((string) $row->total_outstanding));
         $this->assertSame([
             'Rows' => 1,
             'Assessed' => '1000.10',
@@ -158,8 +159,8 @@ final class AdminReportingExpansionTest extends TestCase
     public function test_search_status_dates_sorting_and_archive_scope_share_one_query_contract(): void
     {
         [, $homeowner] = $this->resident('Filtered', 'Owner');
-        $start = CarbonImmutable::parse('2026-10-18 00:00:00', 'Asia/Manila')->utc();
-        $end = CarbonImmutable::parse('2026-10-18 23:59:59', 'Asia/Manila')->utc();
+        $start = CarbonImmutable::parse('2026-10-18 00:00:00', 'Asia/Manila');
+        $end = CarbonImmutable::parse('2026-10-18 23:59:59', 'Asia/Manila');
         $first = Complaint::query()->create([
             'homeowner_id' => $homeowner->id,
             'ticket_number' => 'CMP-FILTER-001',
@@ -167,7 +168,7 @@ final class AdminReportingExpansionTest extends TestCase
             'description' => 'Testing the inclusive beginning of the selected day.',
             'category' => 'Common Area',
             'priority' => 'Medium',
-            'status' => 'Pending',
+            'status' => 'Resolved',
         ]);
         $first->forceFill(['created_at' => $start])->saveQuietly();
         $second = Complaint::query()->create([

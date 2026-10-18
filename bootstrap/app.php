@@ -2,9 +2,10 @@
 
 use App\Http\Middleware\AuthenticatePortalSession;
 use App\Http\Middleware\AuthenticateProfilePhoto;
+use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureHomeownerIsApproved;
-use App\Http\Middleware\ValidateRegistrationStatusSignature;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\ValidateRegistrationStatusSignature;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
         $middleware->alias([
+            'account.active' => EnsureActiveAccount::class,
             'profile-photo.auth' => AuthenticateProfilePhoto::class,
             'portal.auth.session' => AuthenticatePortalSession::class,
             'homeowner.approved' => EnsureHomeownerIsApproved::class,

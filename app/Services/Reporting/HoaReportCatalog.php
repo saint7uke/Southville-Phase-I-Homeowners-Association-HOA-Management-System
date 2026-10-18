@@ -69,7 +69,9 @@ final class HoaReportCatalog
 
     public function authorize(User $user, string $panel, string $slug, ?string $format = null, string $scope = 'current'): void
     {
-        abort_unless($user->can('export_reports') && $this->exists($slug), 403);
+        abort_unless(! $user->trashed() && $user->account_status === 'Active'
+            && in_array($panel, ['admin', 'staff'], true)
+            && $user->can('export_reports') && $this->exists($slug), 403);
         if ($panel === 'staff') {
             abort_unless($user->hasRole('hoa_staff') && in_array($slug, self::STAFF_REPORTS, true), 403);
             abort_unless($scope === 'current', 403);
@@ -84,7 +86,7 @@ final class HoaReportCatalog
     /** @return array<string, array<string, mixed>> */
     public function availableFor(User $user, string $panel): array
     {
-        if (! $user->can('export_reports')) {
+        if ($user->trashed() || $user->account_status !== 'Active' || ! in_array($panel, ['admin', 'staff'], true) || ! $user->can('export_reports')) {
             return [];
         }
 
@@ -254,10 +256,10 @@ final class HoaReportCatalog
         };
         $dateOnly = in_array($slug, ['payment-period', 'payment-homeowner', 'delinquency', 'dues-settings', 'payment-history', 'homeowners'], true);
         if ($from) {
-            $query->where($column, '>=', $dateOnly ? $from : CarbonImmutable::parse($from, config('app.timezone'))->startOfDay()->utc());
+            $query->where($column, '>=', $dateOnly ? $from : CarbonImmutable::parse($from, config('app.timezone'))->startOfDay());
         }
         if ($to) {
-            $query->where($column, '<=', $dateOnly ? $to : CarbonImmutable::parse($to, config('app.timezone'))->endOfDay()->utc());
+            $query->where($column, '<=', $dateOnly ? $to : CarbonImmutable::parse($to, config('app.timezone'))->endOfDay());
         }
     }
 

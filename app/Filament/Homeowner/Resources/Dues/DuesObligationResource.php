@@ -60,7 +60,8 @@ final class DuesObligationResource extends Resource
                     Textarea::make('notes')->maxLength(500),
                     FileUpload::make('proof')->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])->maxSize(5120)->storeFiles(false)->required(),
                 ])
-                ->visible(fn (DuesObligation $record): bool => in_array($record->status, ['Pending', 'Partial', 'Overdue'], true))
+                ->visible(fn (DuesObligation $record): bool => in_array($record->status, ['Pending', 'Partial', 'Overdue'], true)
+                    && (Filament::auth()->user()?->can('submit_own_payment_proof') ?? false))
                 ->action(function (DuesObligation $record, array $data): void {
                     $actor = Filament::auth()->user();
                     $proof = $data['proof'] ?? null;

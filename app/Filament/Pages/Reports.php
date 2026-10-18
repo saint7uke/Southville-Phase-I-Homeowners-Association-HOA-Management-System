@@ -17,6 +17,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Livewire\WithPagination;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 final class Reports extends Page
@@ -144,6 +145,15 @@ final class Reports extends Page
         $catalog = app(HoaReportCatalog::class);
         $filters = $catalog->validateFilters($slug, $filters ?? $this->getReportFilters($slug), $context['panel'] === 'admin');
         $catalog->authorize($context['user'], $context['panel'], $slug, $format, $filters['scope']);
+        if ($format === 'pdf') {
+            $summary = $catalog->summary($slug, $filters);
+            if ((int) reset($summary) > 2000) {
+                Notification::make()->warning()->title('PDF row limit exceeded')
+                    ->body('This PDF exceeds 2,000 rows. Narrow the filters or use a queued CSV/XLSX export.')->send();
+
+                return;
+            }
+        }
         $route = $context['panel'] === 'staff' ? 'staff.reports.download' : 'admin.reports.download';
         $this->redirect(route($route, ['report' => $slug, 'format' => $format, ...$filters]));
     }
@@ -188,6 +198,10 @@ final class Reports extends Page
         if ($filters !== null) {
             $this->filters[$slug] = $filters;
         }
+        $context = $this->context();
+        $catalog = app(HoaReportCatalog::class);
+        $validated = $catalog->validateFilters($slug, $this->getReportFilters($slug), $context['panel'] === 'admin');
+        $catalog->authorize($context['user'], $context['panel'], $slug, null, $validated['scope']);
         $this->previewSlug = $slug;
         $this->previewPage = 1;
         $this->loadPreview();
@@ -207,6 +221,12 @@ final class Reports extends Page
         $this->dispatch('report-preview-closed', triggerId: $triggerId);
     }
 
+    public function updatedPreviewPerPage(): void
+    {
+        $this->previewPage = 1;
+        $this->loadPreview();
+    }
+
     private function loadPreview(): void
     {
         if ($this->previewSlug === null) {
@@ -217,21 +237,19 @@ final class Reports extends Page
             $catalog = app(HoaReportCatalog::class);
             $filters = $catalog->validateFilters($this->previewSlug, $this->getReportFilters($this->previewSlug), $context['panel'] === 'admin');
             $catalog->authorize($context['user'], $context['panel'], $this->previewSlug, null, $filters['scope']);
+            $this->previewPerPage = in_array($this->previewPerPage, [10, 25, 50], true) ? $this->previewPerPage : 10;
+            $this->previewSummary = $catalog->summary($this->previewSlug, $filters);
+            $rowCount = (int) reset($this->previewSummary);
+            $lastPage = max(1, (int) ceil($rowCount / $this->previewPerPage));
+            $this->previewPage = min(max(1, $this->previewPage), $lastPage);
             $records = $catalog->query($this->previewSlug, $filters)
                 ->offset(($this->previewPage - 1) * $this->previewPerPage)
                 ->limit($this->previewPerPage + 1)->get();
-            if ($records->isEmpty() && $this->previewPage > 1) {
-                $this->previewPage--;
-                $this->loadPreview();
-
-                return;
-            }
             $definition = $catalog->definitions()[$this->previewSlug];
             $this->previewTitle = $definition['title'];
             $this->previewHeadings = $catalog->headings($this->previewSlug);
             $this->previewRows = $records->take($this->previewPerPage)->map(fn ($record): array => $catalog->map($this->previewSlug, $record))->all();
             $this->previewHasMore = $records->count() > $this->previewPerPage;
-            $this->previewSummary = $catalog->summary($this->previewSlug, $filters);
             AuditLog::query()->create([
                 'user_id' => $context['user']->id,
                 'panel' => $context['panel'],
@@ -251,7 +269,7 @@ final class Reports extends Page
                 triggerId: 'report-preview-'.$this->previewSlug,
             );
             $this->dispatch('report-preview-opened');
-        } catch (ValidationException $exception) {
+        } catch (ValidationException|HttpExceptionInterface $exception) {
             throw $exception;
         } catch (Throwable $exception) {
             report($exception);

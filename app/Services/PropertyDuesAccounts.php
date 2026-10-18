@@ -20,12 +20,13 @@ final class PropertyDuesAccounts
 
     public function payerIsEligible(Homeowner $payer, Homeowner $liable): bool
     {
-        if ($payer->id === $liable->id) {
-            return true;
+        if ($payer->trashed() || ! in_array($payer->status, ['Active', 'Delinquent'], true)
+            || $payer->user?->account_status !== 'Active' || $payer->user?->trashed()) {
+            return false;
         }
 
-        if ($payer->status !== 'Active' || $payer->user?->account_status !== 'Active' || $payer->user?->trashed()) {
-            return false;
+        if ($payer->id === $liable->id) {
+            return true;
         }
 
         if ($payer->address_key !== $liable->address_key) {
@@ -40,7 +41,7 @@ final class PropertyDuesAccounts
     public function eligiblePayers(Homeowner $liable): Builder
     {
         return Homeowner::query()
-            ->where('status', 'Active')
+            ->whereIn('status', ['Active', 'Delinquent'])
             ->where('address_key', $liable->address_key)
             ->whereHas('user', fn (Builder $query) => $query->where('account_status', 'Active')->whereNull('users.deleted_at'))
             ->where(function (Builder $query) use ($liable): void {
@@ -56,7 +57,7 @@ final class PropertyDuesAccounts
     public function activeOwners(): Builder
     {
         return Homeowner::query()
-            ->where('status', 'Active')
+            ->whereIn('status', ['Active', 'Delinquent'])
             ->whereIn('ownership_type', ['Owner', 'Co-owner'])
             ->whereNotNull('address_key')
             ->whereHas('user', fn (Builder $query) => $query->where('account_status', 'Active')->whereNull('users.deleted_at'));

@@ -31,7 +31,7 @@ final class LandlordMatcher
             ->where('address_key', PropertyAddress::key($data))
             ->whereIn('ownership_type', ['Owner', 'Co-owner'])
             ->where('status', 'Active')
-            ->whereHas('user', fn ($query) => $query->where('account_status', 'Active'))
+            ->whereHas('user', fn ($query) => $query->where('account_status', 'Active')->whereNull('users.deleted_at'))
             ->with('user');
 
         if ($lock) {

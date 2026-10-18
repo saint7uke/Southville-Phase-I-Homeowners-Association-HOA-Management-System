@@ -23,6 +23,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 final class PaymentsTable
 {
@@ -109,7 +110,22 @@ final class PaymentsTable
                     app(ChangePaymentDeletionState::class)->restore($record, $actor);
                 }),
         ])->toolbarActions([
-            BulkActionGroup::make([DeleteBulkAction::make(), RestoreBulkAction::make()])
+            BulkActionGroup::make([
+                DeleteBulkAction::make()->using(function (Collection $records): void {
+                    $actor = app(AuthenticatedActor::class)->user();
+                    abort_unless($actor instanceof User, 403);
+                    foreach ($records as $record) {
+                        app(ChangePaymentDeletionState::class)->delete($record, $actor);
+                    }
+                }),
+                RestoreBulkAction::make()->using(function (Collection $records): void {
+                    $actor = app(AuthenticatedActor::class)->user();
+                    abort_unless($actor instanceof User, 403);
+                    foreach ($records as $record) {
+                        app(ChangePaymentDeletionState::class)->restore($record, $actor);
+                    }
+                }),
+            ])
                 ->visible(fn (): bool => Filament::getCurrentPanel()?->getId() === 'admin'),
         ]);
     }

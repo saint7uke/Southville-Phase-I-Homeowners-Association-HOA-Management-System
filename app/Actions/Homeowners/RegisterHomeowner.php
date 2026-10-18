@@ -9,6 +9,7 @@ use App\Notifications\NewHomeownerRegistration;
 use App\Services\LandlordMatcher;
 use App\Services\PropertyAddressAvailability;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 final class RegisterHomeowner
@@ -45,6 +46,11 @@ final class RegisterHomeowner
                 if (isset($data['verification_document'])) {
                     $storedPath = $data['verification_document']->store('verification_documents', 'local');
                     $documentPath = is_string($storedPath) ? $storedPath : null;
+                    if ($documentPath === null || ! Storage::disk('local')->exists($documentPath)) {
+                        throw ValidationException::withMessages([
+                            'verification_document' => __('The verification document could not be stored. Please try again.'),
+                        ]);
+                    }
                 }
 
                 $residencyDate = $data['ownership_type'] === 'Tenant'

@@ -1,0 +1,5 @@
+{
+    "preset": "laravel",
+    "notName": ["composer-setup.php"],
+    "exclude": ["node_modules.audit-quarantine-20261018"]
+}

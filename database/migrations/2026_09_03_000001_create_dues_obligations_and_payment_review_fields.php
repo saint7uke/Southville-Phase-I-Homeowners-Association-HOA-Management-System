@@ -45,11 +45,12 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('payments', function (Blueprint $table): void {
+            $table->dropForeign(['dues_obligation_id']);
             $table->dropIndex(['dues_obligation_id', 'payment_date']);
             $table->dropIndex(['review_status', 'created_at']);
             $table->dropConstrainedForeignId('reviewed_by');
             $table->dropColumn(['proof_path', 'proof_original_name', 'proof_mime_type', 'proof_size', 'reviewed_at', 'review_status']);
-            $table->dropConstrainedForeignId('dues_obligation_id');
+            $table->dropColumn('dues_obligation_id');
         });
 
         Schema::dropIfExists('dues_obligations');

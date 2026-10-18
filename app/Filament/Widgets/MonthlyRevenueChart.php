@@ -24,7 +24,7 @@ final class MonthlyRevenueChart extends ChartWidget
             : "DATE_FORMAT(payment_date, '%Y-%m')";
         $totals = Payment::query()
             ->whereIn('review_status', ['Approved', 'Recorded'])
-            ->whereDate('payment_date', '>=', $months->first()->toDateString())
+            ->where('payment_date', '>=', $months->first()->toDateString())
             ->selectRaw("{$expression} as period, SUM(amount_paid) as total")
             ->groupBy('period')
             ->pluck('total', 'period');

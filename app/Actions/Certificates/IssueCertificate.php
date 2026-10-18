@@ -15,6 +15,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -74,6 +75,9 @@ final class IssueCertificate
             throw new AuthorizationException;
         }
 
+        $purpose = filled($purpose) ? trim($purpose) : null;
+        Validator::make(['purpose' => $purpose], ['purpose' => ['nullable', 'string', 'max:255']])->validate();
+
         $storedPath = null;
 
         try {
@@ -90,7 +94,7 @@ final class IssueCertificate
                     'service_request_id' => $request->id,
                     'certificate_type_id' => $certificateType->id,
                     'type' => $certificateType->name,
-                    'purpose' => $purpose ?: $request->details,
+                    'purpose' => $purpose ?? Str::limit((string) $request->details, 255, ''),
                 ], $issuer);
                 $storedPath = $certificate->file_path;
 
@@ -167,9 +171,13 @@ final class IssueCertificate
             'issued_by' => $issuer->id,
         ]);
 
-        $certificate->update([
-            'file_path' => app(StoreCertificateDocument::class)->handle($certificate),
-        ]);
+        $path = app(StoreCertificateDocument::class)->handle($certificate);
+        try {
+            $certificate->update(['file_path' => $path]);
+        } catch (Throwable $exception) {
+            Storage::disk('local')->delete($path);
+            throw $exception;
+        }
 
         return $certificate;
     }

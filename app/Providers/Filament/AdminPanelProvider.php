@@ -2,8 +2,8 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Auth\Pages\RequestPasswordReset;
 use App\Filament\Auth\Pages\Login;
+use App\Filament\Auth\Pages\RequestPasswordReset;
 use App\Filament\Widgets\ComplaintStatusChart;
 use App\Filament\Widgets\DashboardAccount;
 use App\Filament\Widgets\HoaOverview;
@@ -67,10 +67,10 @@ class AdminPanelProvider extends PanelProvider
                 PortalWelcome::class,
                 HoaOverview::class,
                 MonthlyRevenueChart::class,
-                ComplaintStatusChart::class,
                 OverdueAccounts::class,
                 RecentPayments::class,
                 DashboardAccount::class,
+                ComplaintStatusChart::class,
             ])
             ->middleware([
                 EncryptCookies::class,

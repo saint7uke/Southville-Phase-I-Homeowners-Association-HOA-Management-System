@@ -71,7 +71,7 @@ Route::get('/homeowner/register/submitted', [RegistrationStatusController::class
 Route::get('/homeowner/login', [AuthController::class, 'create'])->name('homeowner.login');
 
 Route::post('/homeowner/my-profile/availability', ProfileAvailabilityController::class)
-    ->middleware(['auth:homeowner', 'throttle:30,1'])
+    ->middleware(['auth:homeowner', 'account.active', 'throttle:30,1'])
     ->name('homeowner.profile.availability');
 
 // Filament's homeowner password-reset page still references its panel login name.
@@ -109,7 +109,7 @@ Route::get('/homeowner-profile-photos/{homeowner}', HomeownerProfilePhotoControl
     ->name('homeowner.profile-photo');
 
 Route::get('/homeowners/{homeowner}/verification-document', VerificationDocumentController::class)
-    ->middleware(['auth:admin,staff,homeowner,web', 'throttle:60,1'])
+    ->middleware(['auth:admin,staff,homeowner,web', 'account.active', 'throttle:60,1'])
     ->name('homeowners.verification-document');
 
 Route::get('/payments/{payment}/proof', [PaymentProofController::class, 'download'])
@@ -125,12 +125,14 @@ Route::get('/case-attachments/{caseAttachment}', CaseAttachmentController::class
     ->middleware(['profile-photo.auth', 'throttle:60,1'])
     ->name('case-attachments.download');
 
-Route::get('/admin/reports/payments.xlsx', PaymentExportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:5,1'])->name('admin.reports.payments');
-Route::get('/admin/reports/audit-logs.csv', AuditLogExportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:view_audit_logs', 'throttle:5,1'])->name('admin.reports.audit-logs');
-Route::get('/admin/reports/queued/{reportExport}', QueuedReportDownloadController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:10,1'])->name('admin.reports.queued.download');
-Route::get('/admin/reports/{report}.{format}', HoaReportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:5,1'])->whereIn('format', ['csv', 'xlsx', 'pdf'])->name('admin.reports.download');
-Route::get('/admin/reports/{report}/preview', HoaReportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:10,1'])->name('admin.reports.preview');
-Route::get('/staff/reports/payments.xlsx', PaymentExportController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:5,1'])->name('staff.reports.payments');
-Route::get('/staff/reports/queued/{reportExport}', QueuedReportDownloadController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:10,1'])->name('staff.reports.queued.download');
-Route::get('/staff/reports/{report}.{format}', HoaReportController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:5,1'])->whereIn('format', ['csv', 'xlsx', 'pdf'])->name('staff.reports.download');
-Route::get('/staff/reports/{report}/preview', HoaReportController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:10,1'])->name('staff.reports.preview');
+Route::middleware('account.active')->group(function (): void {
+    Route::get('/admin/reports/payments.xlsx', PaymentExportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:5,1'])->name('admin.reports.payments');
+    Route::get('/admin/reports/audit-logs.csv', AuditLogExportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:view_audit_logs', 'throttle:5,1'])->name('admin.reports.audit-logs');
+    Route::get('/admin/reports/queued/{reportExport}', QueuedReportDownloadController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:10,1'])->name('admin.reports.queued.download');
+    Route::get('/admin/reports/{report}.{format}', HoaReportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:5,1'])->whereIn('format', ['csv', 'xlsx', 'pdf'])->name('admin.reports.download');
+    Route::get('/admin/reports/{report}/preview', HoaReportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:10,1'])->name('admin.reports.preview');
+    Route::get('/staff/reports/payments.xlsx', PaymentExportController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:5,1'])->name('staff.reports.payments');
+    Route::get('/staff/reports/queued/{reportExport}', QueuedReportDownloadController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:10,1'])->name('staff.reports.queued.download');
+    Route::get('/staff/reports/{report}.{format}', HoaReportController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:5,1'])->whereIn('format', ['csv', 'xlsx', 'pdf'])->name('staff.reports.download');
+    Route::get('/staff/reports/{report}/preview', HoaReportController::class)->middleware(['auth:staff,admin,web', 'role:hoa_staff', 'permission:export_reports', 'throttle:10,1'])->name('staff.reports.preview');
+});

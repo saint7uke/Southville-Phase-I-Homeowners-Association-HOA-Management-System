@@ -220,8 +220,10 @@ for (const viewport of [
 ]) {
     test(`registration email availability success is accessible at ${viewport.width}px`, async ({ page }) => {
         await page.setViewportSize(viewport);
+        let releaseAvailability;
+        const availabilityResponse = new Promise((resolve) => { releaseAvailability = resolve; });
         await page.route('**/homeowner/register/email-availability?**', async (route) => {
-            await new Promise((resolve) => setTimeout(resolve, 250));
+            await availabilityResponse;
             await route.fulfill({
                 contentType: 'application/json',
                 body: JSON.stringify({ available: !route.request().url().includes('reserved') }),
@@ -237,6 +239,7 @@ for (const viewport of [
         await expect(status).toBeVisible();
         await expect(status).toHaveText('Checking email availability…');
         await expect(status).toHaveAttribute('data-state', 'neutral');
+        releaseAvailability();
         await expect(status).toHaveText('Email address is available.');
         await expect(status).toHaveAttribute('data-state', 'success');
         await expect(email).toHaveClass(/is-valid/);

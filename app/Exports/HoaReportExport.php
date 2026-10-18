@@ -16,6 +16,8 @@ final class HoaReportExport implements FromQuery, WithHeadings, WithMapping, Wit
     /** @var array<string, mixed> */
     private array $filters;
 
+    private ?HoaReportCatalog $catalog = null;
+
     /** @param array<string, mixed> $filters */
     public function __construct(
         public readonly string $report,
@@ -31,7 +33,7 @@ final class HoaReportExport implements FromQuery, WithHeadings, WithMapping, Wit
             'status' => $status,
             'q' => null,
             'scope' => 'current',
-            'sort' => app(HoaReportCatalog::class)->definitions()[$report]['defaultSort'] ?? 'date',
+            'sort' => $this->catalog()->definitions()[$report]['defaultSort'] ?? 'date',
             'direction' => 'asc',
             ...$filters,
         ];
@@ -39,22 +41,27 @@ final class HoaReportExport implements FromQuery, WithHeadings, WithMapping, Wit
 
     public function title(): string
     {
-        return app(HoaReportCatalog::class)->definitions()[$this->report]['title'];
+        return $this->catalog()->definitions()[$this->report]['title'];
     }
 
     public function query(): Builder
     {
-        return app(HoaReportCatalog::class)->query($this->report, $this->filters);
+        return $this->catalog()->query($this->report, $this->filters);
     }
 
     public function headings(): array
     {
-        return app(HoaReportCatalog::class)->headings($this->report);
+        return $this->catalog()->headings($this->report);
     }
 
     public function map($record): array
     {
-        return app(HoaReportCatalog::class)->map($this->report, $record);
+        return $this->catalog()->map($this->report, $record);
+    }
+
+    private function catalog(): HoaReportCatalog
+    {
+        return $this->catalog ??= app(HoaReportCatalog::class);
     }
 
     /** @return array<string, string> */

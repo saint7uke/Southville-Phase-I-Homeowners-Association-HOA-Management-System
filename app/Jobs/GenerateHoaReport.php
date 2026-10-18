@@ -47,6 +47,7 @@ final class GenerateHoaReport implements ShouldQueue
         $path = sprintf('reports/%d/%d.%s', $record->user_id, $record->id, $format);
 
         try {
+            abort_unless(in_array($record->format, ['csv', 'xlsx'], true), 422, 'Queued reports support CSV or XLSX only.');
             $user = User::query()->findOrFail($record->user_id);
             $catalog = app(HoaReportCatalog::class);
             $catalog->authorize($user, $record->panel, $record->report, $format, (string) ($filters['scope'] ?? 'current'));

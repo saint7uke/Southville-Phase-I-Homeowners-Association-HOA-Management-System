@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const phpBinary = process.env.PLAYWRIGHT_PHP_BINARY
-    ?? (process.platform === 'win32' ? '"F:\\Xampp 8\\php\\php.exe"' : 'php');
+    ?? 'php';
 
 const phpServerEnvironment = process.platform === 'win32'
     ? process.env

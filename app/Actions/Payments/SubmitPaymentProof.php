@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Payments;
 
 use App\Models\DuesObligation;
+use App\Models\Homeowner;
 use App\Models\Payment;
 use App\Models\User;
 use App\Services\PropertyDuesAccounts;
@@ -32,7 +33,7 @@ final class SubmitPaymentProof
     {
         $payer = $actor->homeowner?->loadMissing('user');
         $obligation->loadMissing('homeowner.user');
-        if (! $actor->hasRole('homeowner') || $payer === null || ! $this->accounts->payerIsEligible($payer, $obligation->homeowner)) {
+        if (! $actor->hasRole('homeowner') || ! $actor->can('submit_own_payment_proof') || $payer === null || ! $this->accounts->payerIsEligible($payer, $obligation->homeowner)) {
             throw new AuthorizationException;
         }
 
@@ -53,6 +54,14 @@ final class SubmitPaymentProof
         try {
             return DB::transaction(function () use ($validated, $actor, $payer, $proof, $path): Payment {
                 $locked = DuesObligation::query()->lockForUpdate()->findOrFail($validated['dues_obligation_id']);
+                if ($existing = Payment::withTrashed()->where('submission_token', $validated['submission_token'])->lockForUpdate()->first()) {
+                    return $this->idempotentResult($existing, $validated);
+                }
+                $currentPayer = Homeowner::query()->with('user')->find($payer->id);
+                $locked->load('homeowner.user');
+                if ($currentPayer === null || ! $this->accounts->payerIsEligible($currentPayer, $locked->homeowner)) {
+                    throw new AuthorizationException;
+                }
                 if (! in_array($locked->status, ['Pending', 'Partial', 'Overdue'], true)) {
                     throw ValidationException::withMessages(['dues_obligation_id' => __('This obligation is no longer open for payment.')]);
                 }
@@ -99,11 +108,11 @@ final class SubmitPaymentProof
             }, 3);
         } catch (QueryException $exception) {
             Storage::disk('local')->delete($path);
-            if (Payment::withTrashed()->where('transaction_reference_key', $validated['transaction_reference_key'])->exists()) {
-                throw ValidationException::withMessages(['transaction_reference' => __('This transaction reference has already been used.')]);
-            }
             if ($existing = Payment::withTrashed()->where('submission_token', $validated['submission_token'])->first()) {
                 return $this->idempotentResult($existing, $validated);
+            }
+            if (Payment::withTrashed()->where('transaction_reference_key', $validated['transaction_reference_key'])->exists()) {
+                throw ValidationException::withMessages(['transaction_reference' => __('This transaction reference has already been used.')]);
             }
             throw $exception;
         } catch (Throwable $exception) {
@@ -115,7 +124,9 @@ final class SubmitPaymentProof
     /** @param array<string, mixed> $data */
     private function idempotentResult(Payment $payment, array $data): Payment
     {
-        $matches = $payment->dues_obligation_id === (int) $data['dues_obligation_id']
+        $matches = ! $payment->trashed()
+            && $payment->proof_path !== null
+            && $payment->dues_obligation_id === (int) $data['dues_obligation_id']
             && $payment->payer_homeowner_id === (int) $data['payer_homeowner_id']
             && Money::toMinor((string) $payment->amount_paid) === Money::toMinor((string) $data['amount_paid'])
             && $payment->payment_date?->toDateString() === CarbonImmutable::parse($data['payment_date'])->toDateString()

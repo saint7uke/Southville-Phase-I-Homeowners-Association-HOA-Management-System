@@ -85,7 +85,7 @@ final class Homeowner extends Model
 
                 $landlord->loadMissing('user');
                 if (($homeowner->isDirty('landlord_homeowner_id') || ! $homeowner->exists)
-                    && ($landlord->status !== 'Active' || $landlord->user?->account_status !== 'Active')) {
+                    && ($landlord->status !== 'Active' || $landlord->user?->account_status !== 'Active' || $landlord->user?->trashed())) {
                     throw ValidationException::withMessages([
                         'landlord_homeowner_id' => __('Only an active Owner or Co-owner can be linked as a landlord.'),
                     ]);

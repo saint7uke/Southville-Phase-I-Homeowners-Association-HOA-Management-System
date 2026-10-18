@@ -18,7 +18,7 @@ final class ReviewPaymentProof
 {
     public function approve(Payment $payment, User $reviewer): Payment
     {
-        if (! $reviewer->can('manage_payments')) {
+        if ($reviewer->trashed() || $reviewer->account_status !== 'Active' || ! $reviewer->can('manage_payments')) {
             throw new AuthorizationException;
         }
 
@@ -45,7 +45,7 @@ final class ReviewPaymentProof
             $balance = $totalDue - $alreadyPaid - $received;
             $obligation->update([
                 'amount_paid' => Money::fromMinor($alreadyPaid + $received),
-                'status' => $balance === 0 ? 'Paid' : ($obligation->due_date->isPast() ? 'Overdue' : 'Partial'),
+                'status' => $balance === 0 ? 'Paid' : ($obligation->due_date->isBefore(today()) ? 'Overdue' : 'Partial'),
             ]);
 
             $lockedPayment->update([
@@ -66,7 +66,7 @@ final class ReviewPaymentProof
 
     public function reject(Payment $payment, User $reviewer, string $reason): Payment
     {
-        if (! $reviewer->can('manage_payments')) {
+        if ($reviewer->trashed() || $reviewer->account_status !== 'Active' || ! $reviewer->can('manage_payments')) {
             throw new AuthorizationException;
         }
 

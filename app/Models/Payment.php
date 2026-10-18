@@ -106,7 +106,7 @@ final class Payment extends Model
             'penalty_amount' => Money::fromMinor($penalty),
             'status' => $paid >= $totalDue
                 ? 'Paid'
-                : ($obligation->due_date->isPast() ? 'Overdue' : ($paid > 0 ? 'Partial' : 'Pending')),
+                : ($obligation->due_date->isBefore(today()) ? 'Overdue' : ($paid > 0 ? 'Partial' : 'Pending')),
         ]);
     }
 }

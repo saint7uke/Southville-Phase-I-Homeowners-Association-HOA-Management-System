@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Filament\Resources\Homeowners\Pages\ListHomeowners;
-use App\Models\AuditLog;
 use App\Models\Homeowner;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;

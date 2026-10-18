@@ -34,8 +34,9 @@ final class UpdatePaymentMetadata
         }
 
         try {
-            return DB::transaction(function () use ($payment, $validated, $reference, $key): Payment {
+            return DB::transaction(function () use ($payment, $validated, $reference, $key, $actor): Payment {
                 $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+                Gate::forUser($actor)->authorize('update', $locked);
                 $locked->update([
                     'payment_date' => $validated['payment_date'],
                     'payment_method' => $validated['payment_method'],
@@ -46,8 +47,11 @@ final class UpdatePaymentMetadata
 
                 return $locked->refresh();
             });
-        } catch (QueryException) {
-            throw ValidationException::withMessages(['transaction_reference' => __('This transaction reference has already been used.')]);
+        } catch (QueryException $exception) {
+            if ($key !== null && Payment::withTrashed()->where('transaction_reference_key', $key)->whereKeyNot($payment->id)->exists()) {
+                throw ValidationException::withMessages(['transaction_reference' => __('This transaction reference has already been used.')]);
+            }
+            throw $exception;
         }
     }
 }

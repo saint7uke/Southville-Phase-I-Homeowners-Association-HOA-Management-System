@@ -13,6 +13,7 @@
 /.zed
 /auth.json
 /node_modules
+/node_modules.audit-quarantine-*
 /database/*.sqlite
 /public/build
 /public/hot

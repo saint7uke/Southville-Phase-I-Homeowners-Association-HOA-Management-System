@@ -7,6 +7,7 @@ namespace App\Filament\Homeowner\Widgets;
 use App\Models\Announcement;
 use App\Models\DuesObligation;
 use App\Models\User;
+use App\Services\PropertyDuesAccounts;
 use Filament\Facades\Filament;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget;
@@ -27,8 +28,12 @@ final class HomeownerOverview extends StatsOverviewWidget
             return [Stat::make('Profile', 'Not linked')->description('Contact HOA staff')->color('danger')];
         }
 
+        $accounts = app(PropertyDuesAccounts::class);
+        $liable = $accounts->primaryForAddress($homeowner->address_key);
+        $visibleAccountId = $liable !== null && $accounts->payerIsEligible($homeowner->loadMissing('user'), $liable)
+            ? $liable->id : $homeowner->id;
         $outstanding = DuesObligation::query()
-            ->where('homeowner_id', $homeowner->id)
+            ->where('homeowner_id', $visibleAccountId)
             ->whereIn('status', ['Pending', 'Partial', 'Overdue'])
             ->selectRaw('COALESCE(SUM(amount_due + penalty_amount - amount_paid), 0) as aggregate')
             ->value('aggregate');
