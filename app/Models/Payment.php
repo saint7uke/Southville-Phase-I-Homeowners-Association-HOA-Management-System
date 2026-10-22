@@ -9,6 +9,7 @@ use App\Support\Money;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -17,11 +18,11 @@ final class Payment extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['homeowner_id', 'payer_homeowner_id', 'dues_setting_id', 'dues_obligation_id', 'or_number', 'amount_paid', 'balance', 'penalty', 'payment_date', 'covered_period', 'payment_method', 'transaction_reference', 'transaction_reference_key', 'submission_token', 'status', 'notes', 'proof_path', 'proof_original_name', 'proof_mime_type', 'proof_size', 'reviewed_at', 'reviewed_by', 'review_status', 'review_notes', 'recorded_by'];
+    protected $fillable = ['homeowner_id', 'payer_homeowner_id', 'dues_setting_id', 'dues_obligation_id', 'or_number', 'amount_paid', 'balance', 'penalty', 'payment_date', 'covered_period', 'payment_method', 'transaction_reference', 'transaction_reference_key', 'submission_token', 'status', 'notes', 'proof_path', 'proof_original_name', 'proof_mime_type', 'proof_size', 'reviewed_at', 'reviewed_by', 'review_status', 'review_notes', 'recorded_by', 'property_snapshot'];
 
     protected function casts(): array
     {
-        return ['payment_date' => 'date', 'amount_paid' => 'decimal:2', 'balance' => 'decimal:2', 'penalty' => 'decimal:2', 'proof_size' => 'integer', 'reviewed_at' => 'datetime'];
+        return ['property_snapshot' => 'array', 'payment_date' => 'date', 'amount_paid' => 'decimal:2', 'balance' => 'decimal:2', 'penalty' => 'decimal:2', 'proof_size' => 'integer', 'reviewed_at' => 'datetime'];
     }
 
     public function homeowner(): BelongsTo
@@ -52,6 +53,11 @@ final class Payment extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by')->withTrashed();
+    }
+
+    public function latestReceiptDocument(): HasOne
+    {
+        return $this->hasOne(PaymentDocument::class)->ofMany(['created_at' => 'max', 'id' => 'max']);
     }
 
     protected static function booted(): void
@@ -98,7 +104,7 @@ final class Payment extends Model
         $totalDue = Money::toMinor((string) $obligation->amount_due) + $penalty;
 
         if ($paid < 0 || $penalty < 0 || $paid > $totalDue) {
-            throw ValidationException::withMessages(['payment' => 'This payment cannot be changed because it would make the obligation ledger inconsistent.']);
+            throw ValidationException::withMessages(['payment' => __('This payment cannot be changed because it would make the obligation ledger inconsistent.')]);
         }
 
         $obligation->update([

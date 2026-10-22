@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Portal;
 
+use App\Support\PaymentMethods;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\File;
 
@@ -11,7 +12,7 @@ final class SubmitPaymentProofRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('submit_own_payment_proof') ?? false;
+        return PaymentMethods::acceptsNewProofs() && ($this->user()?->can('submit_own_payment_proof') ?? false);
     }
 
     /** @return array<string, mixed> */

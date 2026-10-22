@@ -25,7 +25,7 @@ class ContactMessageResource extends Resource
     {
         return $schema->components([
             Textarea::make('message')->disabled()->columnSpanFull(),
-            Select::make('status')->options(['New' => 'New', 'In Progress' => 'In Progress', 'Closed' => 'Closed'])->required(),
+            Select::make('status')->options(['New' => __('New'), 'In Progress' => __('In Progress'), 'Closed' => __('Closed')])->required(),
         ]);
     }
 
@@ -35,7 +35,7 @@ class ContactMessageResource extends Resource
             TextColumn::make('name')->searchable(),
             TextColumn::make('email')->searchable(),
             TextColumn::make('subject')->searchable()->wrap(),
-            TextColumn::make('status')->badge(),
+            TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
             TextColumn::make('created_at')->dateTime()->sortable(),
         ])->defaultSort('created_at', 'desc')->recordActions([EditAction::make()]);
     }

@@ -41,19 +41,19 @@ final class CreateServiceRequest
             return DB::transaction(function () use ($homeowner, $data, $files, $uploader, &$storedPaths): ServiceRequest {
                 $homeowner = Homeowner::withTrashed()->lockForUpdate()->find($homeowner->getKey());
                 if (! $homeowner instanceof Homeowner) {
-                    throw ValidationException::withMessages(['homeowner_id' => 'Select a current resident.']);
+                    throw ValidationException::withMessages(['homeowner_id' => __('Select a current resident.')]);
                 }
 
                 $resident = User::withTrashed()->lockForUpdate()->find($homeowner->user_id);
                 if (! $resident instanceof User || $resident->trashed()) {
-                    throw ValidationException::withMessages(['homeowner_id' => 'Select a current resident.']);
+                    throw ValidationException::withMessages(['homeowner_id' => __('Select a current resident.')]);
                 }
 
                 $validated = $this->validator->validate($homeowner, $data, $files, $uploader);
                 if (filled($validated['handled_by'] ?? null)) {
                     $handler = User::query()->lockForUpdate()->find($validated['handled_by']);
                     if (! $handler instanceof User || $handler->account_status !== 'Active' || ! $handler->hasRole('hoa_staff')) {
-                        throw ValidationException::withMessages(['handled_by' => 'Select an active HOA staff member.']);
+                        throw ValidationException::withMessages(['handled_by' => __('Select an active HOA staff member.')]);
                     }
                 }
                 $request = $homeowner->serviceRequests()->create([...$validated, 'status' => 'Pending']);

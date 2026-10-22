@@ -29,9 +29,9 @@ final class PaymentReviewCompleted extends Notification implements ShouldQueue
         $approved = $this->payment->review_status === 'Approved';
 
         return (new MailMessage)
-            ->subject($approved ? 'Payment proof approved' : 'Payment proof rejected')
-            ->line("Payment {$this->payment->or_number} was {$this->payment->review_status}.")
-            ->when(! $approved && filled($this->payment->review_notes), fn (MailMessage $mail) => $mail->line('Reason: '.$this->payment->review_notes))
-            ->action('View payments', url('/homeowner/payments'));
+            ->subject(__($approved ? 'Payment proof approved' : 'Payment proof rejected'))
+            ->line(__('Payment :reference was :status.', ['reference' => $this->payment->or_number, 'status' => __($this->payment->review_status)]))
+            ->when(! $approved && filled($this->payment->review_notes), fn (MailMessage $mail) => $mail->line(__('Reason:').' '.$this->payment->review_notes))
+            ->action(__('View payments'), url('/homeowner/payments'));
     }
 }

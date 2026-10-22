@@ -20,8 +20,8 @@ final class CreateComplaint extends CreateRecord
     {
         return parent::getCreateFormAction()
             ->requiresConfirmation()
-            ->modalHeading('Review and submit complaint')
-            ->modalDescription('Please review every field and attachment before confirming. After submission, the complaint enters the HOA review workflow.');
+            ->modalHeading(__('Review and submit complaint'))
+            ->modalDescription(__('Please review every field and attachment before confirming. After submission, the complaint enters the HOA review workflow.'));
     }
 
     protected function handleRecordCreation(array $data): Model

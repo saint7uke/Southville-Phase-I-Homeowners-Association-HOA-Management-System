@@ -8,6 +8,7 @@ use App\Models\Announcement;
 use App\Models\DuesObligation;
 use App\Models\User;
 use App\Services\PropertyDuesAccounts;
+use App\Support\PropertyIdentity;
 use Filament\Facades\Filament;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget;
@@ -25,11 +26,11 @@ final class HomeownerOverview extends StatsOverviewWidget
         $homeowner = $user instanceof User ? $user->homeowner()->first() : null;
 
         if ($homeowner === null) {
-            return [Stat::make('Profile', 'Not linked')->description('Contact HOA staff')->color('danger')];
+            return [Stat::make('Profile', 'Not linked')->description(__('Contact HOA staff'))->color('danger')];
         }
 
         $accounts = app(PropertyDuesAccounts::class);
-        $liable = $accounts->primaryForAddress($homeowner->address_key);
+        $liable = $accounts->primaryForAddress(PropertyIdentity::key($homeowner));
         $visibleAccountId = $liable !== null && $accounts->payerIsEligible($homeowner->loadMissing('user'), $liable)
             ? $liable->id : $homeowner->id;
         $outstanding = DuesObligation::query()
@@ -46,12 +47,12 @@ final class HomeownerOverview extends StatsOverviewWidget
                 ->color((float) $outstanding > 0 ? 'danger' : 'success')
                 ->url('/homeowner/dues/dues-obligations'),
             Stat::make('Open complaints', $homeowner->complaints()->whereIn('status', ['Pending', 'Under Review'])->count())
-                ->description('Pending or under review')
+                ->description(__('Pending or under review'))
                 ->icon(Heroicon::OutlinedExclamationTriangle)
                 ->color('warning')
                 ->url('/homeowner/complaints'),
             Stat::make('Pending requests', $homeowner->serviceRequests()->whereIn('status', ['Pending', 'Processing', 'Approved'])->count())
-                ->description('Awaiting HOA completion')
+                ->description(__('Awaiting HOA completion'))
                 ->icon(Heroicon::OutlinedClipboardDocumentList)
                 ->color('info')
                 ->url('/homeowner/service-requests'),

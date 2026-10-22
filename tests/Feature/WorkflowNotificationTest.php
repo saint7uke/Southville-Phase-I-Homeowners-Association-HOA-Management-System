@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Actions\Announcements\SendAnnouncementBlast;
-use App\Actions\Certificates\IssueCertificate;
 use App\Models\Announcement;
 use App\Models\Certificate;
 use App\Models\Complaint;
 use App\Models\ContactMessage;
 use App\Models\Homeowner;
 use App\Models\ServiceRequest;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Notifications\AnnouncementPublished;
 use App\Notifications\CertificateIssued;
@@ -20,17 +20,20 @@ use App\Notifications\WorkflowStatusChanged;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Tests\Support\UsesUploadedResidency;
 use Tests\TestCase;
 
 final class WorkflowNotificationTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesUploadedResidency;
 
     protected function setUp(): void
     {
         parent::setUp();
         Notification::fake();
         $this->seed(RolesAndPermissionsSeeder::class);
+        SystemSetting::current()->forceFill(['certificate_signatory_name' => 'Test Authorized Signatory', 'certificate_signatory_title' => 'President', 'signatory_confirmed_at' => now()])->save();
     }
 
     public function test_new_operational_items_notify_staff_and_status_changes_notify_owner(): void
@@ -52,7 +55,7 @@ final class WorkflowNotificationTest extends TestCase
     {
         $admin = $this->user('hoa_admin');
         $homeowner = $this->homeowner();
-        app(IssueCertificate::class)->handle(['homeowner_id' => $homeowner->id, 'type' => 'Certificate of Residency'], $admin);
+        $this->issueCertificate(['homeowner_id' => $homeowner->id, 'type' => 'Certificate of Residency'], $admin);
         Notification::assertSentTo($homeowner->user, CertificateIssued::class);
 
         $announcement = Announcement::query()->create(['title' => 'Community assembly', 'content' => 'Please attend the monthly assembly.', 'category' => 'Event', 'audience' => 'Residents', 'status' => 'Published', 'published_at' => now(), 'created_by' => $admin->id]);

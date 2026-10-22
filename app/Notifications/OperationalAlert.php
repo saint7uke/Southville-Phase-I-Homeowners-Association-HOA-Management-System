@@ -13,7 +13,7 @@ final class OperationalAlert extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(private readonly string $subject, private readonly string $message, private readonly string $url)
+    public function __construct(private readonly string $subject, private readonly string $message, private readonly string $url, private readonly array $parameters = [])
     {
         $this->afterCommit();
     }
@@ -25,6 +25,6 @@ final class OperationalAlert extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)->subject($this->subject)->line($this->message)->action('Open staff panel', $this->url);
+        return (new MailMessage)->subject(__($this->subject))->line(__($this->message, $this->parameters ?? []))->action(__('Open staff panel'), $this->url);
     }
 }

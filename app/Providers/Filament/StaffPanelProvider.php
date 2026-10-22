@@ -6,6 +6,8 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\Pages\RequestPasswordReset;
 use App\Filament\Auth\Pages\StaffLogin;
+use App\Filament\Pages\HouseholdMembers;
+use App\Filament\Pages\Households;
 use App\Filament\Pages\Reports;
 use App\Filament\Resources\Announcements\AnnouncementResource;
 use App\Filament\Resources\Certificates\CertificateResource;
@@ -23,6 +25,7 @@ use App\Filament\Widgets\PortalWelcome;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\EnsurePanelIsEnabled;
 use App\Http\Middleware\MigrateLegacyPanelSession;
+use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -78,6 +81,8 @@ final class StaffPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
                 Reports::class,
+                Households::class,
+                HouseholdMembers::class,
             ])
             ->widgets([
                 PortalWelcome::class,
@@ -90,6 +95,7 @@ final class StaffPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                SetLocale::class,
                 EnsurePanelIsEnabled::class,
                 MigrateLegacyPanelSession::class,
                 AuthenticateSession::class,

@@ -60,7 +60,7 @@ final class PasswordResetController extends Controller
         );
 
         return $status === Password::PASSWORD_RESET
-            ? redirect()->route('homeowner.login')->with('success', __('Your password has been reset. You can now log in.'))
+            ? redirect()->route('login')->with('success', __('Your password has been reset. Approved accounts can now sign in.'))
             : back()->withErrors(['email' => __($status)]);
     }
 }

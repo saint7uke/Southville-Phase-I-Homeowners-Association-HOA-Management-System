@@ -25,9 +25,9 @@ final class RecentPayments extends TableWidget
         $homeownerId = $user instanceof User ? $user->homeowner()->value('id') : null;
 
         return $table->query(Payment::query()->where('homeowner_id', $homeownerId)->latest('payment_date')->limit(3))->columns([
-            TextColumn::make('covered_period')->label('Period'),
+            TextColumn::make('covered_period')->label(__('Period')),
             TextColumn::make('amount_paid')->money('PHP'),
-            TextColumn::make('status')->badge(),
+            TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
             TextColumn::make('payment_date')->date('M d, Y'),
         ])->paginated(false);
     }

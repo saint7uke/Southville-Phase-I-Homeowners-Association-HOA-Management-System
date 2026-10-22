@@ -1,0 +1,19 @@
+{
+    "renderer": "original-pdf-v1",
+    "source_format": "pdf",
+    "source_sha256": "ae0f3fb8ca5470aeebb97c22eec429536e0e71a7648ef0cf8f91cc389361dc30",
+    "sha256": "ae0f3fb8ca5470aeebb97c22eec429536e0e71a7648ef0cf8f91cc389361dc30",
+    "printed_year": 2026,
+    "font_profile": "butaw",
+    "font_sha256": "57e93ff143572bcc092c1f56202d43ddc07bb119aa104c6d7af163470fb551f6",
+    "visible_slips": 1,
+    "populated_slip": "the original single slip",
+    "pages": [{"width": 612, "height": 792}],
+    "fields": [
+        {"key": "amount", "page": 1, "x": 107.16, "y": 94.44, "width": 115.18, "height": 13, "font_size": 11.04},
+        {"key": "month", "page": 1, "x": 86.52, "y": 107.88, "width": 137.02, "height": 13, "font_size": 11.04},
+        {"key": "block", "page": 1, "x": 68.4, "y": 134.76, "width": 43.9, "height": 13, "font_size": 11.04},
+        {"key": "lot", "page": 1, "x": 134.28, "y": 134.76, "width": 76.78, "height": 13, "font_size": 11.04},
+        {"key": "collector", "page": 1, "x": 75.359, "y": 161.52, "width": 142.531, "height": 13, "font_size": 11.04}
+    ]
+}

@@ -21,10 +21,10 @@ final class StaffRecentPayments extends TableWidget
     public function table(Table $table): Table
     {
         return $table->query(Payment::query()->with('homeowner.user')->where('recorded_by', Filament::auth()->id())->latest('payment_date')->limit(10))->columns([
-            TextColumn::make('or_number')->label('Receipt'),
-            TextColumn::make('homeowner.user.full_name')->label('Homeowner')->searchable(),
+            TextColumn::make('or_number')->label(__('Receipt')),
+            TextColumn::make('homeowner.user.full_name')->label(__('Homeowner'))->searchable(),
             TextColumn::make('amount_paid')->money('PHP')->sortable(),
-            TextColumn::make('status')->badge(),
+            TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
             TextColumn::make('payment_date')->date('M d, Y'),
         ])->paginated(false);
     }

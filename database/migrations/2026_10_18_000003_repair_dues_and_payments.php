@@ -79,6 +79,7 @@ return new class extends Migration
 
         Schema::dropIfExists('dues_setting_name_locks');
         Schema::table('dues_settings', function (Blueprint $table): void {
+            $table->dropIndex(['normalized_name']);
             $table->date('starts_on')->nullable()->change();
             $table->dropColumn('normalized_name');
         });

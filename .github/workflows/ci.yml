@@ -123,7 +123,9 @@ jobs:
       - run: php artisan test --filter=ViteConfigurationIntegrityTest
       - run: npm ci
       - run: npm run build
-      - run: php artisan migrate --force
+      - name: Require native MySQL 8.4 and a disposable database before migration
+        shell: bash
+        run: php artisan hoa:verify-native-mysql | tee storage/logs/mysql84-preflight.log
         env: &mysql-env
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
@@ -136,6 +138,8 @@ jobs:
           SESSION_DRIVER: array
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
+      - run: php artisan migrate --force
+        env: *mysql-env
       - name: Run PHPUnit with retained diagnostics
         id: mysql-phpunit
         shell: bash
@@ -164,18 +168,20 @@ jobs:
 
           exit "$status"
         env: *mysql-env
-      - name: Upload MySQL PHPUnit failure log
-        if: failure() && steps.mysql-phpunit.outcome == 'failure'
+      - name: Retain native MySQL identity and PHPUnit evidence
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: phpunit-mysql-${{ github.run_attempt }}
-          path: storage/logs/phpunit-mysql.log
-          if-no-files-found: error
+          path: |
+            storage/logs/mysql84-preflight.log
+            storage/logs/phpunit-mysql.log
+          if-no-files-found: warn
           retention-days: 7
 
   browser-matrix:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -194,22 +200,23 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: cp .env.example .env
       - run: php artisan key:generate
-      - run: touch database/database.sqlite
+      - run: touch database/phase23-browser-test-ci.sqlite
       - run: php artisan migrate --force
         env: &browser-env
           DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
+          DB_DATABASE: database/phase23-browser-test-ci.sqlite
           CACHE_STORE: array
           SESSION_DRIVER: database
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
-          HOA_BROWSER_ADMIN_EMAIL: admin@southville.test
-          HOA_BROWSER_ADMIN_PASSWORD: Southville2026!
-          HOA_BROWSER_STAFF_EMAIL: staff@southville.test
-          HOA_BROWSER_STAFF_PASSWORD: Southville2026!
-          HOA_BROWSER_HOMEOWNER_EMAIL: resident@southville.test
-          HOA_BROWSER_HOMEOWNER_PASSWORD: Southville2026!
-      - run: php artisan db:seed --force
+          HOA_BROWSER_READINESS_FIXTURE: 'true'
+          HOA_BROWSER_ADMIN_EMAIL: admin@phase23.test
+          HOA_BROWSER_ADMIN_PASSWORD: BrowserTest!2026
+          HOA_BROWSER_STAFF_EMAIL: staff@phase23.test
+          HOA_BROWSER_STAFF_PASSWORD: BrowserTest!2026
+          HOA_BROWSER_HOMEOWNER_EMAIL: resident@phase23.test
+          HOA_BROWSER_HOMEOWNER_PASSWORD: BrowserTest!2026
+      - run: APP_ENV=testing php artisan db:seed --class='Tests\Support\Phase23BrowserSeeder' --force
         env: *browser-env
       - run: php artisan test --filter=ViteConfigurationIntegrityTest
       - run: npm ci

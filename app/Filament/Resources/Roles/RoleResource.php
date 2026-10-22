@@ -29,8 +29,8 @@ final class RoleResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Placeholder::make('name')->label('Built-in role')->content(fn (Role $record): string => $record->name),
-            CheckboxList::make('permission_names')->label('Permissions')->options(fn (): array => Permission::query()->where('guard_name', 'web')->orderBy('name')->pluck('name', 'name')->all())->columns(2)->bulkToggleable(),
+            Placeholder::make('name')->label(__('Built-in role'))->content(fn (Role $record): string => $record->name),
+            CheckboxList::make('permission_names')->label(__('Permissions'))->options(fn (): array => Permission::query()->where('guard_name', 'web')->orderBy('name')->pluck('name', 'name')->all())->columns(2)->bulkToggleable(),
         ]);
     }
 
@@ -38,7 +38,7 @@ final class RoleResource extends Resource
     {
         return $table->columns([
             TextColumn::make('name')->badge()->searchable(),
-            TextColumn::make('permissions_count')->counts('permissions')->label('Permissions')->sortable(),
+            TextColumn::make('permissions_count')->counts('permissions')->label(__('Permissions'))->sortable(),
             TextColumn::make('updated_at')->dateTime()->sortable(),
         ])->recordActions([EditAction::make()]);
     }

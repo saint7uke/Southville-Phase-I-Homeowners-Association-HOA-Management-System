@@ -24,13 +24,13 @@ final class HomeownerPasswordReset extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Reset your Southville HOA password')
-            ->greeting('Hello '.$notifiable->full_name.',')
-            ->line('We received a request to reset your homeowner portal password.')
-            ->action('Reset password', route('homeowner.password.reset', [
+            ->subject(__('Reset your Southville HOA password'))
+            ->greeting(__('Hello :name,', ['name' => $notifiable->full_name]))
+            ->line(__('Use this secure link to set or reset your HOA account password. Account approval is still required before sign-in.'))
+            ->action(__('Reset password'), route('homeowner.password.reset', [
                 'token' => $this->token,
                 'email' => $notifiable->getEmailForPasswordReset(),
             ]))
-            ->line('This link will expire in 60 minutes. If you did not request this, no action is required.');
+            ->line(__('This link will expire in 60 minutes. If you did not request this, no action is required.'));
     }
 }

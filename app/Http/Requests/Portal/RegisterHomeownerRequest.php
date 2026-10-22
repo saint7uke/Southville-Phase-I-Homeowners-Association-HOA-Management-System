@@ -41,7 +41,8 @@ final class RegisterHomeownerRequest extends FormRequest
                 Rule::unique('user_email_reservations', 'email'),
             ],
             'password' => ['required', 'confirmed', Password::default()],
-            'house_number' => ['required', 'string', 'max:50'],
+            'house_number' => ['prohibited'],
+            'phase_suffix' => ['required', 'string', 'regex:/^[A-Z0-9]{1,10}$/D'],
             'street' => ['required', 'string', 'max:100'],
             'block' => ['required', 'string', 'max:20'],
             'lot' => [
@@ -68,7 +69,10 @@ final class RegisterHomeownerRequest extends FormRequest
             'block' => $this->input('block'),
             'lot' => $this->input('lot'),
             'phase' => PropertyAddress::DEFAULT_PHASE,
+            'phase_suffix' => $this->input('phase_suffix'),
         ]);
+        // Validate the original prohibited value, including forged arrays; never normalize it away.
+        unset($address['house_number']);
 
         $this->merge([
             'first_name' => PersonName::normalize($this->string('first_name')->toString()),
@@ -82,19 +86,29 @@ final class RegisterHomeownerRequest extends FormRequest
         ]);
     }
 
+    public function messages(): array
+    {
+        return [
+            'phase_suffix.required' => __('Enter the phase suffix using 1–10 letters or digits.'),
+            'phase_suffix.regex' => __('Enter 1–10 ASCII letters or digits for the phase suffix.'),
+            'house_number.prohibited' => __('House Number is not accepted in new registrations. Leave this field out of the submission.'),
+        ];
+    }
+
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            if ($validator->errors()->hasAny(['house_number', 'street', 'block', 'lot', 'ownership_type'])) {
+            if ($validator->errors()->hasAny(['house_number', 'phase_suffix', 'street', 'block', 'lot', 'ownership_type'])) {
                 return;
             }
 
             if (! app(PropertyAddressAvailability::class)->available($this->all())) {
-                $validator->errors()->add('address', __(PropertyAddressAvailability::UNAVAILABLE_MESSAGE));
+                $service = app(PropertyAddressAvailability::class);
+                $validator->errors()->add('address', __($service->message($this->all(), false)));
             }
 
             if ($this->input('ownership_type') !== 'Tenant'
-                || $validator->errors()->hasAny(['landlord_name', 'house_number', 'street', 'block', 'lot'])) {
+                || $validator->errors()->hasAny(['landlord_name', 'phase_suffix', 'street', 'block', 'lot'])) {
                 return;
             }
 

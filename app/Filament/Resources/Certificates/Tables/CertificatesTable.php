@@ -20,15 +20,18 @@ final class CertificatesTable
     public static function configure(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('certificate_number')->label('Certificate no.')->searchable(),
-            TextColumn::make('homeowner.user.full_name')->label('Resident')->searchable(['first_name', 'last_name']),
+            TextColumn::make('certificate_number')->label(__('Certificate no.'))->searchable(),
+            TextColumn::make('homeowner.user.full_name')->label(__('Resident'))->searchable(['first_name', 'last_name']),
             TextColumn::make('type')->wrap(),
-            TextColumn::make('status')->badge(),
+            TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
             TextColumn::make('issued_at')->dateTime()->sortable(),
-            TextColumn::make('expires_at')->dateTime()->placeholder('No expiry'),
+            TextColumn::make('expires_at')->dateTime()->placeholder(__('No expiry')),
         ])->defaultSort('issued_at', 'desc')->filters([
             TrashedFilter::make()->visible(fn (): bool => Filament::auth()->user()?->hasRole('hoa_admin') ?? false),
         ])->recordActions([
+            Action::make('viewPrint')->label(__('View / Print'))
+                ->url(fn (Certificate $record): string => URL::temporarySignedRoute('certificates.download', now()->addMinutes(30), ['certificate' => $record->id, 'view' => '1']))
+                ->openUrlInNewTab()->visible(fn (Certificate $record): bool => $record->status === 'Issued'),
             Action::make('download')
                 ->url(fn (Certificate $record): string => URL::temporarySignedRoute('certificates.download', now()->addMinutes(30), $record))
                 ->openUrlInNewTab()

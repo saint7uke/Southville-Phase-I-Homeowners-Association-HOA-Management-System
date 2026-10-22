@@ -23,21 +23,21 @@ final class UsersTable
     public static function configure(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('full_name')->label('Name')->searchable(['first_name', 'last_name']),
+            TextColumn::make('full_name')->label(__('Name'))->searchable(['first_name', 'last_name']),
             TextColumn::make('email')->searchable()->copyable(),
-            TextColumn::make('roles.name')->label('Role')->badge(),
-            TextColumn::make('account_status')->label('Account status')->badge(),
-            TextColumn::make('contact_number')->label('Contact'),
-            TextColumn::make('last_login_at')->label('Last login')->dateTime()->sortable()->placeholder('Never'),
-            TextColumn::make('last_login_ip')->label('Last IP')->toggleable(),
-            TextColumn::make('last_login_panel')->label('Last panel')->badge()->placeholder('None'),
-            TextColumn::make('created_at')->label('Registered')->dateTime()->sortable(),
+            TextColumn::make('roles.name')->label(__('Role'))->badge(),
+            TextColumn::make('account_status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->label(__('Account status'))->badge(),
+            TextColumn::make('contact_number')->label(__('Contact')),
+            TextColumn::make('last_login_at')->label(__('Last login'))->dateTime()->sortable()->placeholder(__('Never')),
+            TextColumn::make('last_login_ip')->label(__('Last IP'))->toggleable(),
+            TextColumn::make('last_login_panel')->label(__('Last panel'))->badge()->placeholder(__('None')),
+            TextColumn::make('created_at')->label(__('Registered'))->dateTime()->sortable(),
         ])->defaultSort('created_at', 'desc')->filters([
             SelectFilter::make('account_status')->options(UserAccountStatus::options()),
             TrashedFilter::make(),
         ])->recordActions([
             Action::make('sendPasswordReset')
-                ->label('Send password reset')
+                ->label(__('Send password reset'))
                 ->icon('heroicon-o-envelope')
                 ->requiresConfirmation()
                 ->action(function (User $record): void {

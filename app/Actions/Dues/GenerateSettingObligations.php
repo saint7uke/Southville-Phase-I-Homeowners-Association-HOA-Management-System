@@ -6,7 +6,9 @@ namespace App\Actions\Dues;
 
 use App\Models\DuesObligation;
 use App\Models\DuesSetting;
+use App\Services\PropertyAddressAvailability;
 use App\Services\PropertyDuesAccounts;
+use App\Support\PropertyIdentity;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -25,29 +27,32 @@ final class GenerateSettingObligations
         $homeowners = $this->accounts->activeOwners()
             ->orderByRaw("CASE WHEN ownership_type = 'Owner' THEN 0 ELSE 1 END")
             ->orderBy('id')
-            ->get(['id', 'address_key']);
+            ->get();
 
         foreach ($homeowners as $homeowner) {
-            if (isset($seenProperties[$homeowner->address_key])) {
+            $propertyKey = PropertyIdentity::key($homeowner);
+            if (isset($seenProperties[$propertyKey])) {
                 continue;
             }
-            $seenProperties[$homeowner->address_key] = true;
-            $created += DB::transaction(function () use ($homeowner, $setting, $period): int {
-                DB::table('property_address_registry')->insertOrIgnore([
-                    'address_key' => $homeowner->address_key,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-                DB::table('property_address_registry')->where('address_key', $homeowner->address_key)->lockForUpdate()->first();
+            $validCandidate = false;
+            $created += DB::transaction(function () use ($homeowner, $setting, $period, $propertyKey, &$validCandidate): int {
+                app(PropertyAddressAvailability::class)->lockProperty($homeowner->getAttributes());
+                // The initial candidate list may predate an address move or deactivation.
+                $current = $this->accounts->activeOwners()->whereKey($homeowner->id)->lockForUpdate()->first();
+                if ($current === null || PropertyIdentity::key($current) !== $propertyKey) {
+                    return 0;
+                }
+                $validCandidate = true;
                 $exists = DuesObligation::query()
                     ->where('dues_setting_id', $setting->id)
                     ->where('billing_year', $period->year)
                     ->where('billing_month', $period->month)
-                    ->whereHas('homeowner', fn ($query) => $query->where('address_key', $homeowner->address_key))
+                    ->whereHas('homeowner', fn ($query) => PropertyIdentity::scope($query, $homeowner))
                     ->exists();
                 if ($exists) {
                     return 0;
                 }
+                $this->accounts->assertAssessmentIdentity($current->getAttributes(), $period, $setting->id);
 
                 return DuesObligation::query()->insertOrIgnore([
                     'homeowner_id' => $homeowner->id,
@@ -63,6 +68,9 @@ final class GenerateSettingObligations
                     'updated_at' => now(),
                 ]);
             });
+            if ($validCandidate) {
+                $seenProperties[$propertyKey] = true;
+            }
         }
 
         return $created;

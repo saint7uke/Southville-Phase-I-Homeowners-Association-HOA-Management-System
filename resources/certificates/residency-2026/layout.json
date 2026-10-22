@@ -1,0 +1,18 @@
+{
+    "renderer": "original-pdf-v1",
+    "source_sha256": "b436ba82870db95049480cec8c379a33377244c1f7ab63c50ce04f62eb62479d",
+    "sha256": "262cb2cf63ca2147f7ad3a39fea8c9be01a3e189e9bb63e072dc31b9b30b2a0d",
+    "printed_year": 2026,
+    "printed_signatory_name": "JOSEPHINE ALARZAR",
+    "printed_signatory_title": "SHOAi PRESIDENT",
+    "pages": [{"width": 612, "height": 792}],
+    "fields": [
+        {"key": "resident_name", "page": 1, "x": 302, "y": 226.9, "width": 255, "height": 13, "font_size": 12, "min_font_size": 9},
+        {"key": "block", "page": 1, "x": 238, "y": 258.6, "width": 51, "height": 13, "font_size": 12, "min_font_size": 9},
+        {"key": "lot", "page": 1, "x": 316, "y": 258.6, "width": 45, "height": 13, "font_size": 12, "min_font_size": 9},
+        {"key": "phase_suffix", "page": 1, "x": 408.7, "y": 258.6, "width": 23.9, "height": 13, "font_size": 12},
+        {"key": "purpose", "page": 1, "x": 264, "y": 385.6, "width": 285, "height": 13, "font_size": 12, "min_font_size": 9},
+        {"key": "day", "page": 1, "x": 286, "y": 433.2, "width": 33, "height": 13, "font_size": 12, "min_font_size": 9},
+        {"key": "month", "page": 1, "x": 363, "y": 433.2, "width": 116, "height": 13, "font_size": 12, "min_font_size": 9}
+    ]
+}

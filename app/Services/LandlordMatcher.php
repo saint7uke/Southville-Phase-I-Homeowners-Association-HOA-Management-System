@@ -7,7 +7,7 @@ namespace App\Services;
 use App\Models\Homeowner;
 use App\Models\User;
 use App\Support\PersonName;
-use App\Support\PropertyAddress;
+use App\Support\PropertyIdentity;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -22,13 +22,15 @@ final class LandlordMatcher
     /** @param array<string, mixed> $data @return array{valid: bool, message: string, homeowner: Homeowner|null} */
     public function match(array $data, bool $lock = false): array
     {
+        if (app(PropertyAddressAvailability::class)->needsReview($data)) {
+            return ['valid' => false, 'message' => PropertyAddressAvailability::REVIEW_MESSAGE, 'homeowner' => null];
+        }
         $nameKey = PersonName::key($data['landlord_name'] ?? null);
         if ($nameKey === '') {
             return ['valid' => false, 'message' => self::NOT_FOUND_MESSAGE, 'homeowner' => null];
         }
 
-        $query = Homeowner::query()
-            ->where('address_key', PropertyAddress::key($data))
+        $query = PropertyIdentity::scope(Homeowner::query(), $data)
             ->whereIn('ownership_type', ['Owner', 'Co-owner'])
             ->where('status', 'Active')
             ->whereHas('user', fn ($query) => $query->where('account_status', 'Active')->whereNull('users.deleted_at'))

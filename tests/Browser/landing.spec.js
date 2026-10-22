@@ -68,7 +68,7 @@ for (const viewport of [
         await page.goto('/homeowner/register', { waitUntil: 'networkidle' });
         await page.locator('[data-role-card="Owner"]').click();
 
-        await page.locator('#house_number').fill('12');
+        await page.locator('#phase_suffix').fill('A');
         await page.locator('#street').fill('Narra Street');
         await page.locator('#block').fill('7');
         await page.locator('#lot').fill('8');
@@ -84,7 +84,7 @@ for (const viewport of [
         await page.locator('#street').fill('Reserved Street');
         await expect(status).toHaveText('This address is already registered. Please use a different address.');
         await expect(status).toHaveAttribute('data-state', 'error');
-        await expect(page.locator('#house_number')).toHaveAttribute('aria-invalid', 'true');
+        await expect(page.locator('#phase_suffix')).toHaveAttribute('aria-invalid', 'true');
         expect(requestCount).toBe(2);
 
         await page.locator('#first_name').fill('Test');
@@ -98,7 +98,7 @@ for (const viewport of [
         await page.locator('#residency_date').fill('2020-01-01');
         await page.locator('#privacy_consent').check();
         await page.locator('[data-review-registration]').dispatchEvent('submit');
-        await expect(page.locator('#house_number')).toBeFocused();
+        await expect(page.locator('#phase_suffix')).toBeFocused();
         await expect(page).toHaveURL(/\/homeowner\/register$/);
         expect(requestCount).toBe(3);
 
@@ -150,7 +150,7 @@ for (const viewport of [
 
         await page.goto('/homeowner/register', { waitUntil: 'networkidle' });
         await page.locator('[data-role-card="Tenant"]').click();
-        await page.locator('#house_number').fill('12');
+        await page.locator('#phase_suffix').fill('A');
         await page.locator('#street').fill('Narra Street');
         await page.locator('#block').fill('7');
         await page.locator('#lot').fill('8');

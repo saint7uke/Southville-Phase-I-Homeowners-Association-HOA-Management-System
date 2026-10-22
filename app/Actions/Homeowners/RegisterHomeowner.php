@@ -8,7 +8,10 @@ use App\Models\User;
 use App\Notifications\NewHomeownerRegistration;
 use App\Services\LandlordMatcher;
 use App\Services\PropertyAddressAvailability;
+use App\Support\PropertyAddress;
+use App\Support\PropertyIdentity;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -22,6 +25,12 @@ final class RegisterHomeowner
     /** @param array<string, mixed> $data */
     public function handle(array $data): User
     {
+        $data['phase'] = PropertyAddress::DEFAULT_PHASE;
+        $data['phase_suffix'] = PropertyIdentity::suffix($data['phase_suffix'] ?? null);
+        Validator::make($data, [
+            'house_number' => ['prohibited'],
+            'phase_suffix' => ['required', 'string', 'regex:/^[A-Z0-9]{1,10}$/D'],
+        ])->validate();
         $documentPath = null;
 
         try {
@@ -58,7 +67,8 @@ final class RegisterHomeowner
                     : $data['residency_date'];
 
                 $user->homeowner()->create([
-                    'house_number' => $data['house_number'],
+                    'house_number' => null,
+                    'phase_suffix' => $data['phase_suffix'],
                     'street' => $data['street'],
                     'block' => $data['block'] ?? null,
                     'lot' => $data['lot'] ?? null,

@@ -1,0 +1,16 @@
+services:
+  mysql84-acceptance:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${HOA_MYSQL_TEST_DATABASE:?Set a new disposable database name containing test}
+      MYSQL_USER: hoa_test
+      MYSQL_PASSWORD: isolated_test_only
+      MYSQL_ROOT_PASSWORD: isolated_root_test_only
+    ports:
+      - "127.0.0.1:33084:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uhoa_test", "-pisolated_test_only"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    # Deliberately no production mounts, host database mounts or persistent volumes.

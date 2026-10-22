@@ -13,6 +13,7 @@ use App\Filament\Widgets\PortalWelcome;
 use App\Filament\Widgets\RecentPayments;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\MigrateLegacyPanelSession;
+use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -76,6 +77,7 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                SetLocale::class,
                 MigrateLegacyPanelSession::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,

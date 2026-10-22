@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Actions\Certificates\IssueCertificate;
 use App\Actions\Certificates\RevokeCertificate;
 use App\Actions\ServiceRequests\CreateServiceRequest as CreateServiceRequestAction;
 use App\Filament\Resources\Certificates\Pages\CreateCertificate;
@@ -12,6 +11,7 @@ use App\Models\Certificate;
 use App\Models\CertificateType;
 use App\Models\Homeowner;
 use App\Models\ServiceRequest;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\CertificateTypeCatalog;
 use App\Support\CertificateTypeName;
@@ -19,20 +19,27 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
+use Tests\Support\UsesUploadedResidency;
 use Tests\TestCase;
 
 final class CertificateWorkflowTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesUploadedResidency;
 
     protected function setUp(): void
     {
         parent::setUp();
+        Storage::fake('local');
+        Notification::fake();
         $this->seed(RolesAndPermissionsSeeder::class);
+        SystemSetting::current()->forceFill(['certificate_signatory_name' => 'Test Authorized Signatory', 'certificate_signatory_title' => 'President', 'signatory_confirmed_at' => now()])->save();
     }
 
     public function test_authorized_staff_issues_a_private_downloadable_certificate(): void
@@ -41,7 +48,7 @@ final class CertificateWorkflowTest extends TestCase
         $staff = User::factory()->create(['account_status' => 'Active']);
         $staff->assignRole('hoa_staff');
 
-        $certificate = app(IssueCertificate::class)->handle([
+        $certificate = $this->issueCertificate([
             'homeowner_id' => $homeowner->id,
             'type' => 'Certificate of Residency',
             'purpose' => 'Employment requirement',
@@ -68,9 +75,9 @@ final class CertificateWorkflowTest extends TestCase
         $admin = User::factory()->create(['account_status' => 'Active']);
         $admin->assignRole('hoa_admin');
 
-        $certificate = app(IssueCertificate::class)->handle([
+        $certificate = $this->issueCertificate([
             'homeowner_id' => $homeowner->id,
-            'type' => 'Community Clearance',
+            'type' => 'Certificate of Residency',
         ], $admin);
 
         $this->assertSame('2026-12-31 23:59:59', $certificate->expires_at?->format('Y-m-d H:i:s'));
@@ -84,9 +91,9 @@ final class CertificateWorkflowTest extends TestCase
 
         $this->expectException(ValidationException::class);
 
-        app(IssueCertificate::class)->handle([
+        $this->issueCertificate([
             'homeowner_id' => $homeowner->id,
-            'type' => 'Community Clearance',
+            'type' => 'Certificate of Residency',
             'expires_at' => now()->addMonth(),
         ], $admin);
     }
@@ -101,42 +108,27 @@ final class CertificateWorkflowTest extends TestCase
         $this->actingAs($admin, 'admin');
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
+        $this->confirmUploadedSource();
+
         Livewire::test(CreateCertificate::class)
             ->fillForm([
                 'homeowner_id' => $homeowner->id,
-                'type' => 'Community Clearance',
+                'type' => 'Certificate of Residency',
                 'purpose' => 'Employment requirement',
             ])
-            ->call('create')
+            ->call('preparePreview')->call('create')
             ->assertHasNoFormErrors();
 
         $this->assertSame('2026-12-31 23:59:59', Certificate::query()->sole()->expires_at?->format('Y-m-d H:i:s'));
     }
 
-    public function test_admin_form_requires_a_name_when_other_type_is_selected(): void
+    public function test_admin_form_does_not_offer_other_or_retired_types(): void
     {
-        $admin = User::factory()->create(['account_status' => 'Active']);
+        $admin = User::factory()->create();
         $admin->assignRole('hoa_admin');
         $this->actingAs($admin, 'admin');
         Filament::setCurrentPanel(Filament::getPanel('admin'));
-
-        Livewire::test(CreateCertificate::class)
-            ->assertSee('Other')
-            ->fillForm([
-                'homeowner_id' => $this->homeowner()->id,
-                'type' => CertificateTypeCatalog::OTHER_VALUE,
-            ])
-            ->call('create')
-            ->assertHasFormErrors(['custom_type' => 'required'])
-            ->fillForm(['custom_type' => 'Vehicle Registration Certification'])
-            ->call('create')
-            ->assertHasNoFormErrors();
-
-        $this->assertDatabaseHas('certificates', ['type' => 'Vehicle Registration Certification']);
-        $this->assertDatabaseHas('certificate_types', [
-            'normalized_key' => CertificateTypeName::key('Vehicle Registration Certification'),
-            'created_by' => $admin->id,
-        ]);
+        Livewire::test(CreateCertificate::class)->assertSee('Certificate of Residency')->assertSee('Certificate of Cohabitation')->assertDontSee('Other')->assertDontSee('Community Clearance');
     }
 
     public function test_staff_certificate_form_does_not_offer_other(): void
@@ -156,9 +148,9 @@ final class CertificateWorkflowTest extends TestCase
         $homeowner = $this->homeowner();
         $admin = User::factory()->create(['account_status' => 'Active']);
         $admin->assignRole('hoa_admin');
-        $certificate = app(IssueCertificate::class)->handle([
+        $certificate = $this->issueCertificate([
             'homeowner_id' => $homeowner->id,
-            'type' => 'Community Clearance',
+            'type' => 'Certificate of Residency',
         ], $admin);
 
         app(RevokeCertificate::class)->handle($certificate, $admin, 'Information needs correction.');
@@ -173,7 +165,7 @@ final class CertificateWorkflowTest extends TestCase
         $homeowner = $this->homeowner();
         $admin = User::factory()->create(['account_status' => 'Active']);
         $admin->assignRole('hoa_admin');
-        $certificate = app(IssueCertificate::class)->handle(['homeowner_id' => $homeowner->id, 'type' => 'Community Clearance'], $admin);
+        $certificate = $this->issueCertificate(['homeowner_id' => $homeowner->id, 'type' => 'Certificate of Residency'], $admin);
 
         $this->actingAs($homeowner->user, 'web')->get(route('certificates.download', $certificate))->assertForbidden();
     }
@@ -190,7 +182,7 @@ final class CertificateWorkflowTest extends TestCase
             'status' => 'Approved',
         ]);
 
-        $certificate = app(IssueCertificate::class)->fromApprovedRequest($request, $staff);
+        $certificate = $this->issueRequestedCertificate($request, $staff);
 
         $this->assertSame($request->id, $certificate->service_request_id);
         $this->assertSame('Completed', $request->refresh()->status);
@@ -211,7 +203,8 @@ final class CertificateWorkflowTest extends TestCase
             'status' => 'Approved',
         ]);
 
-        $certificate = app(IssueCertificate::class)->fromApprovedRequest($request, $staff);
+        DB::table('service_requests')->where('id', $request->id)->update(['grandfathered' => true]);
+        $certificate = $this->issueRequestedCertificate($request->fresh(), $staff);
 
         $this->assertSame('Community Clearance', $certificate->type);
         $this->assertSame('Completed', $request->refresh()->status);
@@ -224,32 +217,18 @@ final class CertificateWorkflowTest extends TestCase
         $homeowner = $this->homeowner();
 
         $this->expectException(ValidationException::class);
-        app(IssueCertificate::class)->handle([
+        $this->issueCertificate([
             'homeowner_id' => $homeowner->id,
             'type' => 'Unapproved certificate type',
         ], $admin);
     }
 
-    public function test_admin_can_create_a_reusable_custom_certificate_type(): void
+    public function test_admin_cannot_create_new_custom_certificate_types(): void
     {
-        Storage::fake('local');
-        $admin = User::factory()->create(['account_status' => 'Active']);
+        $admin = User::factory()->create();
         $admin->assignRole('hoa_admin');
-        $homeowner = $this->homeowner();
-
-        $certificate = app(IssueCertificate::class)->handle([
-            'homeowner_id' => $homeowner->id,
-            'type' => CertificateTypeCatalog::OTHER_VALUE,
-            'custom_type' => '  Pet Ownership   Certification ',
-        ], $admin);
-
-        $type = CertificateType::query()->where('normalized_key', CertificateTypeName::key('pet ownership certification'))->sole();
-        $this->assertSame('Pet Ownership Certification', $type->name);
-        $this->assertFalse($type->is_system);
-        $this->assertSame($admin->id, $type->created_by);
-        $this->assertSame($type->id, $certificate->certificate_type_id);
-        $this->assertSame($type->name, $certificate->type);
-        $this->assertContains($type->name, app(CertificateTypeCatalog::class)->requestTypes());
+        $this->expectException(ValidationException::class);
+        $this->issueCertificate(['homeowner_id' => $this->homeowner()->id, 'type' => CertificateTypeCatalog::OTHER_VALUE, 'custom_type' => 'Pet Ownership Certification'], $admin);
     }
 
     public function test_custom_certificate_type_rejects_normalized_duplicates_and_reserved_request_names(): void
@@ -269,19 +248,19 @@ final class CertificateWorkflowTest extends TestCase
 
         foreach (['  pet ownership   certification ', 'Other', CertificateTypeCatalog::OTHER_VALUE, "Invalid\nType"] as $duplicate) {
             try {
-                app(IssueCertificate::class)->handle([
+                $this->issueCertificate([
                     'homeowner_id' => $homeowner->id,
                     'type' => CertificateTypeCatalog::OTHER_VALUE,
                     'custom_type' => $duplicate,
                 ], $admin);
                 $this->fail('A duplicate or reserved custom certificate type must be rejected.');
             } catch (ValidationException $exception) {
-                $this->assertArrayHasKey('custom_type', $exception->errors());
+                $this->assertArrayHasKey('type', $exception->errors());
             }
         }
 
         $this->assertDatabaseCount('certificates', 0);
-        $this->assertDatabaseCount('certificate_types', 4);
+        $this->assertDatabaseCount('certificate_types', 5);
     }
 
     public function test_staff_cannot_forge_a_custom_certificate_type(): void
@@ -290,7 +269,7 @@ final class CertificateWorkflowTest extends TestCase
         $staff->assignRole('hoa_staff');
 
         try {
-            app(IssueCertificate::class)->handle([
+            $this->issueCertificate([
                 'homeowner_id' => $this->homeowner()->id,
                 'type' => CertificateTypeCatalog::OTHER_VALUE,
                 'custom_type' => 'Staff Created Type',
@@ -303,41 +282,14 @@ final class CertificateWorkflowTest extends TestCase
         $this->assertDatabaseMissing('certificate_types', ['normalized_key' => CertificateTypeName::key('Staff Created Type')]);
     }
 
-    public function test_custom_catalog_type_can_be_requested_and_issued(): void
+    public function test_retired_catalog_type_is_historical_only_for_new_submissions(): void
     {
-        Storage::fake('local');
         $homeowner = $this->homeowner();
-        $admin = User::factory()->create(['account_status' => 'Active']);
-        $admin->assignRole('hoa_admin');
-        $staff = User::factory()->create(['account_status' => 'Active']);
-        $staff->assignRole('hoa_staff');
-        $type = CertificateType::query()->create([
-            'name' => 'Pet Ownership Certification',
-            'normalized_key' => CertificateTypeName::key('Pet Ownership Certification'),
-            'is_active' => true,
-            'is_system' => false,
-            'created_by' => $admin->id,
-        ]);
-
-        $pending = app(CreateServiceRequestAction::class)->handle($homeowner, [
-            'request_type' => $type->name,
-            'subject' => 'Pet registration',
-            'details' => 'Required for community records.',
-        ], uploader: $homeowner->user);
-        $this->assertSame('Pending', $pending->status);
-
-        $approved = ServiceRequest::query()->create([
-            'homeowner_id' => $homeowner->id,
-            'request_type' => $type->name,
-            'subject' => 'Pet registration',
-            'details' => 'Required for community records.',
-            'status' => 'Approved',
-        ]);
-        $certificate = app(IssueCertificate::class)->fromApprovedRequest($approved, $staff);
-
-        $this->assertSame($type->id, $certificate->certificate_type_id);
-        $this->assertSame($type->name, $certificate->type);
-        $this->assertSame('Completed', $approved->refresh()->status);
+        $type = CertificateType::query()->create(['name' => 'Pet Ownership Certification', 'normalized_key' => CertificateTypeName::key('Pet Ownership Certification'), 'is_active' => true, 'is_system' => false]);
+        $this->assertArrayHasKey($type->name, app(CertificateTypeCatalog::class)->historicalOptions());
+        $this->assertNotContains($type->name, app(CertificateTypeCatalog::class)->requestTypes());
+        $this->expectException(ValidationException::class);
+        app(CreateServiceRequestAction::class)->handle($homeowner, ['request_type' => $type->name, 'subject' => 'Pet registration', 'details' => 'Required for community records.'], uploader: $homeowner->user);
     }
 
     public function test_staff_cannot_revoke_an_issued_certificate_through_the_action(): void
@@ -347,9 +299,9 @@ final class CertificateWorkflowTest extends TestCase
         $staff = User::factory()->create(['account_status' => 'Active']);
         $staff->assignRole('hoa_staff');
         $homeowner = $this->homeowner();
-        $certificate = app(IssueCertificate::class)->handle([
+        $certificate = $this->issueCertificate([
             'homeowner_id' => $homeowner->id,
-            'type' => 'Community Clearance',
+            'type' => 'Certificate of Residency',
         ], $admin);
 
         try {
@@ -365,9 +317,9 @@ final class CertificateWorkflowTest extends TestCase
         $admin = User::factory()->create(['account_status' => 'Active']);
         $admin->assignRole('hoa_admin');
         $homeowner = $this->homeowner();
-        $certificate = app(IssueCertificate::class)->handle([
+        $certificate = $this->issueCertificate([
             'homeowner_id' => $homeowner->id,
-            'type' => 'Community Clearance',
+            'type' => 'Certificate of Residency',
         ], $admin);
 
         $this->expectException(ValidationException::class);
@@ -381,7 +333,7 @@ final class CertificateWorkflowTest extends TestCase
         $admin = User::factory()->create(['account_status' => 'Active']);
         $admin->assignRole('hoa_admin');
         $homeowner = $this->homeowner();
-        $certificate = app(IssueCertificate::class)->handle([
+        $certificate = $this->issueCertificate([
             'homeowner_id' => $homeowner->id,
             'type' => 'Certificate of Residency',
         ], $admin);
@@ -401,7 +353,7 @@ final class CertificateWorkflowTest extends TestCase
         $admin->assignRole('hoa_admin');
         $staff = User::factory()->create(['account_status' => 'Active']);
         $staff->assignRole('hoa_staff');
-        $certificate = app(IssueCertificate::class)->handle(['homeowner_id' => $homeowner->id, 'type' => 'Community Clearance'], $admin);
+        $certificate = $this->issueCertificate(['homeowner_id' => $homeowner->id, 'type' => 'Certificate of Residency'], $admin);
 
         $this->assertTrue($admin->can('delete', $certificate));
         $this->assertFalse($staff->can('delete', $certificate));

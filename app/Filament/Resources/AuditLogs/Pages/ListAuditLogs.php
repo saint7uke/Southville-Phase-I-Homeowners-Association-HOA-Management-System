@@ -12,6 +12,6 @@ class ListAuditLogs extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [Action::make('export')->label('Export CSV')->icon('heroicon-o-arrow-down-tray')->url(route('admin.reports.audit-logs'))];
+        return [Action::make('export')->label(__('Export CSV'))->icon('heroicon-o-arrow-down-tray')->url(route('admin.reports.audit-logs'))];
     }
 }

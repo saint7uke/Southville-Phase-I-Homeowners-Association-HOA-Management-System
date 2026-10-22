@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Portal\StoreComplaintRequest;
 use App\Models\Complaint;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 final class ComplaintController extends Controller
@@ -22,6 +23,8 @@ final class ComplaintController extends Controller
 
     public function create(): View
     {
+        Gate::authorize('create', Complaint::class);
+
         return view('portal.complaints.create');
     }
 

@@ -275,15 +275,13 @@ final class AccountLifecycleTest extends TestCase
     }
 
     #[DataProvider('portalStatusPageProvider')]
-    public function test_portal_preserves_pending_and_rejected_status_page(UserAccountStatus $status): void
+    public function test_portal_denies_pending_and_rejected_credentials_without_starting_session(UserAccountStatus $status): void
     {
         [$resident] = $this->homeowner($status);
-
-        $this->post('/portal/login', ['email' => $resident->email, 'password' => 'password'])
-            ->assertRedirect('/portal/status');
-
-        $this->assertAuthenticatedAs($resident, 'web');
-        $this->assertSame('portal', $resident->refresh()->last_login_panel);
+        $this->post('/portal/login', ['email' => $resident->email, 'password' => 'password'])->assertSessionHasErrors('email');
+        $this->assertGuest('web');
+        $this->assertGuest('homeowner');
+        $this->assertNull($resident->fresh()->last_login_at);
     }
 
     public function test_approved_homeowner_login_uses_panel_guard_and_opens_homeowner_dashboard(): void
@@ -341,8 +339,8 @@ final class AccountLifecycleTest extends TestCase
         return [
             'pending' => [UserAccountStatus::Pending, 'Your application is still pending approval.'],
             'rejected' => [UserAccountStatus::Rejected, 'Your homeowner application was rejected.'],
-            'suspended' => [UserAccountStatus::Suspended, 'Your homeowner account is suspended.'],
-            'inactive' => [UserAccountStatus::Inactive, 'Your homeowner account is inactive.'],
+            'suspended' => [UserAccountStatus::Suspended, 'Your account is suspended.'],
+            'inactive' => [UserAccountStatus::Inactive, 'Your account is inactive.'],
         ];
     }
 
@@ -398,19 +396,15 @@ final class AccountLifecycleTest extends TestCase
         $this->assertDatabaseMissing('audit_logs', ['user_id' => $resident->id, 'action' => 'Auth.login']);
     }
 
-    public function test_wrong_role_credentials_emit_failed_and_never_login(): void
+    public function test_legacy_login_submission_selects_staff_guard_from_registered_role(): void
     {
         $staff = $this->userWithRole('hoa_staff');
-
-        $this->post('/portal/login', ['email' => $staff->email, 'password' => 'password'])
-            ->assertSessionHasErrors('email');
-
+        $this->post('/portal/login', ['email' => $staff->email, 'password' => 'password'])->assertRedirect('/staff');
+        $this->assertAuthenticatedAs($staff, 'staff');
         $this->assertGuest('web');
-        $this->assertDatabaseHas('audit_logs', ['user_id' => $staff->id, 'action' => 'Auth.failed']);
-        $this->assertDatabaseMissing('audit_logs', ['user_id' => $staff->id, 'action' => 'Auth.login']);
+        $this->assertDatabaseHas('audit_logs', ['user_id' => $staff->id, 'action' => 'Auth.login']);
     }
 
-    /** @return array<string, array{string, string}> */
     public static function panelGuardProvider(): array
     {
         return [
@@ -511,8 +505,8 @@ final class AccountLifecycleTest extends TestCase
         $oldPasswordHash = $resident->getAuthPassword();
 
         $this->post('/portal/login', ['email' => $resident->email, 'password' => 'password'])
-            ->assertRedirect('/portal/dashboard');
-        $this->get('/portal/dashboard')->assertOk();
+            ->assertRedirect('/homeowner');
+        $this->get('/homeowner')->assertOk();
         $this->assertDatabaseHas('sessions', ['user_id' => $resident->id]);
 
         $resident->forceFill(['password' => 'NewSecureResident2026'])->saveQuietly();
@@ -526,8 +520,8 @@ final class AccountLifecycleTest extends TestCase
         Auth::forgetGuards();
         $this->withSession([
             $guardSessionKey => $resident->id,
-            'password_hash_web' => $sessionPasswordHash,
-        ])->get('/portal/dashboard')->assertRedirect('/portal/login');
+            'password_hash_homeowner' => $sessionPasswordHash,
+        ])->get('/homeowner')->assertRedirect('/homeowner/login/filament');
     }
 
     public function test_authentication_fail_logout_and_password_reset_are_audited_without_credentials(): void

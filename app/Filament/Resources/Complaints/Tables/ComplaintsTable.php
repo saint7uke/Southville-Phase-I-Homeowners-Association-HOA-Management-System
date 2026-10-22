@@ -24,7 +24,7 @@ class ComplaintsTable
         return $table
             ->columns([
                 TextColumn::make('homeowner.user.full_name')
-                    ->label('Homeowner')
+                    ->label(__('Homeowner'))
                     ->searchable(['first_name', 'last_name']),
                 TextColumn::make('ticket_number')
                     ->searchable(),
@@ -32,12 +32,12 @@ class ComplaintsTable
                     ->searchable(),
                 TextColumn::make('category')
                     ->badge(),
-                TextColumn::make('priority')
+                TextColumn::make('priority')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))
                     ->badge(),
-                TextColumn::make('status')
+                TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))
                     ->badge(),
                 TextColumn::make('handler.full_name')
-                    ->label('Assigned staff')
+                    ->label(__('Assigned staff'))
                     ->sortable(),
                 TextColumn::make('resolved_at')
                     ->dateTime()
@@ -56,12 +56,12 @@ class ComplaintsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('category')->options(['Noise' => 'Noise', 'Property Damage' => 'Property Damage', 'Neighbor Dispute' => 'Neighbor Dispute', 'Common Area' => 'Common Area', 'Security' => 'Security', 'Others' => 'Others']),
-                SelectFilter::make('priority')->options(['Low' => 'Low', 'Medium' => 'Medium', 'High' => 'High', 'Urgent' => 'Urgent']),
-                SelectFilter::make('status')->options(['Pending' => 'Pending', 'Under Review' => 'Under Review', 'Resolved' => 'Resolved', 'Rejected' => 'Rejected', 'Closed' => 'Closed', 'Dismissed' => 'Dismissed']),
+                SelectFilter::make('category')->options(['Noise' => __('Noise'), 'Property Damage' => __('Property Damage'), 'Neighbor Dispute' => __('Neighbor Dispute'), 'Common Area' => __('Common Area'), 'Security' => __('Security'), 'Others' => __('Others')]),
+                SelectFilter::make('priority')->options(['Low' => __('Low'), 'Medium' => __('Medium'), 'High' => __('High'), 'Urgent' => __('Urgent')]),
+                SelectFilter::make('status')->options(['Pending' => __('Pending'), 'Under Review' => __('Under Review'), 'Resolved' => __('Resolved'), 'Rejected' => __('Rejected'), 'Closed' => __('Closed'), 'Dismissed' => __('Dismissed')]),
                 Filter::make('created_at')->schema([
-                    DatePicker::make('from')->label('Submitted from'),
-                    DatePicker::make('to')->label('Submitted to')->afterOrEqual('from'),
+                    DatePicker::make('from')->label(__('Submitted from')),
+                    DatePicker::make('to')->label(__('Submitted to'))->afterOrEqual('from'),
                 ])->query(fn (Builder $query, array $data): Builder => $query
                     ->when($data['from'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('created_at', '>=', $date))
                     ->when($data['to'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('created_at', '<=', $date))),

@@ -37,8 +37,8 @@ final class ComplaintForm
             Select::make('priority')->options(array_combine(ComplaintSubmissionValidator::PRIORITIES, ComplaintSubmissionValidator::PRIORITIES))->default('Medium')->required(),
             Textarea::make('description')->rows(6)->minLength(20)->maxLength(5000)->disabled(fn (string $operation): bool => $operation === 'edit' && self::isStaff())->required()->columnSpanFull(),
             FileUpload::make('attachments')
-                ->label('Supporting attachments')
-                ->helperText('Upload up to 3 PDF, image, or Word files; 5 MB each.')
+                ->label(__('Supporting attachments'))
+                ->helperText(__('Upload up to 3 PDF, image, or Word files; 5 MB each.'))
                 ->multiple()
                 ->maxFiles(3)
                 ->storeFiles(false)
@@ -47,9 +47,9 @@ final class ComplaintForm
                 ->visible(fn (string $operation): bool => $operation === 'create')
                 ->columnSpanFull(),
             Placeholder::make('initial_status')
-                ->label('Initial status')
+                ->label(__('Initial status'))
                 ->content('Pending')
-                ->helperText('New complaints enter the review workflow as Pending.')
+                ->helperText(__('New complaints enter the review workflow as Pending.'))
                 ->visible(fn (string $operation): bool => $operation === 'create'),
             Select::make('status')
                 ->options(fn (?Complaint $record): array => self::statusOptions($record, self::isStaff()))
@@ -62,18 +62,18 @@ final class ComplaintForm
                 ->visible(fn (string $operation): bool => $operation === 'edit')
                 ->live(),
             Select::make('handled_by')
-                ->label('Assigned staff')
+                ->label(__('Assigned staff'))
                 ->relationship('handler', 'email', modifyQueryUsing: fn (Builder $query): Builder => $query->role('hoa_staff')->where('account_status', 'Active'))
                 ->getOptionLabelFromRecordUsing(fn (User $record): string => $record->full_name.' | '.$record->email)
                 ->searchable()
                 ->preload()
                 ->disabled(fn (): bool => ! Filament::auth()->user()?->hasRole('hoa_admin'))
                 ->visible(fn (string $operation): bool => $operation !== 'view'),
-            Textarea::make('admin_remarks')->label('Resolution notes')->rows(4)->maxLength(3000)->required(fn (callable $get): bool => in_array($get('status'), ['Resolved', 'Rejected', 'Closed', 'Dismissed'], true))->visible(fn (string $operation): bool => $operation === 'edit')->columnSpanFull(),
-            Placeholder::make('status_summary')->label('Current status')->content(fn (?Complaint $record): string => $record?->status ?? '-')->visible(fn (string $operation): bool => $operation === 'view'),
-            Placeholder::make('handler_summary')->label('Assigned staff')->content(fn (?Complaint $record): string => $record?->handler?->full_name ?? 'Not yet assigned')->visible(fn (string $operation): bool => $operation === 'view'),
-            Placeholder::make('timeline_summary')->label('Status timeline')->content(fn (?Complaint $record): string => $record === null ? '-' : 'Submitted '.$record->created_at->format('M d, Y g:i A').' | Last updated '.$record->updated_at->format('M d, Y g:i A').($record->resolved_at ? ' | Finalized '.$record->resolved_at->format('M d, Y g:i A') : ''))->visible(fn (string $operation): bool => $operation === 'view')->columnSpanFull(),
-            Placeholder::make('resolution_summary')->label('Resolution notes')->content(fn (?Complaint $record): string => $record?->admin_remarks ?: 'No resolution notes yet.')->visible(fn (string $operation): bool => $operation === 'view')->columnSpanFull(),
+            Textarea::make('admin_remarks')->label(__('Resolution notes'))->rows(4)->maxLength(3000)->required(fn (callable $get): bool => in_array($get('status'), ['Resolved', 'Rejected', 'Closed', 'Dismissed'], true))->visible(fn (string $operation): bool => $operation === 'edit')->columnSpanFull(),
+            Placeholder::make('status_summary')->label(__('Current status'))->content(fn (?Complaint $record): string => $record?->status ?? '-')->visible(fn (string $operation): bool => $operation === 'view'),
+            Placeholder::make('handler_summary')->label(__('Assigned staff'))->content(fn (?Complaint $record): string => $record?->handler?->full_name ?? 'Not yet assigned')->visible(fn (string $operation): bool => $operation === 'view'),
+            Placeholder::make('timeline_summary')->label(__('Status timeline'))->content(fn (?Complaint $record): string => $record === null ? '-' : 'Submitted '.$record->created_at->format('M d, Y g:i A').' | Last updated '.$record->updated_at->format('M d, Y g:i A').($record->resolved_at ? ' | Finalized '.$record->resolved_at->format('M d, Y g:i A') : ''))->visible(fn (string $operation): bool => $operation === 'view')->columnSpanFull(),
+            Placeholder::make('resolution_summary')->label(__('Resolution notes'))->content(fn (?Complaint $record): string => $record?->admin_remarks ?: 'No resolution notes yet.')->visible(fn (string $operation): bool => $operation === 'view')->columnSpanFull(),
         ])->columns(2);
     }
 
@@ -81,20 +81,20 @@ final class ComplaintForm
     private static function statusOptions(?Complaint $record, bool $staff): array
     {
         if ($record === null) {
-            return ['Pending' => 'Pending'];
+            return ['Pending' => __('Pending')];
         }
 
         return match ($record->status) {
-            'Pending' => ['Pending' => 'Pending', 'Under Review' => 'Under Review'],
+            'Pending' => ['Pending' => __('Pending'), 'Under Review' => __('Under Review')],
             'Under Review' => $staff ? [
-                'Under Review' => 'Under Review',
-                'Resolved' => 'Resolved',
+                'Under Review' => __('Under Review'),
+                'Resolved' => __('Resolved'),
             ] : [
-                'Under Review' => 'Under Review',
-                'Resolved' => 'Resolved',
-                'Rejected' => 'Rejected',
-                'Closed' => 'Closed',
-                'Dismissed' => 'Dismissed',
+                'Under Review' => __('Under Review'),
+                'Resolved' => __('Resolved'),
+                'Rejected' => __('Rejected'),
+                'Closed' => __('Closed'),
+                'Dismissed' => __('Dismissed'),
             ],
             default => [$record->status => $record->status],
         };

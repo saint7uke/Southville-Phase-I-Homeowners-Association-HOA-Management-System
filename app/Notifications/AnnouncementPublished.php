@@ -26,9 +26,9 @@ final class AnnouncementPublished extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('New HOA announcement')
-            ->greeting('Hello '.$notifiable->full_name.'.')
+            ->subject(__('New HOA announcement'))
+            ->greeting(__('Hello :name.', ['name' => $notifiable->full_name]))
             ->line($this->title)
-            ->action('Read announcements', url('/homeowner/announcements'));
+            ->action(__('Read announcements'), url('/homeowner/announcements'));
     }
 }

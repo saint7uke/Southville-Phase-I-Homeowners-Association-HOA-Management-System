@@ -69,16 +69,16 @@ final class RequestPasswordReset extends BaseRequestPasswordReset
     private function genericNotification(): Notification
     {
         return Notification::make()
-            ->title('Check your email')
-            ->body('If an eligible account matches that address, a password reset link will be sent shortly.')
+            ->title(__('Check your email'))
+            ->body(__('If an eligible account matches that address, a password reset link will be sent shortly.'))
             ->success();
     }
 
     private function rateLimitedNotification(): Notification
     {
         return Notification::make()
-            ->title('Too many requests')
-            ->body('Please wait before requesting another password reset link.')
+            ->title(__('Too many requests'))
+            ->body(__('Please wait before requesting another password reset link.'))
             ->danger();
     }
 

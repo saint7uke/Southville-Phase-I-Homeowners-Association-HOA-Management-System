@@ -12,19 +12,23 @@ final class CertificateTypeCatalog
 {
     public const OTHER_VALUE = '__other__';
 
+    public const ALLOWED = ['Certificate of Residency', 'Certificate of Cohabitation'];
+
+    public function allowsNew(mixed $name): bool
+    {
+        return in_array(CertificateTypeName::key($name), array_map(CertificateTypeName::key(...), self::ALLOWED), true);
+    }
+
     /** @return array<string, string> */
     public function activeOptions(bool $includeOther = false): array
     {
         $options = CertificateType::query()
             ->where('is_active', true)
+            ->whereIn('normalized_key', array_map(CertificateTypeName::key(...), self::ALLOWED))
             ->orderByDesc('is_system')
             ->orderBy('name')
             ->pluck('name', 'name')
             ->all();
-
-        if ($includeOther) {
-            $options[self::OTHER_VALUE] = 'Other';
-        }
 
         return $options;
     }
@@ -32,10 +36,14 @@ final class CertificateTypeCatalog
     /** @return list<string> */
     public function requestTypes(): array
     {
-        return array_values(array_unique([
-            ...array_values($this->activeOptions()),
-            ...ServiceRequest::NON_CERTIFICATE_TYPES,
-        ]));
+        return array_values($this->activeOptions());
+    }
+
+    public function historicalOptions(): array
+    {
+        $types = array_unique([...CertificateType::query()->pluck('name')->all(), ...ServiceRequest::NON_CERTIFICATE_TYPES]);
+
+        return array_combine($types, $types);
     }
 
     /** @return array<string, string> */

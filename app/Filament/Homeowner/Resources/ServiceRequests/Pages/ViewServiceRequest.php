@@ -20,7 +20,7 @@ final class ViewServiceRequest extends ViewRecord
 
         if ($certificate?->status === 'Issued') {
             $actions[] = Action::make('download_certificate')
-                ->label('Download certificate')
+                ->label(__('Download certificate'))
                 ->icon('heroicon-o-document-arrow-down')
                 ->url(URL::temporarySignedRoute('certificates.download', now()->addMinutes(30), $certificate))
                 ->openUrlInNewTab();

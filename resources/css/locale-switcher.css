@@ -1,0 +1,81 @@
+.hoa-locale-switcher {
+    --locale-surface: var(--hoa-surface, var(--surface, #fff));
+    --locale-ink: var(--hoa-ink, var(--ink, #173140));
+    --locale-line: var(--hoa-muted, var(--muted, #64748b));
+    --locale-focus: var(--hoa-focus, var(--focus, #0879ad));
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-self: center;
+    align-items: center;
+    block-size: 44px;
+    max-inline-size: 100%;
+    color: var(--locale-ink);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 20px;
+    white-space: nowrap;
+    color-scheme: light;
+}
+
+.dark .hoa-locale-switcher { color-scheme: dark; }
+.hoa-locale-switcher[data-locale-theme="light"] {
+    --locale-surface: #fff;
+    --locale-ink: #173140;
+    --locale-line: #64748b;
+    --locale-focus: #0879ad;
+    color-scheme: light;
+}
+
+.hoa-locale-switcher .hoa-locale-select {
+    box-sizing: border-box;
+    appearance: none;
+    inline-size: 140px;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    block-size: 44px;
+    min-block-size: 44px;
+    margin: 0;
+    border: 1px solid var(--locale-line);
+    border-radius: 8px;
+    padding: 0 30px 0 34px;
+    background: var(--locale-surface);
+    background-image: none;
+    color: var(--locale-ink);
+    font: inherit;
+    line-height: 20px;
+    cursor: pointer;
+    box-shadow: none;
+}
+.hoa-locale-select option { background: var(--locale-surface); color: var(--locale-ink); }
+.hoa-locale-switcher .hoa-locale-select:focus-visible { outline: 3px solid var(--locale-focus); outline-offset: 2px; }
+.hoa-locale-switcher .hoa-locale-select:disabled { cursor: progress; opacity: .8; }
+.hoa-locale-icon, .hoa-locale-chevron { position: absolute; inline-size: 16px; block-size: 16px; pointer-events: none; }
+.hoa-locale-icon { inset-inline-start: 11px; }
+.hoa-locale-chevron { inset-inline-end: 10px; }
+.hoa-locale-spinner { display: none; }
+.hoa-locale-switcher[aria-busy="true"] .hoa-locale-globe { display: none; }
+.hoa-locale-switcher[aria-busy="true"] .hoa-locale-spinner { display: block; animation: hoa-locale-spin .8s linear infinite; }
+.hoa-locale-sr-only { position: absolute; inline-size: 1px; block-size: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.hoa-locale-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; margin-block-end: 1rem; }
+.fi-simple-layout > .hoa-locale-toolbar { align-self: flex-end; margin: 1rem; }
+.fi-simple-layout-header:has(.hoa-locale-switcher) { display: flex; align-items: center; gap: .75rem; }
+.fi-simple-user-menu-ctn:has(.hoa-locale-switcher) { display: flex; align-items: center; gap: .75rem; }
+@media (prefers-color-scheme: dark) {
+    .hoa-portal-auth-form .hoa-locale-switcher:not([data-locale-theme="light"]) {
+        --locale-surface: #102832;
+        --locale-ink: #e7f0f3;
+        --locale-line: #a9bec7;
+        --locale-focus: #8edbfa;
+        color-scheme: dark;
+    }
+}
+@media (max-width: 767px) {
+    .portal-nav:has(> .hoa-locale-switcher) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; padding-block: .75rem; }
+    .portal-nav:has(> .hoa-locale-switcher) > .brand { min-inline-size: 0; gap: .35rem; font-size: .8rem; }
+    .portal-nav:has(> .hoa-locale-switcher) > .brand > span:last-child { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .portal-nav:has(> .hoa-locale-switcher) > .portal-links { grid-row: 2; grid-column: 1 / -1; min-inline-size: 0; }
+    .portal-nav:has(> .hoa-locale-switcher) > .hoa-locale-switcher { grid-row: 1; grid-column: 2; }
+}
+@keyframes hoa-locale-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .hoa-locale-spinner { animation: none !important; } }

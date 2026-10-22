@@ -18,10 +18,13 @@ final class CertificateDownloadController extends Controller
 
         abort_unless(is_string($certificate->file_path) && Storage::disk('local')->exists($certificate->file_path), 404);
 
-        return Storage::disk('local')->download(
+        $disposition = request()->query('view') === '1' ? 'inline' : 'attachment';
+
+        return Storage::disk('local')->response(
             $certificate->file_path,
             "hoa-certificate-{$certificate->certificate_number}.pdf",
-            ['Content-Type' => 'application/pdf', 'X-Content-Type-Options' => 'nosniff'],
+            ['Content-Type' => 'application/pdf', 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store'],
+            $disposition,
         );
     }
 }

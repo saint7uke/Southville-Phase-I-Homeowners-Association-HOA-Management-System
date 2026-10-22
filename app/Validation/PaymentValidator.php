@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Validation;
 
+use App\Support\PaymentMethods;
 use App\Support\PaymentReference;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -23,12 +24,14 @@ final class PaymentValidator
             'amount_paid' => ['required', 'regex:/^\d{1,8}(?:\.\d{1,2})?$/', 'decimal:0,2', 'gt:0'],
             'penalty' => [$proofSubmission ? 'prohibited' : 'nullable', 'regex:/^\d{1,8}(?:\.\d{1,2})?$/', 'decimal:0,2', 'gte:0'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
-            'payment_method' => ['required', Rule::in($proofSubmission ? ['Bank Transfer', 'GCash', 'Maya'] : ['Cash', 'Bank Transfer', 'GCash', 'Maya'])],
+            'payment_method' => ['required', Rule::in(PaymentMethods::accepted())],
             'transaction_reference' => [$electronic ? 'required' : 'nullable', 'string', 'max:120', 'regex:/^[^\p{C}]+$/u'],
             'submission_token' => ['nullable', 'uuid'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'property_snapshot' => ['prohibited'],
         ], [
             'amount_paid.regex' => __('Enter a valid amount with no more than two decimal places.'),
+            'payment_method.in' => __(PaymentMethods::CASH_ONLY_MESSAGE),
             'transaction_reference.required' => __('A transaction reference is required for electronic payments.'),
         ])->validate();
 

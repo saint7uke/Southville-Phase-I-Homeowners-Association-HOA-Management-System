@@ -10,11 +10,14 @@ use App\Models\DuesSetting;
 use App\Models\Homeowner;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\PropertyAddressAvailability;
 use App\Services\PropertyDuesAccounts;
 use App\Support\Money;
+use App\Support\PropertyIdentity;
 use App\Validation\PaymentValidator;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
@@ -50,18 +53,15 @@ final class RecordPayment
             $period = CarbonImmutable::parse((string) $data['payment_date'])->startOfMonth();
             $setting = DuesSetting::query()->findOrFail($data['dues_setting_id']);
             $resident = Homeowner::query()->with('user')->findOrFail($data['homeowner_id']);
-            DB::table('property_address_registry')->insertOrIgnore([
-                'address_key' => $resident->address_key, 'created_at' => now(), 'updated_at' => now(),
-            ]);
-            DB::table('property_address_registry')->where('address_key', $resident->address_key)->lockForUpdate()->first();
-            $liable = $this->accounts->primaryForAddress($resident->address_key);
+            app(PropertyAddressAvailability::class)->lockProperty($resident->getAttributes());
+            $liable = $this->accounts->primaryForAddress(PropertyIdentity::key($resident));
             if ($liable === null || ! $this->accounts->payerIsEligible($resident, $liable)) {
                 throw ValidationException::withMessages(['homeowner_id' => __('Select an active resident associated with a liable property account.')]);
             }
             $data['payer_homeowner_id'] ??= $resident->id;
             $existingObligation = DuesObligation::query()
                 ->where('dues_setting_id', $setting->id)->where('billing_year', $period->year)->where('billing_month', $period->month)
-                ->whereHas('homeowner', fn ($query) => $query->where('address_key', $resident->address_key))
+                ->whereHas('homeowner', fn ($query) => PropertyIdentity::scope($query, $resident))
                 ->orderBy('id')->first();
             if ($existingObligation !== null) {
                 $data['dues_obligation_id'] = $existingObligation->id;
@@ -69,6 +69,7 @@ final class RecordPayment
                 throw ValidationException::withMessages(['dues_setting_id' => __('This schedule does not apply to the selected billing month.')]);
             }
             if ($existingObligation === null) {
+                $this->accounts->assertAssessmentIdentity($liable->getAttributes(), $period, $setting->id);
                 $obligation = DuesObligation::query()->firstOrCreate([
                     'homeowner_id' => $liable->id,
                     'dues_setting_id' => $setting->id,
@@ -147,6 +148,11 @@ final class RecordPayment
                     'reviewed_at' => now(),
                     'reviewed_by' => $recorder->id,
                     'recorded_by' => $recorder->id,
+                    'property_snapshot' => [
+                        ...Arr::only($obligation->homeowner->getAttributes(), ['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix', 'property_key', 'address_key']),
+                        'collector_id' => $recorder->id, 'collector_name' => $recorder->full_name,
+                        'collector_authorized' => $recorder->hasAnyRole(['hoa_admin', 'hoa_staff']) && $recorder->can('manage_payments'),
+                    ],
                 ]);
             }, 3);
         } catch (QueryException $exception) {

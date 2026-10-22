@@ -148,8 +148,8 @@ final class Reports extends Page
         if ($format === 'pdf') {
             $summary = $catalog->summary($slug, $filters);
             if ((int) reset($summary) > 2000) {
-                Notification::make()->warning()->title('PDF row limit exceeded')
-                    ->body('This PDF exceeds 2,000 rows. Narrow the filters or use a queued CSV/XLSX export.')->send();
+                Notification::make()->warning()->title(__('PDF row limit exceeded'))
+                    ->body(__('This PDF exceeds 2,000 rows. Narrow the filters or use a queued CSV/XLSX export.'))->send();
 
                 return;
             }
@@ -189,7 +189,7 @@ final class Reports extends Page
             'ip_address' => request()->ip(),
             'user_agent' => mb_substr((string) request()->userAgent(), 0, 500),
         ]);
-        Notification::make()->success()->title(strtoupper($format).' export queued')->body('The private export will appear under My queued exports when complete.')->send();
+        Notification::make()->success()->title(strtoupper($format).' export queued')->body(__('The private export will appear under My queued exports when complete.'))->send();
     }
 
     /** @param array<string, mixed>|null $filters */
@@ -273,7 +273,7 @@ final class Reports extends Page
             throw $exception;
         } catch (Throwable $exception) {
             report($exception);
-            Notification::make()->danger()->title('Preview failed')->body('The report could not be loaded. Please review the filters and try again.')->send();
+            Notification::make()->danger()->title(__('Preview failed'))->body(__('The report could not be loaded. Please review the filters and try again.'))->send();
         }
     }
 

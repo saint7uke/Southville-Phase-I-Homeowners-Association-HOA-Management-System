@@ -20,8 +20,8 @@ final class CreateServiceRequest extends CreateRecord
     {
         return parent::getCreateFormAction()
             ->requiresConfirmation()
-            ->modalHeading('Review and submit request')
-            ->modalDescription('Please review the request type, subject, description, and attachments before confirming.');
+            ->modalHeading(__('Review and submit request'))
+            ->modalDescription(__('Please review the request type, subject, description, and attachments before confirming.'));
     }
 
     protected function handleRecordCreation(array $data): Model

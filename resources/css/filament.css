@@ -204,6 +204,17 @@
     font-weight: 700;
 }
 
+/* The generated primary-400 shade is too light for small white receipt-action text. */
+.fi-btn.hoa-receipt-primary-action {
+    background-color: var(--hoa-blue-dark);
+    color: #ffffff;
+}
+
+.fi-btn.hoa-receipt-primary-action:hover {
+    background-color: #065f86;
+    color: #ffffff;
+}
+
 .fi-input,
 .fi-select,
 .fi-textarea {

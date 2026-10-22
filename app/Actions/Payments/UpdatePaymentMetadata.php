@@ -6,12 +6,9 @@ namespace App\Actions\Payments;
 
 use App\Models\Payment;
 use App\Models\User;
-use App\Support\PaymentReference;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 final class UpdatePaymentMetadata
@@ -20,38 +17,28 @@ final class UpdatePaymentMetadata
     public function handle(Payment $payment, array $data, User $actor): Payment
     {
         Gate::forUser($actor)->authorize('update', $payment);
-        $reference = PaymentReference::display($data['transaction_reference'] ?? null);
-        $electronic = in_array($data['payment_method'] ?? null, ['Bank Transfer', 'GCash', 'Maya'], true);
-        $validated = Validator::make([...$data, 'transaction_reference' => $reference], [
+        $validated = Validator::make($data, [
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
-            'payment_method' => ['required', Rule::in(['Cash', 'Bank Transfer', 'GCash', 'Maya'])],
-            'transaction_reference' => [$electronic ? 'required' : 'nullable', 'string', 'max:120'],
+            'payment_method' => ['sometimes', 'string'],
+            'transaction_reference' => ['sometimes', 'nullable', 'string', 'max:120'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'property_snapshot' => ['prohibited'],
         ])->validate();
-        $key = $electronic ? PaymentReference::key($reference) : null;
-        if ($key !== null && Payment::withTrashed()->where('transaction_reference_key', $key)->whereKeyNot($payment->id)->exists()) {
-            throw ValidationException::withMessages(['transaction_reference' => __('This transaction reference has already been used.')]);
-        }
 
-        try {
-            return DB::transaction(function () use ($payment, $validated, $reference, $key, $actor): Payment {
-                $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
-                Gate::forUser($actor)->authorize('update', $locked);
-                $locked->update([
-                    'payment_date' => $validated['payment_date'],
-                    'payment_method' => $validated['payment_method'],
-                    'transaction_reference' => $reference,
-                    'transaction_reference_key' => $key,
-                    'notes' => filled($validated['notes'] ?? null) ? trim($validated['notes']) : null,
-                ]);
-
-                return $locked->refresh();
-            });
-        } catch (QueryException $exception) {
-            if ($key !== null && Payment::withTrashed()->where('transaction_reference_key', $key)->whereKeyNot($payment->id)->exists()) {
-                throw ValidationException::withMessages(['transaction_reference' => __('This transaction reference has already been used.')]);
+        return DB::transaction(function () use ($payment, $validated, $actor): Payment {
+            $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            Gate::forUser($actor)->authorize('update', $locked);
+            foreach (['payment_method', 'transaction_reference'] as $field) {
+                if (array_key_exists($field, $validated) && $validated[$field] !== $locked->{$field}) {
+                    throw ValidationException::withMessages([$field => __('The original payment method and reference cannot be changed.')]);
+                }
             }
-            throw $exception;
-        }
+            $locked->update([
+                'payment_date' => $validated['payment_date'],
+                'notes' => filled($validated['notes'] ?? null) ? trim($validated['notes']) : null,
+            ]);
+
+            return $locked->refresh();
+        });
     }
 }

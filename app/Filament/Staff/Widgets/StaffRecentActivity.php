@@ -25,9 +25,9 @@ final class StaffRecentActivity extends TableWidget
     public function table(Table $table): Table
     {
         return $table->query(AuditLog::query()->with('user')->where('user_id', Filament::auth()->id())->whereIn('auditable_type', [Complaint::class, ServiceRequest::class, Payment::class, ContactMessage::class])->latest('id')->limit(10))->columns([
-            TextColumn::make('user.full_name')->label('Actor')->placeholder('System'),
+            TextColumn::make('user.full_name')->label(__('Actor'))->placeholder(__('System')),
             TextColumn::make('action')->badge(),
-            TextColumn::make('auditable_type')->label('Record')->formatStateUsing(fn (?string $state): string => class_basename((string) $state)),
+            TextColumn::make('auditable_type')->label(__('Record'))->formatStateUsing(fn (?string $state): string => class_basename((string) $state)),
             TextColumn::make('created_at')->since(),
         ])->paginated(false);
     }

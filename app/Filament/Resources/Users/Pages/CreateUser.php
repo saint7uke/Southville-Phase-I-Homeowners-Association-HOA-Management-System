@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Actions\Users\CreatePendingUser;
+use App\Actions\Users\InviteManagedUser;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
 use App\Support\AuthenticatedActor;
@@ -23,6 +24,11 @@ class CreateUser extends CreateRecord
             throw new AuthorizationException;
         }
 
-        return app(CreatePendingUser::class)->handle($data, $actor);
+        $invite = (bool) ($data['send_invitation'] ?? false);
+        unset($data['send_invitation']);
+
+        return $invite
+            ? app(InviteManagedUser::class)->handle($data, $actor)
+            : app(CreatePendingUser::class)->handle($data, $actor);
     }
 }

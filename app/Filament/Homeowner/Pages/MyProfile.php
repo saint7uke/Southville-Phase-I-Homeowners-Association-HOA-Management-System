@@ -7,6 +7,8 @@ namespace App\Filament\Homeowner\Pages;
 use App\Actions\Homeowners\UpdateOwnProfile;
 use App\Actions\Users\ChangeOwnPassword;
 use App\Models\User;
+use App\Support\PropertyAddress;
+use App\Support\PropertyIdentity;
 use App\Validation\HomeownerProfileValidator;
 use BackedEnum;
 use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
@@ -81,36 +83,37 @@ final class MyProfile extends Page
     {
         return $schema
             ->components([
-                Section::make('Personal information')
-                    ->description('Keep your legal and contact details accurate. Changing your email requires verification.')
+                Section::make(__('Personal information'))->extraAttributes(['data-i18n-section' => 'Personal information'])
+                    ->description(__('Keep your legal and contact details accurate. Changing your email requires verification.'))
                     ->schema([
-                        TextInput::make('first_name')->label('First name')->required()->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('given-name')->extraFieldWrapperAttributes(self::validationAttributes('first_name')),
-                        TextInput::make('middle_name')->label('Middle name')->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('additional-name')->extraFieldWrapperAttributes(self::validationAttributes('middle_name')),
-                        TextInput::make('last_name')->label('Last name')->required()->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('family-name')->extraFieldWrapperAttributes(self::validationAttributes('last_name')),
-                        Select::make('suffix')->options(['Jr.' => 'Jr.', 'Sr.' => 'Sr.', 'II' => 'II', 'III' => 'III', 'IV' => 'IV', 'N/A' => 'N/A'])->placeholder('Select an option')->extraFieldWrapperAttributes(self::validationAttributes('suffix')),
-                        Select::make('sex')->options(['Male' => 'Male', 'Female' => 'Female', 'Prefer not to say' => 'Prefer not to say'])->required()->placeholder('Select an option')->extraFieldWrapperAttributes(self::validationAttributes('sex')),
-                        DatePicker::make('date_of_birth')->label('Date of birth')->required()->maxDate(today()->subDay())->live()->extraFieldWrapperAttributes(self::validationAttributes('date_of_birth')),
+                        TextInput::make('first_name')->label(__('First name'))->required()->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('given-name')->extraFieldWrapperAttributes(self::validationAttributes('first_name')),
+                        TextInput::make('middle_name')->label(__('Middle name'))->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('additional-name')->extraFieldWrapperAttributes(self::validationAttributes('middle_name')),
+                        TextInput::make('last_name')->label(__('Last name'))->required()->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('family-name')->extraFieldWrapperAttributes(self::validationAttributes('last_name')),
+                        Select::make('suffix')->options(['Jr.' => 'Jr.', 'Sr.' => 'Sr.', 'II' => 'II', 'III' => 'III', 'IV' => 'IV', 'N/A' => 'N/A'])->placeholder(__('Select an option'))->extraFieldWrapperAttributes(self::validationAttributes('suffix')),
+                        Select::make('sex')->options(['Male' => __('Male'), 'Female' => __('Female'), 'Prefer not to say' => __('Prefer not to say')])->required()->placeholder(__('Select an option'))->extraFieldWrapperAttributes(self::validationAttributes('sex')),
+                        DatePicker::make('date_of_birth')->label(__('Date of birth'))->required()->maxDate(today()->subDay())->live()->extraFieldWrapperAttributes(self::validationAttributes('date_of_birth')),
                         Placeholder::make('age')->content(fn (Get $get): string => filled($get('date_of_birth')) ? Carbon::parse($get('date_of_birth'))->age.' years old' : 'Calculated from date of birth'),
-                        TextInput::make('contact_number')->label('Contact number')->tel()->required()->maxLength(20)->regex('/^09\d{9}$/')->dehydrateStateUsing(self::normalizePhone(...))->autocomplete('tel')->helperText('Use an 11-digit Philippine mobile number beginning with 09. Spaces, periods, and hyphens are accepted.')->extraFieldWrapperAttributes(self::validationAttributes('contact_number')),
-                        TextInput::make('email')->label('Email address')->email()->required()->maxLength(255)->autocomplete('email')->helperText('A verification link is sent if this changes.')->extraFieldWrapperAttributes(self::validationAttributes('email')),
+                        TextInput::make('contact_number')->label(__('Contact number'))->tel()->required()->maxLength(20)->regex('/^09\d{9}$/')->mutateStateForValidationUsing(self::normalizePhone(...))->dehydrateStateUsing(self::normalizePhone(...))->autocomplete('tel')->helperText(__('Use an 11-digit Philippine mobile number beginning with 09. Spaces, periods, and hyphens are accepted.'))->extraFieldWrapperAttributes(self::validationAttributes('contact_number')),
+                        TextInput::make('email')->label(__('Email address'))->email()->required()->maxLength(255)->autocomplete('email')->helperText(__('A verification link is sent if this changes.'))->extraFieldWrapperAttributes(self::validationAttributes('email')),
                     ])->columns(2),
-                Section::make('Property and emergency contact')
+                Section::make(__('Property and emergency contact'))->extraAttributes(['data-i18n-section' => 'Property and emergency contact'])
                     ->schema([
-                        TextInput::make('house_number')->label('House number')->required()->maxLength(50)->autocomplete('address-line1')->extraFieldWrapperAttributes(self::validationAttributes('house_number')),
+                        TextInput::make('house_number')->label(__('House number'))->maxLength(50)->autocomplete('address-line1')->extraFieldWrapperAttributes(self::validationAttributes('house_number')),
                         TextInput::make('street')->required()->maxLength(100)->autocomplete('address-line2')->extraFieldWrapperAttributes(self::validationAttributes('street')),
                         TextInput::make('block')->required()->maxLength(20)->extraFieldWrapperAttributes(self::validationAttributes('block')),
                         TextInput::make('lot')->required()->maxLength(20)->extraFieldWrapperAttributes(self::validationAttributes('lot')),
-                        TextInput::make('phase')->required()->maxLength(50)->disabled()->dehydrated()->helperText('Contact the HOA to change the registered phase.'),
-                        DatePicker::make('residency_date')->label('Move-in date')->required()->maxDate(today())->afterOrEqual('date_of_birth')->extraFieldWrapperAttributes(self::validationAttributes('residency_date')),
-                        Select::make('ownership_type')->label('Occupancy type')->options(['Owner' => 'Owner', 'Tenant' => 'Tenant', 'Co-owner' => 'Co-owner'])->required()->disabled()->dehydrated()->helperText('Contact the HOA to change the occupancy type.'),
-                        TextInput::make('emergency_contact_name')->label('Emergency contact name')->required()->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('name')->extraFieldWrapperAttributes(self::validationAttributes('emergency_contact_name')),
-                        TextInput::make('emergency_contact_number')->label('Emergency contact number')->tel()->required()->maxLength(20)->regex('/^09\d{9}$/')->dehydrateStateUsing(self::normalizePhone(...))->autocomplete('tel')->extraFieldWrapperAttributes(self::validationAttributes('emergency_contact_number')),
+                        TextInput::make('phase')->required()->maxLength(50)->disabled()->dehydrated()->helperText(__('Contact the HOA to change the registered phase.')),
+                        Placeholder::make('registered_phase')->label(__('Registered phase'))->content(fn (): string => PropertyIdentity::phase(Filament::auth()->user()->homeowner)),
+                        DatePicker::make('residency_date')->label(__('Move-in date'))->required()->maxDate(today())->afterOrEqual('date_of_birth')->extraFieldWrapperAttributes(self::validationAttributes('residency_date')),
+                        Select::make('ownership_type')->label(__('Occupancy type'))->options(['Owner' => __('Owner'), 'Tenant' => __('Tenant'), 'Co-owner' => __('Co-owner')])->required()->disabled()->dehydrated()->helperText(__('Contact the HOA to change the occupancy type.')),
+                        TextInput::make('emergency_contact_name')->label(__('Emergency contact name'))->required()->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('name')->extraFieldWrapperAttributes(self::validationAttributes('emergency_contact_name')),
+                        TextInput::make('emergency_contact_number')->label(__('Emergency contact number'))->tel()->required()->maxLength(20)->regex('/^09\d{9}$/')->mutateStateForValidationUsing(self::normalizePhone(...))->dehydrateStateUsing(self::normalizePhone(...))->autocomplete('tel')->extraFieldWrapperAttributes(self::validationAttributes('emergency_contact_number')),
                     ])->columns(2),
-                Section::make('Profile photo')
-                    ->description('JPEG, PNG, or WebP; 100–4000 pixels per side; maximum 2 MB. Location metadata is removed before private storage.')
+                Section::make(__('Profile photo'))->extraAttributes(['data-i18n-section' => 'Profile photo'])
+                    ->description(__('JPEG, PNG, or WebP; 100–4000 pixels per side; maximum 2 MB. Location metadata is removed before private storage.'))
                     ->schema([
                         FileUpload::make('profile_photo_upload')
-                            ->label('Replacement profile photo')
+                            ->label(__('Replacement profile photo'))
                             ->image()
                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                             ->maxSize(2048)
@@ -126,12 +129,12 @@ final class MyProfile extends Page
     {
         return $schema
             ->components([
-                Section::make('Change password')
-                    ->description('You will be signed out from every device after a successful password change.')
+                Section::make(__('Change password'))->extraAttributes(['data-i18n-section' => 'Change password'])
+                    ->description(__('You will be signed out from every device after a successful password change.'))
                     ->schema([
-                        TextInput::make('current_password')->label('Current password')->password()->revealable()->required()->maxLength(255)->autocomplete('current-password')->extraFieldWrapperAttributes(self::passwordValidationAttributes('current_password')),
-                        TextInput::make('password')->label('New password')->password()->revealable()->required()->maxLength(255)->rule(Password::default())->same('password_confirmation')->autocomplete('new-password')->helperText('At least 12 characters with uppercase, lowercase, number, and symbol.')->extraFieldWrapperAttributes(self::passwordValidationAttributes('password')),
-                        TextInput::make('password_confirmation')->label('Confirm new password')->password()->revealable()->required()->maxLength(255)->autocomplete('new-password')->extraFieldWrapperAttributes(self::passwordValidationAttributes('password_confirmation')),
+                        TextInput::make('current_password')->label(__('Current password'))->password()->revealable()->required()->maxLength(255)->autocomplete('current-password')->extraFieldWrapperAttributes(self::passwordValidationAttributes('current_password')),
+                        TextInput::make('password')->label(__('New password'))->password()->revealable()->required()->maxLength(255)->rule(Password::default())->same('password_confirmation')->autocomplete('new-password')->helperText(__('At least 12 characters with uppercase, lowercase, number, and symbol.'))->extraFieldWrapperAttributes(self::passwordValidationAttributes('password')),
+                        TextInput::make('password_confirmation')->label(__('Confirm new password'))->password()->revealable()->required()->maxLength(255)->autocomplete('new-password')->extraFieldWrapperAttributes(self::passwordValidationAttributes('password_confirmation')),
                     ]),
             ])
             ->statePath('passwordData');
@@ -152,7 +155,7 @@ final class MyProfile extends Page
             throw $this->prefixValidationErrors($exception, 'profileData');
         }
 
-        Notification::make()->success()->title('Profile saved')->send();
+        Notification::make()->success()->title(__('Profile updated successfully!'))->send();
         $this->fillProfileForm();
 
         if ($emailChanged) {
@@ -197,7 +200,7 @@ final class MyProfile extends Page
             'street' => $homeowner->street,
             'block' => $homeowner->block,
             'lot' => $homeowner->lot,
-            'phase' => $homeowner->phase,
+            'phase' => PropertyAddress::normalizeForStorage(['phase' => $homeowner->phase])['phase'],
             'residency_date' => $homeowner->residency_date?->toDateString(),
             'ownership_type' => $homeowner->ownership_type,
             'emergency_contact_name' => $homeowner->emergency_contact_name,
@@ -251,9 +254,9 @@ final class MyProfile extends Page
         return ['data-password-field-wrapper' => $field];
     }
 
-    private static function normalizePhone(?string $value): string
+    private static function normalizePhone(?string $state): string
     {
-        return (string) preg_replace('/[\s().-]+/u', '', trim((string) $value));
+        return HomeownerProfileValidator::normalizePhone($state);
     }
 
     private function checkRateLimit(): bool
@@ -265,8 +268,8 @@ final class MyProfile extends Page
         } catch (TooManyRequestsException $exception) {
             Notification::make()
                 ->danger()
-                ->title('Too many attempts')
-                ->body("Try again in {$exception->secondsUntilAvailable} seconds.")
+                ->title(__('Too many attempts'))
+                ->body(__('Try again in :seconds seconds.', ['seconds' => $exception->secondsUntilAvailable]))
                 ->send();
 
             return false;

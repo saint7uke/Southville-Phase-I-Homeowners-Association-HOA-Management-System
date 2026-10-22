@@ -1,0 +1,44 @@
+{
+    "renderer": "original-pdf-v1",
+    "document_type": "Certificate of Cohabitation",
+    "font_profile": "cohabitation",
+    "phase_is_blank": true,
+    "source_sha256": "44e225a6960a19e48249fe00a3d405b909c9c1a8ef57a9adfe266859e549284a",
+    "sha256": "0ea3553a9ee40357f1a39dafe138f1a55dd56cb8de8908d32a278f9ebfb79396",
+    "font_sha256": "b3658eadae55e682b5f69eb64c439c1ecc8f196c0bb8d4756d145d13bc86476a",
+    "printed_year": 2026,
+    "printed_signatory_name": "JOSEPHINE D. ALARZAR",
+    "printed_signatory_title": "SHOAi PRESIDENT",
+    "phase_correction": {
+        "original_sha256": "9b572c18fc08ecc0edc909dced3069b3ead51f29c1be6beb6737cc0a3a0fe436",
+        "changed_part": "word/document.xml",
+        "description": "User-authorized correction of Phase 1-A and its following address blank to Phase 1 - ____. The same XML part also has the separately authorized signatory punctuation correction; all other package parts are unchanged.",
+        "authorized_date": "2026-10-21"
+    },
+    "signatory_correction": {
+        "previous_source_sha256": "bb8b626f22c75950c4003ad6e8ac7e2ca4105a4b7146716de7031444da280e0b",
+        "previous_pdf_sha256": "6cf0776aea29d1aaa03f49f81dbda0ad633ad872ed04d74ab9d9bf426aa7ee20",
+        "changed_part": "word/document.xml",
+        "description": "User-authorized correction of the printed initial from D, to D.; not an official source/signatory approval.",
+        "authorized_date": "2026-10-21"
+    },
+    "pages": [{"width": 612, "height": 792}],
+    "fields": [
+        {"key": "cohabitant_one", "page": 1, "x": 260, "y": 245.57, "width": 250, "height": 14, "font_size": 12, "error_field": "cohabitant_one"},
+        {"key": "cohabitant_one_birth_month", "page": 1, "x": 123.5, "y": 271.37, "width": 49, "height": 14, "font_size": 12, "error_field": "cohabitant_one_birth_date"},
+        {"key": "cohabitant_one_birth_day", "page": 1, "x": 181.5, "y": 271.37, "width": 36.5, "height": 14, "font_size": 12, "error_field": "cohabitant_one_birth_date"},
+        {"key": "cohabitant_one_birth_year", "page": 1, "x": 227, "y": 271.37, "width": 46, "height": 14, "font_size": 12, "error_field": "cohabitant_one_birth_date"},
+        {"key": "address_one", "page": 1, "x": 341.5, "y": 271.37, "width": 195, "height": 14, "font_size": 12, "error_field": "homeowner_id"},
+        {"key": "phase_suffix", "page": 1, "x": 200.5, "y": 292.01, "width": 61, "height": 14, "font_size": 12, "error_field": "homeowner_id"},
+        {"key": "cohabitant_two", "page": 1, "x": 78, "y": 326.57, "width": 284, "height": 14, "font_size": 12, "error_field": "cohabitant_two"},
+        {"key": "cohabitant_two_birth_month", "page": 1, "x": 415.3, "y": 326.57, "width": 31, "height": 14, "font_size": 12, "error_field": "cohabitant_two_birth_date"},
+        {"key": "cohabitant_two_birth_day", "page": 1, "x": 455.4, "y": 326.57, "width": 31, "height": 14, "font_size": 12, "error_field": "cohabitant_two_birth_date"},
+        {"key": "cohabitant_two_birth_year", "page": 1, "x": 495.4, "y": 326.57, "width": 47.5, "height": 14, "font_size": 12, "error_field": "cohabitant_two_birth_date"},
+        {"key": "address_two", "page": 1, "x": 142, "y": 354.19, "width": 327.5, "height": 14, "font_size": 12, "error_field": "homeowner_id"},
+        {"key": "phase_suffix", "page": 1, "x": 503.4, "y": 354.19, "width": 37.5, "height": 14, "font_size": 12, "error_field": "homeowner_id"},
+        {"key": "years_together", "page": 1, "x": 398.8, "y": 381.79, "width": 88, "height": 14, "font_size": 12, "error_field": "years_together"},
+        {"key": "requester_name", "page": 1, "x": 118.6, "y": 436.99, "width": 177.8, "height": 14, "font_size": 12, "error_field": "requester"},
+        {"key": "day", "page": 1, "x": 362.1, "y": 436.99, "width": 44.3, "height": 14, "font_size": 12, "error_field": "homeowner_id"},
+        {"key": "month", "page": 1, "x": 448.2, "y": 436.99, "width": 64.3, "height": 14, "font_size": 12, "error_field": "homeowner_id"}
+    ]
+}

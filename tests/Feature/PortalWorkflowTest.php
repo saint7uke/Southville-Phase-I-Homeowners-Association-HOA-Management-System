@@ -39,13 +39,13 @@ final class PortalWorkflowTest extends TestCase
             'first_name' => 'juan', 'middle_name' => 'santos', 'last_name' => 'dela cruz', 'sex' => 'Male',
             'date_of_birth' => '1990-05-10', 'contact_number' => '09171234567', 'email' => 'JUAN@EXAMPLE.COM',
             'password' => 'ResidentPass!2026', 'password_confirmation' => 'ResidentPass!2026',
-            'house_number' => '22', 'street' => 'Narra Street', 'block' => '3', 'lot' => '8',
+            'phase_suffix' => 'A', 'street' => 'Narra Street', 'block' => '3', 'lot' => '8',
             'residency_date' => '2020-01-01', 'ownership_type' => 'Owner', 'privacy_consent' => '1',
         ]);
 
         $response->assertRedirect(route('portal.login'));
         $this->assertDatabaseHas('users', ['email' => 'juan@example.com', 'account_status' => 'Pending']);
-        $this->assertDatabaseHas('homeowners', ['house_number' => '22', 'status' => 'Inactive']);
+        $this->assertDatabaseHas('homeowners', ['house_number' => null, 'phase_suffix' => 'A', 'status' => 'Inactive']);
         Notification::assertSentTo($admin, NewHomeownerRegistration::class);
     }
 
@@ -62,7 +62,7 @@ final class PortalWorkflowTest extends TestCase
             'first_name' => 'Reserved', 'last_name' => 'Applicant', 'sex' => 'Female',
             'date_of_birth' => '1990-05-10', 'contact_number' => '09171234567', 'email' => 'reserved@example.test',
             'password' => 'ResidentPass!2026', 'password_confirmation' => 'ResidentPass!2026',
-            'house_number' => '22', 'street' => 'Narra Street', 'block' => '3', 'lot' => '8',
+            'phase_suffix' => 'A', 'street' => 'Narra Street', 'block' => '3', 'lot' => '8',
             'residency_date' => '2020-01-01', 'ownership_type' => 'Owner', 'privacy_consent' => '1',
         ])->assertSessionHasErrors('email');
     }
@@ -120,7 +120,7 @@ final class PortalWorkflowTest extends TestCase
             'email' => 'new-applicant@example.test',
             'password' => 'ResidentPass!2026',
             'password_confirmation' => 'ResidentPass!2026',
-            'house_number' => '22',
+            'phase_suffix' => 'A',
             'street' => 'Narra Street',
             'block' => '3',
             'lot' => '8',
@@ -157,7 +157,7 @@ final class PortalWorkflowTest extends TestCase
             'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'sex' => 'Male',
             'date_of_birth' => '1990-05-10', 'contact_number' => '09171234567', 'email' => 'juan@example.com',
             'password' => 'ResidentPass!2026', 'password_confirmation' => 'ResidentPass!2026',
-            'house_number' => '22', 'street' => 'Narra Street', 'block' => '3', 'lot' => '8', 'residency_date' => '2020-01-01',
+            'phase_suffix' => 'A', 'street' => 'Narra Street', 'block' => '3', 'lot' => '8', 'residency_date' => '2020-01-01',
             'ownership_type' => 'Owner', 'privacy_consent' => '1',
         ]);
 
@@ -308,7 +308,7 @@ final class PortalWorkflowTest extends TestCase
         ]);
         $landlord->assignRole('homeowner');
         $landlordRecord = $landlord->homeowner()->create([
-            'house_number' => '12', 'street' => 'Bugbane', 'block' => '71', 'lot' => '10',
+            'house_number' => '12', 'phase_suffix' => 'A', 'street' => 'Bugbane', 'block' => '71', 'lot' => '10',
             'phase' => 'Southville Phase I', 'residency_date' => '2020-01-01',
             'ownership_type' => 'Owner', 'status' => 'Active',
         ]);
@@ -317,7 +317,7 @@ final class PortalWorkflowTest extends TestCase
             'first_name' => 'Luke', 'last_name' => 'Tenant', 'sex' => 'Male',
             'date_of_birth' => '1992-04-10', 'contact_number' => '09181234567', 'email' => 'tenant@example.test',
             'password' => 'ResidentPass!2026', 'password_confirmation' => 'ResidentPass!2026',
-            'house_number' => '12', 'street' => 'Bugbane', 'block' => '71', 'lot' => '10',
+            'phase_suffix' => 'A', 'street' => 'Bugbane', 'block' => '71', 'lot' => '10',
             'ownership_type' => 'Tenant', 'landlord_name' => 'Luke Landlord', 'landlord_contact' => '09372372572',
             'lease_start_date' => '2026-10-10', 'lease_end_date' => '2026-12-18', 'privacy_consent' => '1',
         ])->assertRedirect();
@@ -346,7 +346,7 @@ final class PortalWorkflowTest extends TestCase
                 'date_of_birth' => '1990-05-10',
                 'email' => 'failed-registration@example.test',
                 'password' => 'ResidentPass!2026',
-                'house_number' => '22',
+                'phase_suffix' => 'A',
                 'street' => null,
                 'ownership_type' => 'Owner',
                 'residency_date' => '2020-01-01',

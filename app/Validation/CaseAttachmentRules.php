@@ -40,11 +40,11 @@ final class CaseAttachmentRules
     /** @return array<string, string> */
     public static function messages(): array
     {
-        return [
+        return array_map(fn (string $message): string => __($message), [
             'attachments.max' => 'A maximum of three attachments is allowed.',
             'attachments.*.mimetypes' => 'Every attachment must be a PDF, JPEG, PNG, DOC, or DOCX file.',
             'attachments.*.extensions' => 'Every attachment must have a PDF, JPG, JPEG, PNG, DOC, or DOCX extension.',
             'attachments.*.max' => 'Every attachment must be no larger than 5 MB.',
-        ];
+        ]);
     }
 }

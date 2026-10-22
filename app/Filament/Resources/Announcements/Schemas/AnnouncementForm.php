@@ -21,7 +21,7 @@ final class AnnouncementForm
             TextInput::make('title')->maxLength(180)->required()->columnSpanFull(),
             Textarea::make('content')->rows(10)->maxLength(10000)->required()->columnSpanFull(),
             FileUpload::make('banner_image')
-                ->label('Banner image')
+                ->label(__('Banner image'))
                 ->disk('public')
                 ->directory('announcements')
                 ->visibility('public')
@@ -32,8 +32,8 @@ final class AnnouncementForm
                 ->columnSpanFull(),
             Select::make('category')->options(array_combine(Announcement::CATEGORIES, Announcement::CATEGORIES))->required(),
             Select::make('audience')->options(['Public' => 'Public website and residents', 'Residents' => 'Residents only'])->default('Public')->required(),
-            Select::make('status')->options(['Draft' => 'Draft', 'Published' => 'Published', 'Archived' => 'Archived'])->default('Draft')->required(),
-            DateTimePicker::make('published_at')->seconds(false)->helperText('Leave blank to publish immediately.')->nullable(),
+            Select::make('status')->options(['Draft' => __('Draft'), 'Published' => __('Published'), 'Archived' => __('Archived')])->default('Draft')->required(),
+            DateTimePicker::make('published_at')->seconds(false)->helperText(__('Leave blank to publish immediately.'))->nullable(),
             DateTimePicker::make('expires_at')->seconds(false)->after('published_at')->nullable(),
         ])->columns(2);
     }

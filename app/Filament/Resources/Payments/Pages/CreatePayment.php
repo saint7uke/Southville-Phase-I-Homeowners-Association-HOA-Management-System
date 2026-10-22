@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Payments\Pages;
 
 use App\Actions\Payments\RecordPayment;
+use App\Filament\Resources\Payments\Actions\GenerateCurrentMonthDuesAction;
 use App\Filament\Resources\Payments\PaymentResource;
 use App\Models\User;
 use App\Support\AuthenticatedActor;
@@ -15,12 +16,17 @@ class CreatePayment extends CreateRecord
 {
     protected static string $resource = PaymentResource::class;
 
+    protected function getHeaderActions(): array
+    {
+        return [GenerateCurrentMonthDuesAction::make()];
+    }
+
     protected function getCreateFormAction(): Action
     {
         return parent::getCreateFormAction()
             ->requiresConfirmation()
-            ->modalHeading('Record this payment?')
-            ->modalDescription('Confirm the obligation, payer, amount, method, and reference before updating the property ledger.');
+            ->modalHeading(__('Record this payment?'))
+            ->modalDescription(__('Confirm the obligation, payer, amount, method, and reference before updating the property ledger.'));
     }
 
     /** @param array<string, mixed> $data */

@@ -33,12 +33,12 @@ class AnnouncementsTable
                 ImageColumn::make('banner_image'),
                 TextColumn::make('category')
                     ->searchable(),
-                TextColumn::make('status')
+                TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))
                     ->searchable(),
                 TextColumn::make('published_at')
                     ->dateTime()
                     ->sortable(),
-                TextColumn::make('creator.full_name')->label('Created by')->sortable(),
+                TextColumn::make('creator.full_name')->label(__('Created by'))->sortable(),
                 TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
@@ -54,10 +54,10 @@ class AnnouncementsTable
             ])
             ->filters([
                 SelectFilter::make('category')->options(array_combine(Announcement::CATEGORIES, Announcement::CATEGORIES)),
-                SelectFilter::make('status')->options(['Draft' => 'Draft', 'Published' => 'Published', 'Archived' => 'Archived']),
+                SelectFilter::make('status')->options(['Draft' => __('Draft'), 'Published' => __('Published'), 'Archived' => __('Archived')]),
                 Filter::make('published_at')->schema([
-                    DatePicker::make('from')->label('Published from'),
-                    DatePicker::make('to')->label('Published to')->afterOrEqual('from'),
+                    DatePicker::make('from')->label(__('Published from')),
+                    DatePicker::make('to')->label(__('Published to'))->afterOrEqual('from'),
                 ])->query(fn (Builder $query, array $data): Builder => $query
                     ->when($data['from'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('published_at', '>=', $date))
                     ->when($data['to'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('published_at', '<=', $date))),
@@ -65,7 +65,7 @@ class AnnouncementsTable
             ])
             ->recordActions([
                 Action::make('emailBlast')
-                    ->label('Email homeowners')
+                    ->label(__('Email homeowners'))
                     ->icon('heroicon-o-paper-airplane')
                     ->requiresConfirmation()
                     ->visible(fn (Announcement $record): bool => (Filament::auth()->user()?->hasRole('hoa_admin') ?? false) && $record->status === 'Published' && $record->published_at?->isPast())

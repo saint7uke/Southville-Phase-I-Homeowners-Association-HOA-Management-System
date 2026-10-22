@@ -20,10 +20,10 @@ final class RecentPayments extends TableWidget
     public function table(Table $table): Table
     {
         return $table->query(Payment::query()->with(['homeowner.user', 'duesSetting'])->latest('payment_date')->latest('id')->limit(10))->columns([
-            TextColumn::make('or_number')->label('OR'),
-            TextColumn::make('homeowner.user.full_name')->label('Homeowner'),
+            TextColumn::make('or_number')->label(__('OR')),
+            TextColumn::make('homeowner.user.full_name')->label(__('Homeowner')),
             TextColumn::make('amount_paid')->money('PHP'),
-            TextColumn::make('status')->badge(),
+            TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
             TextColumn::make('payment_date')->date(),
         ])->paginated(false);
     }

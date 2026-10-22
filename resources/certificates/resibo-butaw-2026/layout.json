@@ -1,0 +1,18 @@
+{
+    "renderer": "original-pdf-v1",
+    "source_sha256": "a290ec1c2cbf7c17f403461ea94577205ee541be35ebe213eccc8ccb14cb04d9",
+    "sha256": "feed735518798f36a9b195aef1695028a2fc903eb2841b720fb08b9ca39343f9",
+    "printed_year": 2026,
+    "font_profile": "butaw",
+    "font_sha256": "57e93ff143572bcc092c1f56202d43ddc07bb119aa104c6d7af163470fb551f6",
+    "visible_slips": 10,
+    "populated_slip": "top-left only",
+    "pages": [{"width": 612, "height": 792}],
+    "fields": [
+        {"key": "amount", "page": 1, "x": 107.2, "y": 88.5, "width": 113, "height": 13, "font_size": 11.04},
+        {"key": "month", "page": 1, "x": 86.5, "y": 101.94, "width": 135, "height": 13, "font_size": 11.04},
+        {"key": "block", "page": 1, "x": 68.2, "y": 128.82, "width": 42, "height": 13, "font_size": 11.04},
+        {"key": "lot", "page": 1, "x": 134.1, "y": 128.82, "width": 75, "height": 13, "font_size": 11.04},
+        {"key": "collector", "page": 1, "x": 75.2, "y": 155.58, "width": 140.8, "height": 13, "font_size": 11.04}
+    ]
+}

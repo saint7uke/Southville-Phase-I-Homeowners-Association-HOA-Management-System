@@ -32,15 +32,15 @@ final class ChangeUserRole
             }
 
             if ($locked->is($administrator)) {
-                throw ValidationException::withMessages(['role' => 'You cannot change your own administrator role.']);
+                throw ValidationException::withMessages(['role' => __('You cannot change your own administrator role.')]);
             }
 
             if ($oldRole === 'hoa_admin' && $locked->account_status === 'Active' && $activeAdmins->count() <= 1) {
-                throw ValidationException::withMessages(['role' => 'At least one active HOA administrator is required.']);
+                throw ValidationException::withMessages(['role' => __('At least one active HOA administrator is required.')]);
             }
 
             if ($role === 'homeowner' && ! $locked->homeowner()->withTrashed()->exists()) {
-                throw ValidationException::withMessages(['role' => 'Create a complete homeowner record before assigning the Homeowner role.']);
+                throw ValidationException::withMessages(['role' => __('Create a complete homeowner record before assigning the Homeowner role.')]);
             }
 
             $locked->syncRoles([$role]);

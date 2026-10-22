@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\PropertyAddressAvailability;
 use App\Support\PersonName;
 use App\Support\PropertyAddress;
+use App\Support\PropertyIdentity;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
@@ -41,6 +42,7 @@ final class HomeownerProfileValidator
         'block',
         'lot',
         'phase',
+        'phase_suffix',
         'residency_date',
         'ownership_type',
         'emergency_contact_name',
@@ -58,6 +60,7 @@ final class HomeownerProfileValidator
         }
 
         $data = [...$data, ...PropertyAddress::normalizeForStorage($data)];
+        $data['house_number'] = filled($data['house_number']) ? $data['house_number'] : null;
 
         $data['suffix'] = $this->collapseWhitespace($data['suffix'] ?? null);
         $data['email'] = mb_strtolower(trim((string) ($data['email'] ?? '')), 'UTF-8');
@@ -93,13 +96,14 @@ final class HomeownerProfileValidator
                     ),
                 ),
             ],
-            'house_number' => ['required', 'string', 'max:50'],
+            'house_number' => ['nullable', 'string', 'max:50'],
             'street' => ['required', 'string', 'max:100'],
             'block' => ['required', 'string', 'max:20'],
             'lot' => ['required', 'string', 'max:20'],
             'residency_date' => ['required', 'date', 'before_or_equal:today', 'after_or_equal:date_of_birth'],
             'ownership_type' => ['required', Rule::in([$homeowner->ownership_type])],
-            'phase' => ['required', 'string', 'max:50', Rule::in([$homeowner->phase])],
+            'phase' => ['required', 'string', 'max:50', Rule::in([PropertyAddress::normalizeForStorage(['phase' => $homeowner->phase])['phase']])],
+            'phase_suffix' => ['nullable', Rule::in([$homeowner->phase_suffix])],
             'emergency_contact_name' => $name,
             'emergency_contact_number' => ['required', 'regex:/^09\d{9}$/'],
             'profile_photo_upload' => [
@@ -116,7 +120,7 @@ final class HomeownerProfileValidator
     /** @param array<string, mixed> $input @return array<string, mixed> */
     public function validate(User $user, Homeowner $homeowner, array $input): array
     {
-        $normalized = $this->normalize($input);
+        $normalized = $this->normalize(['phase_suffix' => $homeowner->phase_suffix, ...$input]);
 
         $validator = Validator::make(
             $normalized,
@@ -141,7 +145,7 @@ final class HomeownerProfileValidator
     /** @return array<string, string> */
     public function messages(): array
     {
-        return [
+        return array_map(fn (string $message): string => __($message), [
             'first_name.regex' => 'The first name may contain letters, spaces, apostrophes, periods, and hyphens only.',
             'middle_name.regex' => 'The middle name may contain letters, spaces, apostrophes, periods, and hyphens only.',
             'last_name.regex' => 'The last name may contain letters, spaces, apostrophes, periods, and hyphens only.',
@@ -158,13 +162,13 @@ final class HomeownerProfileValidator
             'profile_photo_upload.mimetypes' => 'Upload a JPEG, PNG, or WebP image.',
             'profile_photo_upload.extensions' => 'Upload a file with a JPG, JPEG, PNG, or WebP extension.',
             'profile_photo_upload.dimensions' => 'The profile photo must be between 100 and 4000 pixels on each side.',
-        ];
+        ]);
     }
 
     /** @return array<string, string> */
     public function attributes(): array
     {
-        return [
+        return array_map(fn (string $attribute): string => __($attribute), [
             'first_name' => 'first name',
             'middle_name' => 'middle name',
             'last_name' => 'last name',
@@ -176,7 +180,7 @@ final class HomeownerProfileValidator
             'emergency_contact_name' => 'emergency contact name',
             'emergency_contact_number' => 'emergency contact number',
             'profile_photo_upload' => 'profile photo',
-        ];
+        ]);
     }
 
     /** @return array{valid: bool, message: string} */
@@ -194,7 +198,7 @@ final class HomeownerProfileValidator
             return ['valid' => false, 'message' => $validator->errors()->first('email')];
         }
 
-        return ['valid' => true, 'message' => self::EMAIL_AVAILABLE_MESSAGE];
+        return ['valid' => true, 'message' => __(self::EMAIL_AVAILABLE_MESSAGE)];
     }
 
     /** @param array<string, mixed> $address @return array{valid: bool, message: string} */
@@ -203,9 +207,10 @@ final class HomeownerProfileValidator
         $normalized = PropertyAddress::normalizeForStorage([
             ...$address,
             'phase' => $homeowner->phase,
+            'phase_suffix' => $homeowner->phase_suffix,
         ]);
         $validator = Validator::make($normalized, [
-            'house_number' => ['required', 'string', 'max:50'],
+            'house_number' => ['nullable', 'string', 'max:50'],
             'street' => ['required', 'string', 'max:100'],
             'block' => ['required', 'string', 'max:20'],
             'lot' => ['required', 'string', 'max:20'],
@@ -219,16 +224,19 @@ final class HomeownerProfileValidator
         $message = $this->addressConflictMessage($homeowner, $normalized);
 
         return $message === null
-            ? ['valid' => true, 'message' => self::ADDRESS_AVAILABLE_MESSAGE]
-            : ['valid' => false, 'message' => $message];
+            ? ['valid' => true, 'message' => __(self::ADDRESS_AVAILABLE_MESSAGE)]
+            : ['valid' => false, 'message' => __($message)];
     }
 
     /** @param array<string, mixed> $normalized */
     private function addressConflictMessage(Homeowner $homeowner, array $normalized): ?string
     {
-        $newKey = PropertyAddress::key($normalized);
-        if ($newKey === $homeowner->address_key) {
+        if (PropertyIdentity::same($normalized, $homeowner)) {
             return null;
+        }
+
+        if ($this->addressAvailability->financialMoveNeedsReview($homeowner, $normalized)) {
+            return PropertyAddressAvailability::BILLED_MOVE_MESSAGE;
         }
 
         if ($homeowner->landlord_homeowner_id !== null || $homeowner->tenants()->exists()) {
@@ -239,7 +247,7 @@ final class HomeownerProfileValidator
             ...$normalized,
             'ownership_type' => $homeowner->ownership_type,
         ], $homeowner->id)) {
-            return PropertyAddressAvailability::UNAVAILABLE_MESSAGE;
+            return $this->addressAvailability->needsReview($normalized, $homeowner->id) ? PropertyAddressAvailability::REVIEW_MESSAGE : PropertyAddressAvailability::UNAVAILABLE_MESSAGE;
         }
 
         return null;
@@ -252,7 +260,7 @@ final class HomeownerProfileValidator
         return filled($collapsed) ? $collapsed : null;
     }
 
-    private function normalizePhone(mixed $value): string
+    public static function normalizePhone(mixed $value): string
     {
         return (string) preg_replace('/[\s().-]+/u', '', trim((string) $value));
     }

@@ -1,0 +1,12 @@
+{
+    "source_filename": "resibo butaw.docx",
+    "source_sha256": "a290ec1c2cbf7c17f403461ea94577205ee541be35ebe213eccc8ccb14cb04d9",
+    "source_bytes": 69678,
+    "status": "word-exported-engineering-mapping-awaiting-hoa-approval",
+    "pdf_sha256": "feed735518798f36a9b195aef1695028a2fc903eb2841b720fb08b9ca39343f9",
+    "pdf_pages": 1,
+    "visible_slips": 10,
+    "export_method": "Microsoft Word ExportAsFixedFormat through native Windows Script Host COM; macros disabled, preservation copy read-only",
+    "official_approval": false,
+    "note": "The unchanged DOCX is preserved as original.docx. No earlier PDF or inferred coordinates may be used as its replacement."
+}

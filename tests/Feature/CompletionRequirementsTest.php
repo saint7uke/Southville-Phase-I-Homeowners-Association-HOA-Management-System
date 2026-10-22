@@ -48,7 +48,8 @@ final class CompletionRequirementsTest extends TestCase
 
         $this->assertTrue($staff->can('update', $payment));
         $this->assertTrue($admin->can('update', $payment));
-        $this->actingAs($obligation->homeowner->user, 'web')->get(route('payments.receipt.download', $payment))->assertOk();
+        // Eligible original receipts are explicitly generated through Certificates, never on a download GET.
+        $this->actingAs($obligation->homeowner->user, 'web')->get(route('payments.receipt.download', $payment))->assertStatus(409);
 
         $payment->delete();
         $this->assertSame('0.00', $obligation->refresh()->amount_paid);

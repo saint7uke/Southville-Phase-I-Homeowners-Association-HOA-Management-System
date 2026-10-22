@@ -17,6 +17,7 @@ final class PropertyAddress
             'block' => mb_strtoupper(self::collapse($address['block'] ?? ''), 'UTF-8'),
             'lot' => mb_strtoupper(self::collapse($address['lot'] ?? ''), 'UTF-8'),
             'phase' => self::collapse($address['phase'] ?? self::DEFAULT_PHASE) ?: self::DEFAULT_PHASE,
+            ...(array_key_exists('phase_suffix', $address) ? ['phase_suffix' => PropertyIdentity::suffix($address['phase_suffix'])] : []),
         ];
     }
 
@@ -38,6 +39,9 @@ final class PropertyAddress
 
     private static function collapse(mixed $value): string
     {
+        if ($value !== null && ! is_scalar($value)) {
+            return '';
+        }
         $value = (string) $value;
         if (class_exists(\Normalizer::class)) {
             $value = \Normalizer::normalize($value, \Normalizer::FORM_KC) ?: $value;

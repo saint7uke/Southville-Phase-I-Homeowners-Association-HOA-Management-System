@@ -48,12 +48,15 @@
 
 .hoa-navbar { position: fixed; z-index: 100; inset: 0 0 auto; height: 78px; color: #fff; transition: color .25s ease, background .25s ease, box-shadow .25s ease; }
 .hoa-navbar.is-scrolled { background: rgb(255 255 255 / .95); box-shadow: 0 10px 35px rgb(10 46 65 / .08); color: var(--hoa-ink); backdrop-filter: blur(14px); }
-.hoa-navbar-inner { display: flex; width: min(100% - 2rem, 82rem); height: 100%; align-items: center; justify-content: space-between; margin-inline: auto; }
+.hoa-navbar-inner { display: flex; width: min(100% - 2rem, 82rem); height: 100%; align-items: center; justify-content: space-between; gap: .75rem; margin-inline: auto; }
+.hoa-navbar .hoa-brand { min-width: 0; }
 .hoa-brand { display: inline-flex; align-items: center; gap: .72rem; line-height: 1.15; }
-.hoa-brand > span:last-child { display: flex; flex-direction: column; }
+.hoa-brand > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.hoa-navbar .hoa-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hoa-nav-utilities { display: flex; flex: 0 0 auto; align-items: center; gap: .5rem; }
 .hoa-brand strong { font-size: .86rem; letter-spacing: -.015em; }
 .hoa-brand small { margin-top: .18rem; font-size: .58rem; letter-spacing: .09em; text-transform: uppercase; opacity: .72; }
-.hoa-brand-mark { display: grid; width: 40px; height: 40px; place-items: center; overflow: hidden; border: 2px solid currentColor; border-radius: 50%; font-size: .72rem; font-weight: 800; }
+.hoa-brand-mark { display: grid; flex-shrink: 0; width: 40px; height: 40px; place-items: center; overflow: hidden; border: 2px solid currentColor; border-radius: 50%; font-size: .72rem; font-weight: 800; }
 .hoa-brand-mark img { width: 100%; height: 100%; object-fit: contain; border-radius: inherit; }
 .hoa-nav { display: flex; align-items: center; gap: clamp(.8rem, 1.6vw, 1.55rem); }
 .hoa-nav > a:not(.hoa-button) { position: relative; padding-block: .7rem; font-size: .72rem; font-weight: 600; }
@@ -193,7 +196,7 @@
     .hoa-footer-main nav { grid-column: auto; }
 }
 
-@media (max-width: 899px) {
+@media (max-width: 1199px) {
     .hoa-menu-toggle { display: block; }
     .hoa-nav { position: absolute; top: 68px; right: 1rem; left: 1rem; display: none; align-items: stretch; padding: 1rem; border: 1px solid var(--hoa-line); border-radius: 16px; background: #fff; box-shadow: 0 22px 50px rgb(5 41 59 / .16); color: var(--hoa-ink); }
     .hoa-nav.is-open { display: grid; }
@@ -205,6 +208,7 @@
 @media (max-width: 479px) {
     .hoa-navbar { height: 70px; }
     .hoa-brand small { display: none; }
+    .hoa-navbar .hoa-brand > span:last-child { display: none; }
     .hoa-hero-actions, .hoa-hero-actions .hoa-button { width: 100%; }
     .hoa-stats > div { padding: 1.1rem; }
     .hoa-service-card, .hoa-announcement-card { min-height: 230px; }

@@ -32,9 +32,9 @@ final class HoaOverview extends StatsOverviewWidget
         return [
             Stat::make('Total homeowners', $totalHomeowners)->description($activeHomeowners.' active')->icon(Heroicon::OutlinedHomeModern)->color('success'),
             Stat::make('Collections this month', 'PHP '.number_format((float) Payment::query()->whereIn('review_status', ['Approved', 'Recorded'])->whereBetween('payment_date', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])->sum('amount_paid'), 2))->description(now()->format('F Y'))->icon(Heroicon::OutlinedBanknotes)->color('info'),
-            Stat::make('Outstanding dues', 'PHP '.number_format((float) $outstanding, 2))->description('Pending, partial and overdue')->icon(Heroicon::OutlinedReceiptPercent)->color('warning'),
-            Stat::make('Delinquent accounts', Homeowner::query()->where('status', 'Delinquent')->count())->description('Requires follow-up')->icon(Heroicon::OutlinedExclamationCircle)->color('danger'),
-            Stat::make('Open concerns', Complaint::query()->whereIn('status', ['Pending', 'Under Review'])->count())->description('Pending or under review')->icon(Heroicon::OutlinedExclamationTriangle)->color('warning'),
+            Stat::make('Outstanding dues', 'PHP '.number_format((float) $outstanding, 2))->description(__('Pending, partial and overdue'))->icon(Heroicon::OutlinedReceiptPercent)->color('warning'),
+            Stat::make('Delinquent accounts', Homeowner::query()->where('status', 'Delinquent')->count())->description(__('Requires follow-up'))->icon(Heroicon::OutlinedExclamationCircle)->color('danger'),
+            Stat::make('Open concerns', Complaint::query()->whereIn('status', ['Pending', 'Under Review'])->count())->description(__('Pending or under review'))->icon(Heroicon::OutlinedExclamationTriangle)->color('warning'),
             Stat::make('Pending requests', ServiceRequest::query()->whereIn('status', ['Pending', 'Processing'])->count())->description(User::query()->where('account_status', 'Pending')->count().' registrations await review')->icon(Heroicon::OutlinedClipboardDocumentList)->color('primary'),
         ];
     }

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\Pages\Login;
 use App\Filament\Auth\Pages\RequestPasswordReset;
+use App\Filament\Homeowner\Pages\MyHousehold;
 use App\Filament\Homeowner\Pages\MyProfile;
 use App\Filament\Homeowner\Resources\Announcements\AnnouncementResource;
 use App\Filament\Homeowner\Resources\Certificates\CertificateResource;
@@ -20,6 +22,7 @@ use App\Filament\Widgets\DashboardAccount;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\EnsurePanelIsEnabled;
 use App\Http\Middleware\MigrateLegacyPanelSession;
+use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -43,7 +46,7 @@ final class HomeownerPanelProvider extends PanelProvider
             ->path('homeowner')
             ->authGuard('homeowner')
             ->authPasswordBroker('users')
-            ->login()
+            ->login(Login::class)
             ->passwordReset(requestAction: RequestPasswordReset::class)
             ->emailVerification()
             ->darkMode()
@@ -66,6 +69,7 @@ final class HomeownerPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
                 MyProfile::class,
+                MyHousehold::class,
             ])
             ->resources([
                 DuesObligationResource::class,
@@ -86,6 +90,7 @@ final class HomeownerPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                SetLocale::class,
                 EnsurePanelIsEnabled::class,
                 MigrateLegacyPanelSession::class,
                 AuthenticateSession::class,

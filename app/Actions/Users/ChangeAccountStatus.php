@@ -31,16 +31,16 @@ final class ChangeAccountStatus
 
         if ($actor->is($user) && $to !== UserAccountStatus::Active) {
             throw ValidationException::withMessages([
-                'account_status' => 'You cannot deactivate or suspend your own account.',
+                'account_status' => __('You cannot deactivate or suspend your own account.'),
             ]);
         }
 
         if ($to === UserAccountStatus::Rejected && $reason === null) {
-            throw ValidationException::withMessages(['rejection_reason' => 'A rejection reason is required.']);
+            throw ValidationException::withMessages(['rejection_reason' => __('A rejection reason is required.')]);
         }
 
         if ($to === UserAccountStatus::Suspended && $reason === null) {
-            throw ValidationException::withMessages(['suspension_reason' => 'A suspension reason is required.']);
+            throw ValidationException::withMessages(['suspension_reason' => __('A suspension reason is required.')]);
         }
 
         $updated = DB::transaction(function () use ($user, $actor, $to, $reason): User {
@@ -65,7 +65,7 @@ final class ChangeAccountStatus
 
             if ($lockedUser->hasRole('hoa_admin') && $to !== UserAccountStatus::Active && $activeAdmins->count() <= 1) {
                 throw ValidationException::withMessages([
-                    'account_status' => 'At least one active HOA administrator is required.',
+                    'account_status' => __('At least one active HOA administrator is required.'),
                 ]);
             }
 

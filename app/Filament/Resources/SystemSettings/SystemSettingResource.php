@@ -39,7 +39,7 @@ final class SystemSettingResource extends Resource
                 TextInput::make('contact_email')->email()->maxLength(255),
                 TextInput::make('address')->required()->maxLength(500)->columnSpanFull(),
                 FileUpload::make('logo_path')
-                    ->label('HOA logo')
+                    ->label(__('HOA logo'))
                     ->disk('local')
                     ->directory('branding')
                     ->visibility('private')
@@ -49,7 +49,7 @@ final class SystemSettingResource extends Resource
                     ->getUploadedFileNameForStorageUsing(fn (TemporaryUploadedFile $file): string => (string) str()->ulid().'.'.$file->guessExtension())
                     ->downloadable()
                     ->columnSpanFull(),
-                TextInput::make('delinquency_months')->label('Consecutive overdue months before delinquency')->integer()->minValue(1)->maxValue(12)->required(),
+                TextInput::make('delinquency_months')->label(__('Consecutive overdue months before delinquency'))->integer()->minValue(1)->maxValue(12)->required(),
             ])->columns(2),
             Section::make('Email notifications')->schema([
                 Toggle::make('complaint_notifications'),
@@ -60,13 +60,13 @@ final class SystemSettingResource extends Resource
                 Toggle::make('delinquency_notifications'),
                 Toggle::make('contact_notifications'),
             ])->columns(2),
-            Section::make('Panel availability')->description('Admin access always remains available.')->schema([
+            Section::make('Panel availability')->description(__('Admin access always remains available.'))->schema([
                 Toggle::make('staff_panel_enabled'),
                 Toggle::make('homeowner_panel_enabled'),
             ])->columns(2),
-            Section::make('SMTP configuration')->description('Credentials remain environment-managed and are never stored in the database.')->schema([
-                TextInput::make('smtp_host')->label('SMTP host')->default((string) config('mail.mailers.smtp.host'))->disabled()->dehydrated(false),
-                TextInput::make('smtp_from')->label('From address')->default((string) config('mail.from.address'))->disabled()->dehydrated(false),
+            Section::make('SMTP configuration')->description(__('Credentials remain environment-managed and are never stored in the database.'))->schema([
+                TextInput::make('smtp_host')->label(__('SMTP host'))->default((string) config('mail.mailers.smtp.host'))->disabled()->dehydrated(false),
+                TextInput::make('smtp_from')->label(__('From address'))->default((string) config('mail.from.address'))->disabled()->dehydrated(false),
             ])->columns(2),
         ]);
     }
@@ -74,8 +74,8 @@ final class SystemSettingResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('hoa_name')->label('HOA'),
-            TextColumn::make('delinquency_months')->label('Delinquency threshold')->suffix(' months'),
+            TextColumn::make('hoa_name')->label(__('HOA')),
+            TextColumn::make('delinquency_months')->label(__('Delinquency threshold'))->suffix(' months'),
             IconColumn::make('staff_panel_enabled')->boolean(),
             IconColumn::make('homeowner_panel_enabled')->boolean(),
             TextColumn::make('updated_at')->dateTime()->sortable(),

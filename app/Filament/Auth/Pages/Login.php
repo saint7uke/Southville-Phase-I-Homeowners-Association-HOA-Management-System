@@ -4,13 +4,42 @@ declare(strict_types=1);
 
 namespace App\Filament\Auth\Pages;
 
+use App\Services\UnifiedAuthentication;
+use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
 use Filament\Actions\Action;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse;
 use Filament\Auth\Pages\Login as BaseLogin;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
+use Illuminate\Validation\ValidationException;
 
 class Login extends BaseLogin
 {
+    public function mount(): void
+    {
+        $this->form->fill();
+        $this->redirect(route('login'), navigate: false);
+    }
+
+    public function authenticate(): ?LoginResponse
+    {
+        try {
+            $this->rateLimit(5);
+        } catch (TooManyRequestsException $exception) {
+            $this->getRateLimitedNotification($exception)?->send();
+
+            return null;
+        }
+        try {
+            $url = app(UnifiedAuthentication::class)->authenticate($this->form->getState());
+        } catch (ValidationException $exception) {
+            throw ValidationException::withMessages(['data.email' => $exception->errors()['email']]);
+        }
+        $this->redirect($url, navigate: false);
+
+        return null;
+    }
+
     protected string $view = 'filament.auth.login';
 
     protected static string $portalTitle = 'Admin Login';

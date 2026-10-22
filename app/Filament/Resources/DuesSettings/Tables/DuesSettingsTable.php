@@ -33,12 +33,12 @@ class DuesSettingsTable
                     ->sortable(),
                 TextColumn::make('frequency')
                     ->searchable(),
-                TextColumn::make('due_day')->label('Due day')->sortable(),
+                TextColumn::make('due_day')->label(__('Due day'))->sortable(),
                 TextColumn::make('starts_on')->date('M d, Y')->sortable(),
-                TextColumn::make('ends_on')->date('M d, Y')->placeholder('Ongoing')->sortable(),
+                TextColumn::make('ends_on')->date('M d, Y')->placeholder(__('Ongoing'))->sortable(),
                 IconColumn::make('is_active')
                     ->boolean(),
-                TextColumn::make('creator.full_name')->label('Created by')->placeholder('Legacy record'),
+                TextColumn::make('creator.full_name')->label(__('Created by'))->placeholder(__('Legacy record')),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -49,11 +49,11 @@ class DuesSettingsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('frequency')->options(['Monthly' => 'Monthly', 'Annual' => 'Annual', 'Special Assessment' => 'Special Assessment']),
+                SelectFilter::make('frequency')->options(['Monthly' => __('Monthly'), 'Annual' => __('Annual'), 'Special Assessment' => __('Special Assessment')]),
                 SelectFilter::make('is_active')->options(['1' => 'Active', '0' => 'Inactive']),
                 Filter::make('starts_on')->schema([
-                    DatePicker::make('from')->label('Starts from'),
-                    DatePicker::make('to')->label('Starts to')->afterOrEqual('from'),
+                    DatePicker::make('from')->label(__('Starts from')),
+                    DatePicker::make('to')->label(__('Starts to'))->afterOrEqual('from'),
                 ])->query(fn (Builder $query, array $data): Builder => $query
                     ->when($data['from'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('starts_on', '>=', $date))
                     ->when($data['to'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('starts_on', '<=', $date))),
@@ -61,9 +61,9 @@ class DuesSettingsTable
             ->recordActions([
                 EditAction::make(),
                 Action::make('deactivate')
-                    ->label('Close schedule')
+                    ->label(__('Close schedule'))
                     ->requiresConfirmation()
-                    ->modalDescription('The schedule will end after its latest generated billing month and will no longer generate obligations.')
+                    ->modalDescription(__('The schedule will end after its latest generated billing month and will no longer generate obligations.'))
                     ->color('warning')
                     ->visible(fn (DuesSetting $record): bool => $record->is_active)
                     ->action(function (DuesSetting $record): void {

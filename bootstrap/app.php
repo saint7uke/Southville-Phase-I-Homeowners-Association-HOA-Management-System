@@ -5,6 +5,7 @@ use App\Http\Middleware\AuthenticateProfilePhoto;
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureHomeownerIsApproved;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\ValidateRegistrationStatusSignature;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
+        $middleware->web(append: [SetLocale::class]);
         $middleware->alias([
             'account.active' => EnsureActiveAccount::class,
             'profile-photo.auth' => AuthenticateProfilePhoto::class,

@@ -9,7 +9,7 @@
             <h2 id="hoa-auth-intro-title">{{ $this->getPortalWelcome() }}</h2>
             <p class="hoa-filament-auth-support">{{ $this->getPortalSupport() }}</p>
             <div class="hoa-filament-auth-rule" aria-hidden="true"></div>
-            <p class="hoa-filament-auth-note">Secure access for Southville Phase I HOA members and teams.</p>
+            <p class="hoa-filament-auth-note"><span data-i18n="Secure access for Southville Phase I HOA members and teams.">{{ __('Secure access for Southville Phase I HOA members and teams.') }}</span></p>
         </aside>
 
         <section class="hoa-filament-auth-form" aria-labelledby="hoa-auth-form-title">

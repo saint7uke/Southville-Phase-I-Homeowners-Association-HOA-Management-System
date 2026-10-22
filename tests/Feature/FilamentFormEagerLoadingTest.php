@@ -38,7 +38,8 @@ final class FilamentFormEagerLoadingTest extends TestCase
             ->assertOk()
             ->assertSeeText('Automatically set to the last day of the current year.');
 
-        foreach (['complaints', 'service-requests'] as $resource) {
+        $this->actingAs($admin, 'admin')->get('/admin/complaints/create')->assertForbidden();
+        foreach (['service-requests'] as $resource) {
             $this->actingAs($admin, 'admin')
                 ->get("/admin/{$resource}/create")
                 ->assertOk();

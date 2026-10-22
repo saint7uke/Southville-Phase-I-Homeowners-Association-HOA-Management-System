@@ -29,19 +29,19 @@ final class TenantsRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                TextColumn::make('user.full_name')->label('Tenant')->searchable(['first_name', 'last_name']),
-                TextColumn::make('user.contact_number')->label('Contact'),
-                TextColumn::make('lease_start_date')->label('Lease starts')->date(),
-                TextColumn::make('lease_end_date')->label('Lease ends')->date(),
-                TextColumn::make('user.account_status')->label('Account')->badge(),
-                TextColumn::make('landlord_relationship_status')->label('Relationship')->badge(),
+                TextColumn::make('user.full_name')->label(__('Tenant'))->searchable(['first_name', 'last_name']),
+                TextColumn::make('user.contact_number')->label(__('Contact')),
+                TextColumn::make('lease_start_date')->label(__('Lease starts'))->date(),
+                TextColumn::make('lease_end_date')->label(__('Lease ends'))->date(),
+                TextColumn::make('user.account_status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->label(__('Account'))->badge(),
+                TextColumn::make('landlord_relationship_status')->label(__('Relationship'))->badge(),
             ])
             ->recordActions([
                 Action::make('viewTenant')
-                    ->label('View')
+                    ->label(__('View'))
                     ->url(fn (Homeowner $record): string => HomeownerResource::getUrl('view', ['record' => $record])),
                 Action::make('manageTenant')
-                    ->label('Manage')
+                    ->label(__('Manage'))
                     ->url(fn (Homeowner $record): string => HomeownerResource::getUrl('edit', ['record' => $record])),
             ]);
     }

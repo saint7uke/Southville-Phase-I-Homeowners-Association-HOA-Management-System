@@ -1,8 +1,34 @@
 # System-wide audit and targeted repairs
 
+## Original receipt PDF correction — 2026-10-21
+
+The configured ten-slip DOCX export did not match the newly uploaded single-slip PDF. The new PDF is preserved under a separate versioned asset directory and served byte-for-byte for private source review; original-font blank overlays are remapped to its actual geometry. Historical sources/documents remain intact and no old approval is inherited. Empty monthly-receipt history now explains that only generated PDFs appear and links to the existing permission-checked receipt form. The interrupted list-page syntax error is repaired. See [the correction audit](receipt-pdf-source-correction.md) for engineering evidence and final tests; no financial repairs, live approval or schema change were performed.
+
+Final correction evidence: **402 SQLite tests passed, five native-only skips, 4,178 assertions**; 21 focused tests and four distinct Chromium scenarios passed, with the initial pending-dialog test timeout and successful targeted retry explicitly retained. Source review matches the uploaded SHA-256, and generated-PDF raster changes are confined to original blank-field rectangles. Build/Pint/syntax/parity checks passed. Native-engine, all-engine, physical print and real HOA/security approval are not inferred from these results.
+
+## Certificate interface follow-up — 2026-10-21
+
+Source/signatory approval remains one-time setup, but its controls no longer dominate the certificate list. Two daily actions and one administrator-only setup dropdown replace the seven-button header; completed source approvals hide, review links remain grouped, and saved receipt viewing has no submission step. See [the interface audit](certificate-interface-simplification.md). No approval, permission or document-design safeguards were removed. Full SQLite regression: **394 passed, five native-only skips, 4,112 assertions**; focused/interface and three Chromium scenarios passed, with earlier timing/test-harness failures disclosed in the audit. No new migration or live approval was executed.
+
+## Latest targeted continuation: registration and original monthly receipt
+
+See [the registration/Phase/Resibo audit](registration-phase-resibo-butaw.md) and [revision evidence](shoai-revision-progress.md) for the 2026-10-21 continuation. Confirmed registration CSS/state issues are repaired; required Phase suffix and nullable historical House Number compatibility are implemented. Shared confirmed property identity now protects registration, landlord matching, households, payers and future assessments without guessing legacy suffixes or rewriting historical ledgers.
+
+Additional reproduced safeguards preserve existing assessments: a current-period liable account cannot silently move its assessment, and an archived unresolved account's assessment requires review before another confirmed assessment is generated. The read-only identity report exposes those conflicts. No live account/financial repair was performed.
+
+Native Word export succeeded through Windows scripting after PowerShell automation stalled. The exact preserved Resibo Butaw source is integrated into Certificates with first-slip-only overlays, private previews, payment-specific permission checks and immutable, idempotent saved PDFs. Source approval remains an actual HOA decision, not inferred from a test fixture. The latest full SQLite run passed 389 tests with five native-only skips; final native/browser/check details and interruptions are explicitly recorded in the revision checklist. This is bounded verification, not whole-system or host-security certification.
+
+Final evidence for this increment: focused native MySQL 8.4.9 **61 passed / 379 assertions**, 18 distinct browser scenarios passed across Chromium/Firefox/WebKit (interrupted combined run plus final targeted retry), 435 PHP syntax checks passed, Pint/JavaScript/diff checks passed and production build passed. Composer advisory retry and production npm audit found no advisories. The final full-suite run was SQLite, not a full final MySQL rerun. Remaining legacy-data review, real HOA approvals, licensed font provisioning/physical print acceptance and independent host recovery remain explicit release boundaries.
+
 Audit date: 2026-10-18 (Asia/Manila). Baseline: `4fe268d`. Local Windows/XAMPP, PHP 8.2.12; Laravel 12, Filament 4.13.0 initially. Findings below describe inspected paths and reproduced behavior, not a certification of the entire application or host.
 
+## Localization follow-up (2026-10-20)
+
+Confirmed report-filter regression: Filipino rendering submitted translated status values rather than canonical workflow values. The report Blade now translates labels only; a Livewire test verifies `Resolved` remains the submitted value and successfully previews the complaint report. Actual lowercase workflow-notification types now have dictionary/test coverage. Report placeholders and summary labels received targeted presentation-only localization. See `shoai-revision-progress.md` for current command results, browser diagnostics and coverage boundaries. These fixes do not close SEC-01 or constitute complete localization approval.
+
 ## Release decision: incident recovery required
+
+Certificate workflow follow-up (2026-10-20): the separate template-management UI was removed at the user's direction. Residency now uses only the uploaded source, with source/signatory confirmation, actor-bound expiring preview, transactionally idempotent issuance and stored-PDF View/Print within the certificate resource. No live migration or actual source approval was performed. Current evidence and deployment/font prerequisites are in `original-residency-template.md` and `shoai-revision-progress.md`; earlier template-management entries describe historical checkpoints, not the current UI.
 
 **SEC-01 is a critical, confirmed repository compromise.** `vite.config.js` contained executable obfuscated code after the normal configuration. The build configuration had already been executed before discovery during this audit (and in earlier recorded builds). Static decoding, using Python string transformations without evaluating the JavaScript, established that it:
 
@@ -136,3 +162,56 @@ No new schema migration is required by these fixes. Existing migrations were exe
 7. Installer distributions `composer.phar` and `composer-setup.php` remain tracked local tooling. The installer is excluded from formatting; no conclusion about workstation compromise depends on merely finding these files.
 
 Changes are intended for an ordinary reviewed follow-up commit. No push, deployment, external notification, credential rotation or live-data repair was performed.
+
+## Follow-up: phased revision, 2026-10-20
+
+The first staged revision repairs profile phone-state injection and a legacy missing-phase save blocker, introduces Cash-only new recording, disables new electronic proofs while preserving review/history, and adds an authorized current-month dues recovery action using the existing generator. Payment method/reference metadata is now immutable. Published Filament assets have been synchronized with installed packages.
+
+Phase 2–3 source increments now add unified role-selected authentication and secure invitations; homeowner-only complaint creation; restricted new certificate types, grandfathered requests, versioned approval-gated templates and snapshots; provisional household/RBI management and account-only membership moves; private published-project images; and persistent English/Filipino locale infrastructure. Browser regression testing additionally corrected locale CSRF handling. The full SQLite checkpoint passed **321 tests, two SQL-only skips, 1,523 assertions**; the expanded targeted selection passed **63 tests, 423 assertions**. The SQL service is available again: **32 tests, 219 assertions** passed on a new disposable **MariaDB 10.4.32** database, including both payment concurrency scenarios. This is not native MySQL 8.4 verification.
+
+See [the phased revision checklist](shoai-revision-progress.md) for exact commands, migration/backfill safeguards, later checks and remaining coverage. Complete human-reviewed translation coverage, wider browser acceptance, native MySQL 8.4 and independent incident recovery remain explicit gates/work items. No live-data migration/repair, officer provisioning, external notification, push or deployment is included.
+
+Final delivery checkpoint: **328 passed, two SQL-only skips, 1,561 assertions** on SQLite, with later modal/private-draft checks also passing. Two separate Chromium runs passed **four workflows**, including actual profile persistence, responsive/Axe checks and no-remount language switching with unsaved React input and a temporary photo upload. The runtime upload check used normal CSRF enforcement against the isolated database. The production build, PHP syntax, formatting and whitespace checks passed at the documented checkpoints. This is bounded verification, not a certification that every application behavior or deployment environment has been tested.
+
+## Localization / release-readiness continuation — 2026-10-20
+
+Shared dictionaries, presentation-only form/status translations, notification placeholders, live validation feedback and source inventory have been expanded. Browser checks corrected the Filament 4 field-label selector and feedback restoration after unrelated Livewire morphs. Contact submission retained React's form reference across asynchronous work and uses the existing session/CSRF-aware browser route; a real successful save no longer becomes a false failure on form reset.
+
+Native MySQL Community Server **8.4.9** was found outside PATH and tested through a separate loopback instance/data directory/database, not XAMPP's MariaDB or `hoa_system`. Its first full run passed 338 tests and exposed one test-only 39-character ticket fixture violating the real 32-character schema limit. The synthetic identifier was shortened without changing schema/data policy. Native document/migration/concurrency recheck passed **13 tests, 70 assertions**; final full-run results belong in the revision checklist, not an inferred pass here.
+
+Firefox and WebKit each passed four isolated payment/access/household scenarios. These do not establish every workflow or whole-product accessibility. The authoritative ongoing results, failures/retries, coverage boundaries and evidence paths are in `shoai-revision-progress.md` and `localization-coverage.md`.
+
+HOA approval and independent host/credential recovery are still open. Review packages document responsible evidence and sign-off, not substitute approvals. Native tests on the current workstation do not establish host trust. No `.env` change, live migration/data repair, external notification, credential rotation, push or deployment was authorized or performed in this continuation.
+
+Final native MySQL **8.4.9** full rerun passed **339 tests, 3,575 assertions, no skips** (623.39 seconds). Wider browser evidence covers nine Chromium scenarios across a combined run and documented targeted setup retry, plus four Firefox and four WebKit scenarios. The combined Chromium run was **8 passed / 1 fixture-setup failure**, not an unconditional green run; the corrected payment setup retry passed. See the revision checklist for exact scope and limitations. Temporary test servers were stopped; disposable evidence/data was retained without touching the live database or existing XAMPP service.
+
+## Focused follow-up: Cohabitation request guidance (2026-10-22)
+
+Confirmed and fixed an advertised Cohabitation draft-preview action that always
+returned HTTP 409. Approved managers now enter existing certificate preparation;
+other authorized viewers receive localized status guidance. Strict homeowner
+request-list lazy loading was also reproduced and repaired with eager loading.
+Full SQLite checkpoint: **479 passed, six SQL-only skips, 5,336 assertions**;
+no failures/errors. This does not supersede native MySQL/security/HOA release
+gates or imply complete live-browser coverage. See
+[the focused audit](cohabitation-request-guidance.md) for evidence and limitations.
+No live-data/source-approval changes, migration, notification, push or deployment.
+
+## Focused follow-up: service-request editing (2026-10-22)
+
+Confirmed medium-severity workflow defects: the dropdown offered transitions
+rejected by the model, domain errors were not mapped to Filament field paths,
+certificate requests could be completed without a certificate, and successful
+locked updates left the form-bound record stale. Shared transition rules,
+mapped field errors, issuance-controlled completion and post-save model refresh
+repair these conflicts without changing existing permissions or original sources.
+Focused checkpoint: **34 passed / 580 assertions**. Full/browser results and
+limitations are tracked in [the save-workflow audit](service-request-editing.md).
+No live request was advanced or repaired; no migration or source approval.
+
+Final SQLite result for the edit repair: **491 passed / six native-only skips /
+5,567 assertions**, no failures/errors. Initial and serial Chromium attempts each
+had two timeout errors at request-list loading before editing. Browser acceptance
+remains blocked, with root cause unconfirmed; no responsive/Axe/save-browser pass
+or native concurrency rerun is claimed. Owned test servers were stopped and
+synthetic diagnostics retained. See the focused audit for exact evidence.

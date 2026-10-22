@@ -28,9 +28,9 @@ final class WorkflowNotificationObserver
         }
 
         $alert = match (true) {
-            $model instanceof Complaint && $settings->complaint_notifications => new OperationalAlert('New homeowner complaint', "Complaint {$model->ticket_number}: {$model->subject}", url('/staff/complaints')),
-            $model instanceof ServiceRequest && $settings->request_notifications => new OperationalAlert('New homeowner service request', "Request {$model->ticket_number}: {$model->request_type}", url('/staff/service-requests')),
-            $model instanceof ContactMessage && $settings->contact_notifications => new OperationalAlert('New public contact message', "{$model->name}: {$model->subject}", url('/staff/contact-messages')),
+            $model instanceof Complaint && $settings->complaint_notifications => new OperationalAlert('New homeowner complaint', 'Complaint :reference: :subject', url('/staff/complaints'), ['reference' => $model->ticket_number, 'subject' => $model->subject]),
+            $model instanceof ServiceRequest && $settings->request_notifications => new OperationalAlert('New homeowner service request', 'Request :reference: :type', url('/staff/service-requests'), ['reference' => $model->ticket_number, 'type' => $model->request_type]),
+            $model instanceof ContactMessage && $settings->contact_notifications => new OperationalAlert('New public contact message', ':name: :subject', url('/staff/contact-messages'), ['name' => $model->name, 'subject' => $model->subject]),
             default => null,
         };
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\ServiceRequestWorkflow;
 use App\Support\AuthenticatedActor;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,11 +30,13 @@ final class ServiceRequest extends Model
         'Other',
     ];
 
-    protected $fillable = ['homeowner_id', 'ticket_number', 'request_type', 'subject', 'details', 'status', 'admin_remarks', 'document_output', 'handled_by', 'completed_at'];
+    protected $fillable = ['homeowner_id', 'ticket_number', 'request_type', 'subject', 'details', 'status', 'admin_remarks', 'document_output', 'handled_by', 'completed_at', 'cohabitant_one', 'cohabitant_two', 'address_snapshot'];
+
+    protected $attributes = ['grandfathered' => false];
 
     protected function casts(): array
     {
-        return ['completed_at' => 'datetime'];
+        return ['completed_at' => 'datetime', 'address_snapshot' => 'array', 'grandfathered' => 'boolean', 'processed_at' => 'datetime', 'approved_at' => 'datetime'];
     }
 
     public function homeowner(): BelongsTo
@@ -60,22 +63,32 @@ final class ServiceRequest extends Model
     {
         self::creating(fn (ServiceRequest $request) => $request->ticket_number ??= 'REQ-'.now()->format('Y').'-'.Str::upper(Str::random(8)));
         self::updating(function (ServiceRequest $request): void {
+            if ($request->isDirty(['request_type', 'grandfathered', 'homeowner_id', 'ticket_number', 'cohabitant_one', 'cohabitant_two', 'address_snapshot'])) {
+                throw ValidationException::withMessages(['request_type' => __('The original request identity and eligibility cannot be changed.')]);
+            }
             if (! $request->isDirty('status')) {
                 return;
             }
 
-            $allowed = ['Pending' => ['Processing', 'Rejected'], 'Processing' => ['Approved', 'Rejected'], 'Approved' => ['Completed'], 'Completed' => [], 'Rejected' => []];
             $from = (string) $request->getOriginal('status');
-
-            if (! in_array($request->status, $allowed[$from] ?? [], true)) {
-                throw ValidationException::withMessages(['status' => "Status cannot move from {$from} to {$request->status}."]);
+            ServiceRequestWorkflow::assertTransition($from, $request->status);
+            if ($request->status === 'Completed') {
+                app(ServiceRequestWorkflow::class)->assertCompletionDocument($request);
             }
 
             if ($request->status === 'Rejected' && blank($request->admin_remarks)) {
-                throw ValidationException::withMessages(['admin_remarks' => 'Response notes are required when rejecting a request.']);
+                throw ValidationException::withMessages(['admin_remarks' => __('Response notes are required when rejecting a request.')]);
             }
 
             $request->handled_by ??= app(AuthenticatedActor::class)->id();
+            if ($request->status === 'Processing') {
+                $request->processed_by ??= app(AuthenticatedActor::class)->id();
+                $request->processed_at ??= now();
+            }
+            if ($request->status === 'Approved') {
+                $request->approved_by ??= app(AuthenticatedActor::class)->id();
+                $request->approved_at ??= now();
+            }
             if ($request->status === 'Completed') {
                 $request->completed_at ??= now();
             }

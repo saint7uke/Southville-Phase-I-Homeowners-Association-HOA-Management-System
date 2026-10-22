@@ -18,16 +18,20 @@
 <body>
     <header class="certificate-header">
         <img class="certificate-logo" src="{{ $logoDataUri }}" alt="Southville Phase I Homeowners Association logo">
-        <div class="association">{{ mb_strtoupper($settings->hoa_name ?? 'Southville Phase I Homeowners Association') }}</div>
-        <div class="community">{{ $settings->address ?? 'Brgy. Inocencio' }}</div>
+        <div class="association">{{ mb_strtoupper($certificate->document_snapshot['hoa_name'] ?? $settings->hoa_name ?? 'Southville Phase I Homeowners Association') }}</div>
+        <div class="community">{{ $certificate->document_snapshot['hoa_address'] ?? $settings->address ?? 'Brgy. Inocencio' }}</div>
     </header>
-    <h1>{{ mb_strtoupper($certificate->type) }}</h1>
+    <h1>{{ mb_strtoupper($certificate->document_snapshot['title'] ?? $certificate->type) }}</h1>
     <div class="body">
+        @if (!empty($certificate->document_snapshot['body']))
+            <p>{!! nl2br(e($certificate->document_snapshot['body'])) !!}</p>
+        @else
         <p>To whom it may concern:</p>
-        <p>This is to certify that <strong>{{ $certificate->homeowner->user->full_name }}</strong>, resident of <strong>{{ $certificate->homeowner->full_address }}</strong>, is recorded with the Southville Phase I Homeowners Association.</p>
+        <p>This is to certify that <strong>{{ $certificate->document_snapshot['resident_name'] ?? $certificate->homeowner->user->full_name }}</strong>, resident of <strong>{{ $certificate->document_snapshot['full_address'] ?? $certificate->homeowner->full_address }}</strong>, is recorded with the Southville Phase I Homeowners Association.</p>
         @if($certificate->purpose)<p>This certificate is issued upon the resident's request for <strong>{{ $certificate->purpose }}</strong>.</p>@endif
         <p>Issued this {{ $certificate->issued_at->format('jS') }} day of {{ $certificate->issued_at->format('F Y') }}.</p>
-        <div class="signature">{{ $certificate->issuer->full_name }}<br><span style="font-size:10px">Authorized HOA representative</span></div>
+        @endif
+        <div class="signature">{{ $certificate->document_snapshot['signatory_name'] ?? $certificate->issuer->full_name }}<br><span style="font-size:10px">{{ $certificate->document_snapshot['signatory_title'] ?? 'Authorized HOA representative' }}</span></div>
         <p class="number">Certificate no.: {{ $certificate->certificate_number }}@if($certificate->expires_at) · Valid until: {{ $certificate->expires_at->format('F d, Y') }}@endif</p>
     </div>
 </body>

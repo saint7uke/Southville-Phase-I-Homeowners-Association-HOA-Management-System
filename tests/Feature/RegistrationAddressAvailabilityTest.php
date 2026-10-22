@@ -31,7 +31,7 @@ final class RegistrationAddressAvailabilityTest extends TestCase
         $this->homeowner();
 
         $response = $this->postJson(route('homeowner.register.address-availability'), [
-            'house_number' => 'No. 12',
+            'phase_suffix' => ' a ',
             'street' => ' narra st. ',
             'block' => 'Blk. 7',
             'lot' => 'Lot #8',
@@ -76,7 +76,7 @@ final class RegistrationAddressAvailabilityTest extends TestCase
     {
         $this->postJson(route('homeowner.register.address-availability'), [])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['house_number', 'street', 'block', 'lot', 'ownership_type']);
+            ->assertJsonValidationErrors(['phase_suffix', 'street', 'block', 'lot', 'ownership_type']);
 
         $middleware = Route::getRoutes()->getByName('homeowner.register.address-availability')->gatherMiddleware();
         $this->assertContains('throttle:30,1', $middleware);
@@ -204,7 +204,7 @@ final class RegistrationAddressAvailabilityTest extends TestCase
     /** @return array<string, string> */
     private function addressPayload(): array
     {
-        return ['house_number' => '12', 'street' => 'Narra Street', 'block' => '7', 'lot' => '8'];
+        return ['phase_suffix' => 'A', 'street' => 'Narra Street', 'block' => '7', 'lot' => '8'];
     }
 
     /** @return array<string, mixed> */

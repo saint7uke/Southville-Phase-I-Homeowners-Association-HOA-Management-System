@@ -12,6 +12,7 @@ export default defineConfig({
                 'resources/css/filament-auth.css',
                 'resources/css/landing.css',
                 'resources/js/app.js',
+                'resources/js/locale.js',
                 'resources/js/homeowner-profile-validation.js',
                 'resources/js/react/main.jsx',
             ],

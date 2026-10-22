@@ -9,6 +9,8 @@ use App\Filament\Homeowner\Resources\Dues\Pages\ListDuesObligations;
 use App\Models\DuesObligation;
 use App\Models\User;
 use App\Services\PropertyDuesAccounts;
+use App\Support\PaymentMethods;
+use App\Support\PropertyIdentity;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -39,28 +41,28 @@ final class DuesObligationResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table->columns([
-            TextColumn::make('duesSetting.name')->label('Dues type'),
-            TextColumn::make('billing_period')->label('Period')->state(fn (DuesObligation $record): string => sprintf('%04d-%02d', $record->billing_year, $record->billing_month)),
+        return $table->description(__(PaymentMethods::CASH_ONLY_MESSAGE))->columns([
+            TextColumn::make('duesSetting.name')->label(__('Dues type')),
+            TextColumn::make('billing_period')->label(__('Period'))->state(fn (DuesObligation $record): string => sprintf('%04d-%02d', $record->billing_year, $record->billing_month)),
             TextColumn::make('amount_due')->money('PHP')->sortable(),
             TextColumn::make('penalty_amount')->money('PHP')->sortable(),
             TextColumn::make('amount_paid')->money('PHP')->sortable(),
-            TextColumn::make('status')->badge(),
+            TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
             TextColumn::make('due_date')->date()->sortable(),
         ])->defaultSort('due_date')->recordActions([
             Action::make('submitProof')
-                ->label('Submit payment proof')
+                ->label(__('Submit payment proof'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->schema([
-                    TextInput::make('amount_paid')->label('Amount paid')->numeric()->prefix('PHP')->required()->minValue(0.01),
+                    TextInput::make('amount_paid')->label(__('Amount paid'))->numeric()->prefix('PHP')->required()->minValue(0.01),
                     DatePicker::make('payment_date')->required()->maxDate(today())->default(today()),
-                    Select::make('payment_method')->options(['Bank Transfer' => 'Bank Transfer', 'GCash' => 'GCash', 'Maya' => 'Maya'])->required(),
-                    TextInput::make('transaction_reference')->label('Transaction reference')->required()->maxLength(120),
+                    Select::make('payment_method')->options(['Bank Transfer' => __('Bank Transfer'), 'GCash' => __('GCash'), 'Maya' => __('Maya')])->required(),
+                    TextInput::make('transaction_reference')->label(__('Transaction reference'))->required()->maxLength(120),
                     Hidden::make('submission_token')->default(fn (): string => (string) Str::uuid()),
                     Textarea::make('notes')->maxLength(500),
                     FileUpload::make('proof')->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])->maxSize(5120)->storeFiles(false)->required(),
                 ])
-                ->visible(fn (DuesObligation $record): bool => in_array($record->status, ['Pending', 'Partial', 'Overdue'], true)
+                ->visible(fn (DuesObligation $record): bool => PaymentMethods::acceptsNewProofs() && in_array($record->status, ['Pending', 'Partial', 'Overdue'], true)
                     && (Filament::auth()->user()?->can('submit_own_payment_proof') ?? false))
                 ->action(function (DuesObligation $record, array $data): void {
                     $actor = Filament::auth()->user();
@@ -74,7 +76,7 @@ final class DuesObligationResource extends Resource
                         'submission_token' => $data['submission_token'],
                         'notes' => $data['notes'] ?? null,
                     ], $proof);
-                    Notification::make()->success()->title('Proof submitted for staff review')->send();
+                    Notification::make()->success()->title(__('Proof submitted for staff review'))->send();
                 }),
         ]);
     }
@@ -86,7 +88,7 @@ final class DuesObligationResource extends Resource
             return parent::getEloquentQuery()->whereRaw('1 = 0');
         }
 
-        $liable = app(PropertyDuesAccounts::class)->primaryForAddress($resident->address_key);
+        $liable = app(PropertyDuesAccounts::class)->primaryForAddress(PropertyIdentity::key($resident));
         if ($liable === null || ! app(PropertyDuesAccounts::class)->payerIsEligible($resident->loadMissing('user'), $liable->loadMissing('user'))) {
             return parent::getEloquentQuery()->whereRaw('1 = 0');
         }

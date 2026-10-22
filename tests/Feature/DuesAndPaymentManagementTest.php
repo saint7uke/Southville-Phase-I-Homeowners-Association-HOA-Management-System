@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Actions\Dues\GenerateCurrentMonthDues;
 use App\Actions\Dues\GenerateSettingObligations;
 use App\Actions\Dues\SaveDuesSetting;
 use App\Actions\Payments\RecordPayment;
 use App\Actions\Payments\ReviewPaymentProof;
 use App\Actions\Payments\SubmitPaymentProof;
+use App\Actions\Payments\UpdatePaymentMetadata;
 use App\Filament\Resources\DuesSettings\Pages\CreateDuesSetting;
 use App\Filament\Resources\Payments\Pages\CreatePayment;
 use App\Models\DuesObligation;
@@ -20,6 +22,8 @@ use App\Notifications\PaymentReviewCompleted;
 use Carbon\CarbonImmutable;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\TextInput;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
@@ -27,6 +31,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
+use Tests\Support\LegacyPaymentProof;
 use Tests\TestCase;
 
 final class DuesAndPaymentManagementTest extends TestCase
@@ -37,6 +42,100 @@ final class DuesAndPaymentManagementTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+    }
+
+    public function test_new_electronic_recording_is_rejected_but_cash_still_works(): void
+    {
+        $due = $this->obligation($this->resident('Owner', '60', 'Cash Street'), '489.00');
+        $actor = $this->staff();
+        foreach (['GCash', 'Maya', 'Bank Transfer'] as $method) {
+            try {
+                app(RecordPayment::class)->handle([
+                    'dues_obligation_id' => $due->id, 'amount_paid' => '100.00',
+                    'payment_date' => today()->toDateString(), 'payment_method' => $method,
+                    'transaction_reference' => 'FORGED-'.Str::uuid(),
+                ], $actor);
+                $this->fail('Non-cash recording must be rejected.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('payment_method', $exception->errors());
+            }
+        }
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertSame('0.00', $due->fresh()->amount_paid);
+        $payment = app(RecordPayment::class)->handle([
+            'dues_obligation_id' => $due->id, 'amount_paid' => '100.00',
+            'payment_date' => today()->toDateString(), 'payment_method' => 'Cash',
+        ], $actor);
+        $this->assertSame('Cash', $payment->payment_method);
+        $this->assertSame('389.00', $payment->balance);
+    }
+
+    public function test_current_month_recovery_preserves_existing_amounts_and_is_idempotent(): void
+    {
+        $owner = $this->resident('Owner', '61', 'Recovery Street');
+        $due = $this->obligation($owner, '489.00');
+        $due->update(['billing_year' => today()->year, 'billing_month' => today()->month]);
+        $due->duesSetting->update(['amount' => '500.00']);
+        $action = app(GenerateCurrentMonthDues::class);
+        $this->assertSame(0, $action->handle($this->staff()));
+        $this->assertSame('489.00', $due->fresh()->amount_due);
+        $this->resident('Owner', '62', 'Recovery Street');
+        $this->assertSame(1, $action->handle($this->staff()));
+        $this->assertSame(0, $action->handle($this->staff()));
+        $this->assertDatabaseCount('dues_obligations', 2);
+        $this->expectException(AuthorizationException::class);
+        $action->handle($owner->user);
+    }
+
+    public function test_payment_method_and_reference_are_immutable_during_metadata_updates(): void
+    {
+        $actor = $this->staff('hoa_admin');
+        $due = $this->obligation($this->resident('Owner', '63', 'History Street'), '100.00');
+        $payment = Payment::query()->create([
+            'homeowner_id' => $due->homeowner_id, 'dues_setting_id' => $due->dues_setting_id,
+            'dues_obligation_id' => $due->id, 'amount_paid' => '10.00', 'penalty' => '0.00',
+            'payment_date' => today(), 'payment_method' => 'GCash', 'transaction_reference' => 'HISTORIC',
+            'transaction_reference_key' => 'HISTORIC', 'status' => 'Partial', 'review_status' => 'Recorded',
+            'covered_period' => 'October 2026',
+            'recorded_by' => $actor->id,
+        ]);
+        $action = app(UpdatePaymentMetadata::class);
+        $action->handle($payment, ['payment_date' => today()->toDateString(), 'notes' => 'Reviewed historic entry'], $actor);
+        $this->assertSame('GCash', $payment->fresh()->payment_method);
+        $this->assertSame('HISTORIC', $payment->fresh()->transaction_reference);
+        $this->expectException(ValidationException::class);
+        $action->handle($payment, ['payment_date' => today()->toDateString(), 'payment_method' => 'Cash'], $actor);
+    }
+
+    public function test_new_proof_is_rejected_through_both_domain_and_portal_entrypoints(): void
+    {
+        $owner = $this->resident('Owner', '64', 'Proof Disabled Street');
+        $due = $this->obligation($owner, '100.00');
+        $this->actingAs($owner->user, 'web')->post(route('portal.dues-obligations.proof.store', $due), [
+            'amount_paid' => '10.00', 'payment_date' => today()->toDateString(),
+            'payment_method' => 'GCash', 'transaction_reference' => 'NEW-PROOF',
+            'proof' => UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'),
+        ])->assertForbidden();
+        $this->assertDatabaseCount('payments', 0);
+        $this->expectException(AuthorizationException::class);
+        app(SubmitPaymentProof::class)->handle($owner->user, $due, [], UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'));
+    }
+
+    public function test_cash_form_and_confirmed_recovery_action_are_available_without_terminal_instructions(): void
+    {
+        $admin = $this->staff('hoa_admin');
+        $this->actingAs($admin, 'admin');
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $owner = $this->resident('Owner', '65', 'Recovery Interface Street');
+        $this->obligation($owner, '489.00');
+
+        Livewire::test(CreatePayment::class)
+            ->assertFormSet(['payment_method' => 'Cash'])
+            ->assertFormFieldExists('payment_method', fn (TextInput $field): bool => $field->isReadOnly())
+            ->assertDontSee('php artisan')
+            ->callAction('generateCurrentDues')
+            ->assertNotified('No new dues were needed.');
+        $this->assertDatabaseHas('audit_logs', ['action' => 'Dues.current_month_generated', 'user_id' => $admin->id]);
     }
 
     public function test_equivalent_dues_names_cannot_overlap_but_can_follow_a_closed_period(): void
@@ -85,8 +184,7 @@ final class DuesAndPaymentManagementTest extends TestCase
             'amount_paid' => '75.00',
             'penalty' => '0.00',
             'payment_date' => today()->toDateString(),
-            'payment_method' => 'GCash',
-            'transaction_reference' => 'GC-001 234',
+            'payment_method' => 'Cash',
             'submission_token' => $token,
         ];
 
@@ -98,6 +196,7 @@ final class DuesAndPaymentManagementTest extends TestCase
         $this->assertSame(1, Payment::query()->count());
 
         $payload['submission_token'] = (string) Str::uuid();
+        $payload['amount_paid'] = '126.00';
         $this->expectException(ValidationException::class);
         app(RecordPayment::class)->handle($payload, $staff);
     }
@@ -108,7 +207,7 @@ final class DuesAndPaymentManagementTest extends TestCase
         Notification::fake();
         $owner = $this->resident('Owner', '30', 'Proof Street');
         $obligation = $this->obligation($owner, '100.00');
-        $payment = app(SubmitPaymentProof::class)->handle($owner->user, $obligation, [
+        $payment = LegacyPaymentProof::create($owner->user, $obligation, [
             'amount_paid' => '80.00',
             'payment_date' => today()->toDateString(),
             'payment_method' => 'Maya',
@@ -116,10 +215,11 @@ final class DuesAndPaymentManagementTest extends TestCase
         ], UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'));
 
         try {
-            app(SubmitPaymentProof::class)->handle($owner->user, $obligation, [
+            app(RecordPayment::class)->handle([
+                'dues_obligation_id' => $obligation->id,
                 'amount_paid' => '21.00', 'payment_date' => today()->toDateString(),
-                'payment_method' => 'GCash', 'transaction_reference' => 'GC-SECOND',
-            ], UploadedFile::fake()->create('second.pdf', 10, 'application/pdf'));
+                'payment_method' => 'Cash',
+            ], $this->staff());
             $this->fail('Pending proofs must reserve the outstanding balance.');
         } catch (ValidationException $exception) {
             $this->assertArrayHasKey('amount_paid', $exception->errors());

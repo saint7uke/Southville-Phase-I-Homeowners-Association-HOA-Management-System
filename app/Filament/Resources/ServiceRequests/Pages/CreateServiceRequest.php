@@ -23,8 +23,8 @@ class CreateServiceRequest extends CreateRecord
     {
         return parent::getCreateFormAction()
             ->requiresConfirmation()
-            ->modalHeading('Review and create service request')
-            ->modalDescription('Confirm the resident, request details, assignment, and attachments before creating this service request.');
+            ->modalHeading(__('Review and create service request'))
+            ->modalDescription(__('Confirm the resident, request details, assignment, and attachments before creating this service request.'));
     }
 
     /** @param array<string, mixed> $data */
@@ -37,7 +37,7 @@ class CreateServiceRequest extends CreateRecord
 
         $homeowner = Homeowner::withTrashed()->find($data['homeowner_id'] ?? null);
         if (! $homeowner instanceof Homeowner) {
-            throw ValidationException::withMessages(['homeowner_id' => 'Select a current resident.']);
+            throw ValidationException::withMessages(['homeowner_id' => __('Select a current resident.')]);
         }
 
         $attachments = $data['attachments'] ?? [];
@@ -51,8 +51,8 @@ class CreateServiceRequest extends CreateRecord
             report($exception);
             Notification::make()
                 ->danger()
-                ->title('Service request could not be created')
-                ->body('Nothing was saved. Please review the form and try again.')
+                ->title(__('Service request could not be created'))
+                ->body(__('Nothing was saved. Please review the form and try again.'))
                 ->send();
             $this->halt(shouldRollbackDatabaseTransaction: true);
         }

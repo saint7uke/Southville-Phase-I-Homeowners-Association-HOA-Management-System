@@ -44,10 +44,10 @@ final class CertificateIssued extends Notification implements ShouldQueue
         $url = URL::temporarySignedRoute('certificates.download', now()->addMinutes(30), $certificate);
 
         return (new MailMessage)
-            ->subject('Your HOA certificate is ready')
-            ->greeting('Hello '.$notifiable->full_name.'.')
-            ->line("{$certificate->type} {$certificate->certificate_number} has been issued.")
-            ->line('The secure download link expires in 30 minutes and requires your homeowner sign-in.')
-            ->action('Download certificate', $url);
+            ->subject(__('Your HOA certificate is ready'))
+            ->greeting(__('Hello :name.', ['name' => $notifiable->full_name]))
+            ->line(__(':type :number has been issued.', ['type' => $certificate->type, 'number' => $certificate->certificate_number]))
+            ->line(__('The secure download link expires in 30 minutes and requires your homeowner sign-in.'))
+            ->action(__('Download certificate'), $url);
     }
 }

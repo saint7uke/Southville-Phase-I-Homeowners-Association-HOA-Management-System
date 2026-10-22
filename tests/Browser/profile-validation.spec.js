@@ -1,6 +1,42 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
+test('homeowner saves formatted contact details and sees persisted values after refresh', async ({ page }) => {
+    test.setTimeout(180_000);
+    const email = process.env.HOA_BROWSER_HOMEOWNER_EMAIL;
+    const password = process.env.HOA_BROWSER_HOMEOWNER_PASSWORD;
+    test.skip(!email || !password, 'Requires isolated Homeowner browser-test credentials.');
+    await page.goto('/homeowner/login', { waitUntil: 'networkidle' });
+    await page.getByLabel('Email address').fill(email);
+    await page.locator('input[type="password"]').fill(password);
+    await page.locator('button[type="submit"]').click();
+    await expect(page).toHaveURL(/\/homeowner\/?$/, { timeout: 60_000 });
+    await page.goto('/homeowner/my-profile', { waitUntil: 'domcontentloaded' });
+    const form = page.locator('[data-profile-validation-form]');
+    const phone = form.locator('[data-profile-field-wrapper="contact_number"] input');
+    const emergencyName = form.locator('[data-profile-field-wrapper="emergency_contact_name"] input');
+    const emergencyPhone = form.locator('[data-profile-field-wrapper="emergency_contact_number"] input');
+    await phone.fill('0917-123-4567');
+    await emergencyName.fill('Maria Dela Cruz');
+    await emergencyPhone.fill('0998 765 4321');
+    // Submit while the final field still has focus: server validation must not depend on blur.
+    const saved = page.waitForResponse((response) => response.url().endsWith('/livewire/update')
+        && response.request().postData()?.includes('saveProfile'), { timeout: 60_000 });
+    await form.evaluate((element) => element.requestSubmit());
+    const savedResponse = await saved;
+    expect(savedResponse.ok()).toBeTruthy();
+    const result = await savedResponse.json();
+    for (const component of result.components || []) {
+        expect(JSON.parse(component.snapshot).memo.errors || []).toEqual([]);
+    }
+    await expect(page.getByText('Profile updated successfully!', { exact: true })).toBeVisible({ timeout: 30_000 });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(phone).toHaveValue('09171234567');
+    await expect(emergencyName).toHaveValue('Maria Dela Cruz');
+    await expect(emergencyPhone).toHaveValue('09987654321');
+    await expect(form.locator('[data-profile-error-summary]')).toHaveCount(0);
+});
+
 test('homeowner profile validates fields and conflicts responsively', async ({ page }) => {
     test.setTimeout(90_000);
 

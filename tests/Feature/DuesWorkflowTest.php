@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Tests\Support\LegacyPaymentProof;
 use Tests\TestCase;
 
 final class DuesWorkflowTest extends TestCase
@@ -120,13 +121,13 @@ final class DuesWorkflowTest extends TestCase
         }
     }
 
-    public function test_homeowner_payment_proof_is_private_pending_review_and_does_not_allocate_funds(): void
+    public function test_legacy_payment_proof_remains_private_pending_review_and_does_not_allocate_funds(): void
     {
         Storage::fake('local');
         $obligation = $this->obligation();
         $owner = $obligation->homeowner->user;
 
-        $payment = app(SubmitPaymentProof::class)->handle($owner, $obligation, [
+        $payment = LegacyPaymentProof::create($owner, $obligation, [
             'amount_paid' => '100.00',
             'payment_date' => now()->toDateString(),
             'covered_period' => 'September 2026',
@@ -150,7 +151,7 @@ final class DuesWorkflowTest extends TestCase
         ], UploadedFile::fake()->create('other.pdf', 200, 'application/pdf'));
     }
 
-    public function test_homeowner_cannot_submit_zero_or_excess_payment_proof_amount(): void
+    public function test_new_payment_proofs_are_denied_regardless_of_amount(): void
     {
         Storage::fake('local');
         $obligation = $this->obligation(['amount_due' => '100.00', 'amount_paid' => '25.00', 'status' => 'Partial']);
@@ -166,19 +167,19 @@ final class DuesWorkflowTest extends TestCase
                     'transaction_reference' => (string) Str::uuid(),
                 ], UploadedFile::fake()->create('proof.pdf', 200, 'application/pdf'));
                 $this->fail("Amount {$amount} should have been rejected.");
-            } catch (ValidationException) {
+            } catch (AuthorizationException) {
                 $this->assertDatabaseMissing('payments', ['dues_obligation_id' => $obligation->id, 'amount_paid' => $amount]);
             }
         }
     }
 
-    public function test_payment_proof_action_rejects_disallowed_file_content(): void
+    public function test_disabled_payment_proof_action_cannot_be_bypassed_by_an_upload(): void
     {
         Storage::fake('local');
         $obligation = $this->obligation();
         $owner = $obligation->homeowner->user;
 
-        $this->expectException(ValidationException::class);
+        $this->expectException(AuthorizationException::class);
         app(SubmitPaymentProof::class)->handle($owner, $obligation, [
             'amount_paid' => '100.00',
             'payment_date' => now()->toDateString(),
@@ -195,7 +196,7 @@ final class DuesWorkflowTest extends TestCase
         $owner = $obligation->homeowner->user;
         $admin = User::factory()->create(['account_status' => 'Active']);
         $admin->assignRole('hoa_admin');
-        $payment = app(SubmitPaymentProof::class)->handle($owner, $obligation, [
+        $payment = LegacyPaymentProof::create($owner, $obligation, [
             'amount_paid' => '100.10',
             'payment_date' => now()->toDateString(),
             'covered_period' => 'September 2026',
@@ -220,7 +221,7 @@ final class DuesWorkflowTest extends TestCase
         $owner = $obligation->homeowner->user;
         $admin = User::factory()->create(['account_status' => 'Active']);
         $admin->assignRole('hoa_admin');
-        $payment = app(SubmitPaymentProof::class)->handle($owner, $obligation, [
+        $payment = LegacyPaymentProof::create($owner, $obligation, [
             'amount_paid' => '50.00',
             'payment_date' => now()->toDateString(),
             'covered_period' => 'September 2026',

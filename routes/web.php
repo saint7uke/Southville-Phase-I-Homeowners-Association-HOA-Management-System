@@ -5,11 +5,15 @@ use App\Http\Controllers\Admin\HoaReportController;
 use App\Http\Controllers\Admin\PaymentExportController;
 use App\Http\Controllers\Admin\QueuedReportDownloadController;
 use App\Http\Controllers\BrandingLogoController;
+use App\Http\Controllers\ButawReceiptController;
 use App\Http\Controllers\CaseAttachmentController;
 use App\Http\Controllers\CertificateDownloadController;
+use App\Http\Controllers\CertificateDraftController;
 use App\Http\Controllers\ContactMessageController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\HomeownerProfilePhotoController;
+use App\Http\Controllers\HouseholdPdfController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\Portal\AddressAvailabilityController;
 use App\Http\Controllers\Portal\AnnouncementController;
@@ -27,12 +31,26 @@ use App\Http\Controllers\Portal\ProfileController;
 use App\Http\Controllers\Portal\RegisterController;
 use App\Http\Controllers\Portal\RegistrationStatusController;
 use App\Http\Controllers\Portal\ServiceRequestController;
+use App\Http\Controllers\ProjectImageController;
+use App\Http\Controllers\UnifiedLoginController;
 use App\Http\Controllers\VerificationDocumentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+Route::get('/projects/images/{image}', ProjectImageController::class)->middleware('throttle:120,1')->name('projects.image');
+Route::post('/locale', LocaleController::class)->middleware('throttle:30,1')->name('locale.update');
+Route::get('/login', [UnifiedLoginController::class, 'create'])->name('login');
+Route::post('/login', [UnifiedLoginController::class, 'store'])->middleware('throttle:login')->name('login.store');
+Route::post('/admin/login', [UnifiedLoginController::class, 'store'])->middleware('throttle:login');
+Route::post('/staff/login', [UnifiedLoginController::class, 'store'])->middleware('throttle:login');
 Route::get('/branding/logo', BrandingLogoController::class)->middleware('throttle:120,1')->name('branding.logo');
 Route::post('/contact', ContactMessageController::class)->middleware('throttle:5,1')->name('contact.store');
+Route::get('/certificates/sources/{template}/preview', [CertificateDraftController::class, 'template'])->middleware(['profile-photo.auth', 'throttle:20,1'])->name('certificates.source.preview');
+Route::get('/certificates/sources/residency-reference', [CertificateDraftController::class, 'reference'])->middleware(['profile-photo.auth', 'throttle:20,1'])->name('certificates.residency-reference');
+Route::get('/certificates/cohabitation-source/review', [CertificateDraftController::class, 'cohabitationReference'])->middleware(['profile-photo.auth', 'throttle:20,1'])->name('certificates.cohabitation-reference');
+Route::get('/certificates/residency/previews/{token}', [CertificateDraftController::class, 'prepared'])->middleware(['profile-photo.auth', 'throttle:30,1'])->name('certificates.residency-preview');
+Route::get('/service-requests/{serviceRequest}/draft', [CertificateDraftController::class, 'request'])->middleware(['profile-photo.auth', 'throttle:20,1'])->name('service-requests.draft');
+Route::get('/households/{household}/summary.pdf', HouseholdPdfController::class)->middleware(['profile-photo.auth', 'throttle:20,1'])->name('households.pdf');
 
 Route::middleware('guest')->prefix('portal')->name('portal.')->group(function (): void {
     Route::get('/register', fn () => redirect()->route('homeowner.register'))->name('register');
@@ -68,7 +86,7 @@ Route::get('/homeowner/register/submitted', [RegistrationStatusController::class
     ->middleware('registration.status.link')
     ->name('homeowner.register.submitted');
 
-Route::get('/homeowner/login', [AuthController::class, 'create'])->name('homeowner.login');
+Route::get('/homeowner/login', fn () => redirect()->route('login'))->name('homeowner.login');
 
 Route::post('/homeowner/my-profile/availability', ProfileAvailabilityController::class)
     ->middleware(['auth:homeowner', 'account.active', 'throttle:30,1'])
@@ -118,6 +136,12 @@ Route::get('/payments/{payment}/proof', [PaymentProofController::class, 'downloa
 Route::get('/payments/{payment}/receipt', PaymentReceiptController::class)
     ->middleware(['profile-photo.auth', 'throttle:30,1'])
     ->name('payments.receipt.download');
+Route::get('/certificates/payment-previews/{token}', [ButawReceiptController::class, 'preview'])
+    ->middleware(['profile-photo.auth', 'throttle:30,1'])->where('token', '[A-Za-z0-9]{64}')->name('certificates.butaw.preview');
+Route::get('/certificates/payment-source/review', [ButawReceiptController::class, 'reference'])
+    ->middleware(['profile-photo.auth', 'throttle:10,1'])->name('certificates.butaw.reference');
+Route::get('/certificates/payment-documents/{paymentDocument}', [ButawReceiptController::class, 'download'])
+    ->middleware(['profile-photo.auth', 'throttle:30,1'])->name('certificates.butaw.download');
 Route::get('/certificates/{certificate}/download', CertificateDownloadController::class)
     ->middleware(['profile-photo.auth', 'signed', 'throttle:30,1'])
     ->name('certificates.download');

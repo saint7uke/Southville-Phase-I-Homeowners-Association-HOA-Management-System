@@ -33,9 +33,11 @@ final class CreateComplaint
 
         try {
             return DB::transaction(function () use ($homeowner, $data, $files, $uploader, &$storedPaths): Complaint {
+                $uploader = User::query()->lockForUpdate()->findOrFail($uploader->id);
+                Gate::forUser($uploader)->authorize('create', Complaint::class);
                 $homeowner = Homeowner::withTrashed()->lockForUpdate()->find($homeowner->getKey());
                 if (! $homeowner instanceof Homeowner) {
-                    throw ValidationException::withMessages(['homeowner_id' => 'Select a current resident.']);
+                    throw ValidationException::withMessages(['homeowner_id' => __('Select a current resident.')]);
                 }
 
                 $validated = $this->validator->validate($homeowner, $data, $files, $uploader);

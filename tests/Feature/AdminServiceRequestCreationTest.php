@@ -108,7 +108,7 @@ final class AdminServiceRequestCreationTest extends TestCase
 
         foreach (['Pending', 'Active', 'Suspended', 'Inactive', 'Rejected'] as $status) {
             app(CreateServiceRequestAction::class)->handle($this->homeowner($status), [
-                'request_type' => 'Repair/Maintenance',
+                'request_type' => 'Certificate of Residency',
                 'subject' => "Request for {$status} resident",
                 'details' => "This request was recorded for a current {$status} resident account.",
             ], uploader: $admin);
@@ -198,7 +198,7 @@ final class AdminServiceRequestCreationTest extends TestCase
 
         try {
             app(CreateServiceRequestAction::class)->handle($homeowner, [
-                'request_type' => 'Repair/Maintenance',
+                'request_type' => 'Certificate of Residency',
                 'subject' => str_repeat('S', 161),
                 'details' => str_repeat('D', 3001),
             ], uploader: $admin);
@@ -294,7 +294,7 @@ final class AdminServiceRequestCreationTest extends TestCase
     private function validRequestData(): array
     {
         return [
-            'request_type' => 'Repair/Maintenance',
+            'request_type' => 'Certificate of Residency',
             'subject' => 'Streetlight maintenance request',
             'details' => 'Please inspect and repair the streetlight near the property.',
         ];

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\PropertyAddressAvailability;
 use App\Support\PropertyAddress;
+use App\Support\PropertyIdentity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +25,7 @@ final class Homeowner extends Model
         'block',
         'lot',
         'phase',
+        'phase_suffix',
         'residency_date',
         'ownership_type',
         'emergency_contact_name',
@@ -58,6 +61,11 @@ final class Homeowner extends Model
     protected static function booted(): void
     {
         self::saving(function (self $homeowner): void {
+            $homeowner->phase_suffix = PropertyIdentity::suffix($homeowner->phase_suffix);
+            if ($homeowner->phase_suffix !== null && ! preg_match('/^[A-Z0-9]{1,10}$/D', $homeowner->phase_suffix)) {
+                throw ValidationException::withMessages(['phase_suffix' => __('Enter 1–10 ASCII letters or digits for the phase suffix.')]);
+            }
+            $homeowner->property_key = PropertyIdentity::confirmedKey($homeowner);
             $homeowner->address_key = PropertyAddress::key([
                 'house_number' => $homeowner->house_number,
                 'street' => $homeowner->street,
@@ -77,7 +85,7 @@ final class Homeowner extends Model
                 if ($homeowner->ownership_type !== 'Tenant'
                     || $landlord === null
                     || ! in_array($landlord->ownership_type, ['Owner', 'Co-owner'], true)
-                    || $landlord->address_key !== $homeowner->address_key) {
+                    || ! PropertyIdentity::same($landlord, $homeowner)) {
                     throw ValidationException::withMessages([
                         'landlord_homeowner_id' => __('The landlord must be an Owner or Co-owner registered at the same address.'),
                     ]);
@@ -99,16 +107,19 @@ final class Homeowner extends Model
         });
 
         self::updating(function (self $homeowner): void {
+            if (app(PropertyAddressAvailability::class)->financialMoveNeedsReview($homeowner, $homeowner->getAttributes())) {
+                throw ValidationException::withMessages(['address' => __(PropertyAddressAvailability::BILLED_MOVE_MESSAGE)]);
+            }
             if ($homeowner->isDirty('user_id')) {
                 throw ValidationException::withMessages([
                     'user_id' => __('A homeowner record cannot be reassigned to another account.'),
                 ]);
             }
 
-            if (($homeowner->isDirty('address_key') || $homeowner->isDirty('ownership_type'))
+            if (($homeowner->isDirty('address_key') || $homeowner->isDirty('property_key') || $homeowner->isDirty('ownership_type'))
                 && $homeowner->tenants()->exists()
                 && ($homeowner->ownership_type === 'Tenant'
-                    || $homeowner->tenants()->where('address_key', '!=', $homeowner->address_key)->exists())) {
+                    || $homeowner->tenants()->get()->contains(fn (self $tenant): bool => ! PropertyIdentity::same($tenant, $homeowner)))) {
                 throw ValidationException::withMessages([
                     'address' => __('Unlink or reassign this homeowner\'s tenants before changing the property address or occupancy type.'),
                 ]);
@@ -153,14 +164,7 @@ final class Homeowner extends Model
 
     public function getFullAddressAttribute(): string
     {
-        $property = collect([
-            filled($this->block) ? "Block {$this->block}" : null,
-            filled($this->lot) ? "Lot {$this->lot}" : null,
-            $this->house_number,
-            $this->street,
-        ])->filter()->implode(' ');
-
-        return $property.', '.($this->phase ?: 'Southville Phase I').', Brgy. Inocencio';
+        return PropertyIdentity::address($this).', Brgy. Inocencio';
     }
 
     public function getLandlordRelationshipStatusAttribute(): string

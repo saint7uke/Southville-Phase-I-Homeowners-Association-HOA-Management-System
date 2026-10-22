@@ -21,7 +21,8 @@ final class ComplaintPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasRole('hoa_admin') || ($user->can('submit_own_complaint') && $user->account_status === 'Active');
+        return ! $user->trashed() && $user->hasRole('homeowner') && ! $user->hasAnyRole(['hoa_admin', 'hoa_staff'])
+            && $user->can('submit_own_complaint') && $user->account_status === 'Active';
     }
 
     public function update(User $user, Complaint $complaint): bool

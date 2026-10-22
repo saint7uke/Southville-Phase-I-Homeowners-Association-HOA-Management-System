@@ -34,13 +34,13 @@ final class UpdateRolePermissions
         $permissions = array_values(array_unique($validated));
 
         if ($role->name === 'hoa_admin' && array_diff(self::ADMIN_REQUIRED, $permissions) !== []) {
-            throw ValidationException::withMessages(['permission_names' => 'The administrator role must retain all core administration permissions.']);
+            throw ValidationException::withMessages(['permission_names' => __('The administrator role must retain all core administration permissions.')]);
         }
         if ($role->name === 'hoa_staff' && array_intersect(self::STAFF_FORBIDDEN, $permissions) !== []) {
-            throw ValidationException::withMessages(['permission_names' => 'The staff role cannot receive administrator-only permissions.']);
+            throw ValidationException::withMessages(['permission_names' => __('The staff role cannot receive administrator-only permissions.')]);
         }
         if ($role->name === 'homeowner' && array_diff($permissions, self::HOMEOWNER_ALLOWED) !== []) {
-            throw ValidationException::withMessages(['permission_names' => 'The homeowner role can receive only self-service permissions.']);
+            throw ValidationException::withMessages(['permission_names' => __('The homeowner role can receive only self-service permissions.')]);
         }
 
         $old = $role->permissions()->pluck('name')->sort()->values()->all();

@@ -15,7 +15,6 @@ use Filament\Auth\Pages\Login as HomeownerLogin;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -150,7 +149,7 @@ final class PanelFoundationTest extends TestCase
         $staff = User::factory()->create(['account_status' => 'Active']);
         $staff->assignRole('hoa_staff');
 
-        $this->actingAs($staff, 'web')->get('/admin/login')->assertOk();
+        $this->actingAs($staff, 'web')->get('/admin/login')->assertRedirect('/login');
 
         $this->assertAuthenticatedAs($staff, 'web');
         $this->assertGuest('admin');
@@ -186,7 +185,7 @@ final class PanelFoundationTest extends TestCase
         $user = User::factory()->create(['account_status' => $status]);
         $user->assignRole($role);
 
-        $this->actingAs($user, 'web')->get('/admin/login')->assertOk();
+        $this->actingAs($user, 'web')->get('/admin/login')->assertRedirect('/login');
 
         $this->assertAuthenticatedAs($user, 'web');
         $this->assertGuest('admin');
@@ -197,7 +196,7 @@ final class PanelFoundationTest extends TestCase
         $homeowner = User::factory()->create(['account_status' => 'Active']);
         $homeowner->assignRole('homeowner');
 
-        $this->actingAs($homeowner, 'web')->get('/homeowner/login')->assertOk();
+        $this->actingAs($homeowner, 'web')->get('/homeowner/login')->assertRedirect('/login');
 
         $this->assertAuthenticatedAs($homeowner, 'web');
         $this->assertGuest('homeowner');
@@ -218,13 +217,7 @@ final class PanelFoundationTest extends TestCase
     {
         Filament::setCurrentPanel($panel);
 
-        Livewire::test($loginPage)
-            ->fillForm([
-                'email' => 'missing@example.test',
-                'password' => 'wrong-password',
-            ])
-            ->call('authenticate')
-            ->assertHasErrors('data.email');
+        $this->from('/login')->post('/login', ['email' => 'missing@example.test', 'password' => 'wrong-password'])->assertSessionHasErrors('email');
     }
 
     public function test_inactive_homeowner_is_forbidden_from_homeowner_panel(): void

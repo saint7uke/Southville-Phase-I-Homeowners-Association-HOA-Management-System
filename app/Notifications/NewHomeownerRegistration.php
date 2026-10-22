@@ -23,6 +23,6 @@ final class NewHomeownerRegistration extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)->subject('New resident application')->greeting('Hello '.$notifiable->first_name.',')->line($this->resident->full_name.' submitted a Southville Phase I resident application.')->action('Review application', url('/admin/users'))->line('Review the resident details before activating the account.');
+        return (new MailMessage)->subject(__('New resident application'))->greeting(__('Hello :name,', ['name' => $notifiable->first_name]))->line(__(':name submitted a Southville Phase I resident application.', ['name' => $this->resident->full_name]))->action(__('Review application'), url('/admin/users'))->line(__('Review the resident details before activating the account.'));
     }
 }

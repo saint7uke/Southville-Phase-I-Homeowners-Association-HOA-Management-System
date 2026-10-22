@@ -43,7 +43,7 @@ class EditComplaint extends EditRecord
             default => [],
         };
         if (! in_array($data['status'] ?? $this->record->status, $allowedStatuses, true)) {
-            throw ValidationException::withMessages(['data.status' => 'Assigned staff may only move a pending complaint to Under Review or resolve a complaint that is already under review.']);
+            throw ValidationException::withMessages(['data.status' => __('Assigned staff may only move a pending complaint to Under Review or resolve a complaint that is already under review.')]);
         }
 
         return collect($data)->only(['priority', 'status', 'admin_remarks'])->all();

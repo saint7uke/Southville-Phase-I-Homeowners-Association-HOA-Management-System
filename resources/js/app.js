@@ -1,4 +1,11 @@
 import './bootstrap';
+import { translate, translationKey } from './translations';
+
+const t = (key, parameters = {}) => translate(key, document.documentElement.lang, parameters);
+const localizedText = (node, message) => {
+    node.dataset.i18n = translationKey(message);
+    node.textContent = t(message);
+};
 import Swal from 'sweetalert2';
 
 document.querySelectorAll('[data-confirm-profile]').forEach((form) => {
@@ -10,12 +17,12 @@ document.querySelectorAll('[data-confirm-profile]').forEach((form) => {
         event.preventDefault();
 
         const result = await Swal.fire({
-            title: 'Save profile changes?',
-            text: 'Your contact and property details will be updated.',
+            title: t('Save profile changes?'),
+            text: t('Your contact and property details will be updated.'),
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'Save changes',
-            cancelButtonText: 'Keep editing',
+            confirmButtonText: t('Save changes'),
+            cancelButtonText: t('Keep editing'),
             reverseButtons: true,
             focusCancel: true,
         });
@@ -39,7 +46,7 @@ document.querySelectorAll('[data-password-toggle]').forEach((button) => {
         const showing = input.type === 'text';
         input.type = showing ? 'password' : 'text';
         button.setAttribute('aria-pressed', String(!showing));
-        button.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+        button.setAttribute('aria-label', t(showing ? 'Show password' : 'Hide password'));
         button.querySelectorAll('.password-eye').forEach((icon) => {
             icon.hidden = icon.classList.contains(showing ? 'password-eye-hide' : 'password-eye-show');
         });
@@ -59,7 +66,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
     const addressMessage = form.querySelector('#address-availability-message');
     const landlordName = form.querySelector('#landlord_name');
     const landlordMessage = form.querySelector('#landlord-availability-message');
-    const addressFields = ['house_number', 'street', 'block', 'lot']
+    const addressFields = ['phase_suffix', 'street', 'block', 'lot']
         .map((id) => form.querySelector(`#${id}`))
         .filter(Boolean);
     const leaseStart = form.querySelector('#lease_start_date');
@@ -76,6 +83,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
     let emailCheckPending = false;
     let emailCheckController = null;
     let emailCheckTimer = null;
+    let emailRequestSequence = 0;
     let addressAvailable = null;
     let addressCheckPending = false;
     let addressCheckController = null;
@@ -95,7 +103,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
             return;
         }
 
-        emailMessage.textContent = message;
+        localizedText(emailMessage, message);
         emailMessage.hidden = message === '';
         emailMessage.dataset.state = state;
         email.classList.toggle('is-invalid', state === 'error');
@@ -109,13 +117,15 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         }
 
         const value = email.value.trim().toLowerCase();
+        emailCheckController?.abort();
+        const sequence = ++emailRequestSequence;
+        emailCheckPending = false;
         emailAvailable = null;
         if (!value || !email.checkValidity()) {
             updateEmailMessage('');
             return true;
         }
 
-        emailCheckController?.abort();
         emailCheckController = new AbortController();
         emailCheckPending = true;
         updateEmailMessage('Checking email availability…');
@@ -125,6 +135,9 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
                 headers: { Accept: 'application/json' },
                 signal: emailCheckController.signal,
             });
+            if (sequence !== emailRequestSequence) {
+                return true;
+            }
             if (!response.ok) {
                 emailAvailable = null;
                 updateEmailMessage('Email availability could not be checked. You can still submit to validate it.');
@@ -132,6 +145,9 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
             }
 
             const result = await response.json();
+            if (sequence !== emailRequestSequence) {
+                return true;
+            }
             emailAvailable = result.available === true;
             updateEmailMessage(
                 emailAvailable ? 'Email address is available.' : 'This email address is already registered or reserved.',
@@ -139,23 +155,31 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
             );
             return emailAvailable;
         } catch (error) {
-            if (error.name !== 'AbortError') {
+            if (error.name !== 'AbortError' && sequence === emailRequestSequence) {
                 emailAvailable = null;
                 updateEmailMessage('Email availability could not be checked. You can still submit to validate it.');
             }
             return true;
         } finally {
-            emailCheckPending = false;
+            if (sequence === emailRequestSequence) {
+                emailCheckPending = false;
+            }
         }
     };
 
     email?.addEventListener('input', () => {
         window.clearTimeout(emailCheckTimer);
+        emailRequestSequence += 1;
+        emailCheckController?.abort();
+        emailCheckPending = false;
         emailAvailable = null;
         updateEmailMessage('');
         emailCheckTimer = window.setTimeout(() => checkEmailAvailability(), 350);
     });
-    email?.addEventListener('blur', checkEmailAvailability);
+    email?.addEventListener('blur', () => {
+        window.clearTimeout(emailCheckTimer);
+        checkEmailAvailability();
+    });
 
     const canonicalAddressPart = (value, prefixes = []) => {
         let part = value
@@ -184,7 +208,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
 
         return JSON.stringify([
             ownershipType?.value || '',
-            canonicalAddressPart(values.house_number || '', ['HOUSE', 'UNIT', 'NUMBER', 'NO']),
+            (values.phase_suffix || '').trim().toUpperCase(),
             street,
             canonicalAddressPart(values.block || '', ['BLOCK', 'BLK', 'B']),
             canonicalAddressPart(values.lot || '', ['LOT', 'L']),
@@ -196,7 +220,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
             return;
         }
 
-        addressMessage.textContent = message;
+        localizedText(addressMessage, message);
         addressMessage.hidden = message === '';
         addressMessage.dataset.state = state;
         addressFields.forEach((field) => {
@@ -303,7 +327,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
             return;
         }
 
-        landlordMessage.textContent = message;
+        localizedText(landlordMessage, message);
         landlordMessage.hidden = message === '';
         landlordMessage.dataset.state = state;
         landlordName.classList.toggle('is-invalid', state === 'error');
@@ -413,6 +437,9 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
             scheduleLandlordCheck();
         });
         field.addEventListener('blur', () => {
+            if (field.id === 'phase_suffix') {
+                field.value = field.value.trim().toUpperCase();
+            }
             window.clearTimeout(addressCheckTimer);
             checkAddressAvailability();
             window.clearTimeout(landlordCheckTimer);
@@ -459,9 +486,9 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
 
         const confirmationStatus = form.querySelector('#password-confirmation-status');
         if (confirmationStatus) {
-            confirmationStatus.textContent = confirmation.value.length === 0
+            localizedText(confirmationStatus, confirmation.value.length === 0
                 ? ''
-                : confirmationValid ? 'Passwords match.' : 'Passwords do not match.';
+                : confirmationValid ? 'Passwords match.' : 'Passwords do not match.');
             confirmationStatus.classList.toggle('hoa-error-text', confirmation.value.length > 0 && !confirmationValid);
         }
 
@@ -498,9 +525,9 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         }
 
         if (message) {
-            message.textContent = invalid
+            localizedText(message, invalid
                 ? 'The lease end date must be after the lease start date.'
-                : '';
+                : '');
             message.hidden = !invalid;
         }
 
@@ -525,7 +552,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
             field.insertAdjacentElement('afterend', messageElement);
         }
 
-        messageElement.textContent = message;
+        localizedText(messageElement, message);
         messageElement.hidden = message === '';
         field.classList.toggle('is-invalid', message !== '');
         field.setAttribute('aria-invalid', message !== '' ? 'true' : 'false');
@@ -595,7 +622,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         if (form.dataset.confirmed === 'true') {
             submit?.setAttribute('disabled', 'disabled');
             if (submit) {
-                submit.textContent = 'Submitting application…';
+                localizedText(submit, 'Submitting application…');
             }
             return;
         }
@@ -607,6 +634,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         }
 
         registrationSubmissionPending = true;
+        window.clearTimeout(emailCheckTimer);
         window.clearTimeout(addressCheckTimer);
         window.clearTimeout(landlordCheckTimer);
         const [emailIsAvailable, propertyAddressIsAvailable, landlordIsValid] = await Promise.all([
@@ -634,12 +662,12 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
 
         const data = new FormData(form);
         const result = await Swal.fire({
-            title: 'Review your application',
-            text: `${data.get('first_name')} ${data.get('last_name')} — Block ${data.get('block')}, Lot ${data.get('lot')}. Submit this information for HOA review?`,
+            title: t('Review your application'),
+            text: t(':name — Phase 1 - :phase, Block :block, Lot :lot. Submit this information for HOA review?', { name: `${data.get('first_name')} ${data.get('last_name')}`, phase: String(data.get('phase_suffix') || '').trim().toUpperCase(), block: data.get('block'), lot: data.get('lot') }),
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'Submit application',
-            cancelButtonText: 'Keep editing',
+            confirmButtonText: t('Submit application'),
+            cancelButtonText: t('Keep editing'),
             reverseButtons: true,
             focusCancel: true,
         });
@@ -648,7 +676,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
             form.dataset.confirmed = 'true';
             submit?.setAttribute('disabled', 'disabled');
             if (submit) {
-                submit.textContent = 'Submitting application…';
+                localizedText(submit, 'Submitting application…');
             }
             form.requestSubmit();
         } else {
@@ -666,6 +694,6 @@ document.querySelectorAll('[data-auth-submit]').forEach((form) => {
 
         button.disabled = true;
         button.dataset.originalLabel = button.textContent;
-        button.textContent = 'Signing in…';
+        localizedText(button, 'Signing in…');
     });
 });

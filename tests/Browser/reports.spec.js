@@ -9,7 +9,7 @@ test('admin can preview filtered reports and return keyboard focus', async ({ pa
     await page.goto('/admin/login', { waitUntil: 'domcontentloaded' });
     await page.getByLabel('Email address').fill(process.env.HOA_BROWSER_ADMIN_EMAIL);
     await page.locator('input[type="password"]').fill(process.env.HOA_BROWSER_ADMIN_PASSWORD);
-    await page.getByRole('button', { name: 'Admin Login', exact: true }).click();
+    await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL(/\/admin\/?$/, { timeout: 30_000 });
     await page.goto('/admin/reports', { waitUntil: 'domcontentloaded' });
 

@@ -14,10 +14,29 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 class EditCertificate extends EditRecord
 {
     protected static string $resource = CertificateResource::class;
+
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $snapshot = $this->record->document_snapshot ?? [];
+
+        return [...$data, 'cohabitant_one' => $snapshot['cohabitant_one'] ?? null, 'cohabitant_two' => $snapshot['cohabitant_two'] ?? null];
+    }
+
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        throw ValidationException::withMessages(['data.type' => __('Issued certificates are read-only. Revoke and issue a replacement when corrections are required.')]);
+    }
+
+    protected function getFormActions(): array
+    {
+        return [];
+    }
 
     protected function getHeaderActions(): array
     {

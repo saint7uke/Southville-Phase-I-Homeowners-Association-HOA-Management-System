@@ -34,12 +34,12 @@ final class HomeownersTable
     public static function configure(Table $table): Table
     {
         return $table->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['user', 'landlord.user']))->columns([
-            TextColumn::make('user.full_name')->label('Resident')->searchable(['first_name', 'last_name'])->sortable(['last_name']),
-            TextColumn::make('full_address')->label('Property address')->searchable(['house_number', 'street', 'block', 'lot'])->wrap(),
-            TextColumn::make('user.email')->label('Email')->searchable()->toggleable(),
-            TextColumn::make('ownership_type')->badge(),
+            TextColumn::make('user.full_name')->label(__('Resident'))->searchable(['first_name', 'last_name'])->sortable(['last_name']),
+            TextColumn::make('full_address')->label(__('Property address'))->searchable(['house_number', 'street', 'block', 'lot'])->wrap(),
+            TextColumn::make('user.email')->label(__('Email'))->searchable()->toggleable(),
+            TextColumn::make('ownership_type')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
             TextColumn::make('landlord_display')
-                ->label('Landlord / relationship')
+                ->label(__('Landlord / relationship'))
                 ->state(fn (Homeowner $record): string => match (true) {
                     $record->ownership_type !== 'Tenant' => 'Not applicable',
                     $record->landlord_homeowner_id === null => 'Needs landlord review',
@@ -48,21 +48,21 @@ final class HomeownersTable
                 ->badge()
                 ->color(fn (string $state): string => $state === 'Needs landlord review' ? 'warning' : ($state === 'Not applicable' ? 'gray' : 'success'))
                 ->toggleable(),
-            TextColumn::make('status')->badge(),
+            TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
             TextColumn::make('residency_date')->date()->sortable(),
-            TextColumn::make('user.contact_number')->label('Contact'),
+            TextColumn::make('user.contact_number')->label(__('Contact')),
         ])->defaultSort('created_at', 'desc')->filters([
-            SelectFilter::make('status')->options(['Active' => 'Active', 'Inactive' => 'Inactive', 'Delinquent' => 'Delinquent']),
-            SelectFilter::make('ownership_type')->options(['Owner' => 'Owner', 'Tenant' => 'Tenant', 'Co-owner' => 'Co-owner']),
+            SelectFilter::make('status')->options(['Active' => __('Active'), 'Inactive' => __('Inactive'), 'Delinquent' => __('Delinquent')]),
+            SelectFilter::make('ownership_type')->options(['Owner' => __('Owner'), 'Tenant' => __('Tenant'), 'Co-owner' => __('Co-owner')]),
             SelectFilter::make('landlord_relationship')
-                ->label('Landlord relationship')
+                ->label(__('Landlord relationship'))
                 ->options(['linked' => 'Linked', 'needs_review' => 'Needs landlord review'])
                 ->query(fn (Builder $query, array $data): Builder => $query
                     ->when(($data['value'] ?? null) === 'linked', fn (Builder $query): Builder => $query->where('ownership_type', 'Tenant')->whereNotNull('landlord_homeowner_id'))
                     ->when(($data['value'] ?? null) === 'needs_review', fn (Builder $query): Builder => $query->where('ownership_type', 'Tenant')->whereNull('landlord_homeowner_id'))),
             Filter::make('residency_date')->schema([
-                DatePicker::make('from')->label('Move-in from'),
-                DatePicker::make('to')->label('Move-in to')->afterOrEqual('from'),
+                DatePicker::make('from')->label(__('Move-in from')),
+                DatePicker::make('to')->label(__('Move-in to'))->afterOrEqual('from'),
             ])->query(fn (Builder $query, array $data): Builder => $query
                 ->when($data['from'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('residency_date', '>=', $date))
                 ->when($data['to'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('residency_date', '<=', $date))),
@@ -71,7 +71,7 @@ final class HomeownersTable
             ViewAction::make(),
             EditAction::make(),
             Action::make('approve')
-                ->label('Approve Registration')
+                ->label(__('Approve Registration'))
                 ->color('success')
                 ->icon('heroicon-o-check-circle')
                 ->requiresConfirmation()
@@ -81,13 +81,13 @@ final class HomeownersTable
                     app(ChangeAccountStatus::class)->handle($record->user, UserAccountStatus::Active, Filament::auth()->user());
                 }),
             Action::make('viewDocument')
-                ->label('View Document')
+                ->label(__('View Document'))
                 ->icon('heroicon-o-document')
                 ->url(fn (Homeowner $record): string => route('homeowners.verification-document', $record))
                 ->openUrlInNewTab()
                 ->visible(fn (Homeowner $record): bool => ! empty($record->verification_document_path)),
             Action::make('deactivate')
-                ->label('Deactivate')
+                ->label(__('Deactivate'))
                 ->requiresConfirmation()
                 ->color('warning')
                 ->visible(fn (Homeowner $record): bool => Filament::getCurrentPanel()?->getId() === 'admin' && $record->user?->account_status === UserAccountStatus::Active->value)
@@ -100,7 +100,7 @@ final class HomeownersTable
         ])->toolbarActions([
             BulkActionGroup::make([
                 BulkAction::make('exportSelected')
-                    ->label('Export selected CSV')
+                    ->label(__('Export selected CSV'))
                     ->action(function (Collection $records): StreamedResponse {
                         $actor = Filament::auth()->user();
                         abort_unless($actor !== null, 403);
@@ -133,7 +133,7 @@ final class HomeownersTable
                         }, 'homeowners-selected-'.today()->toDateString().'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
                     }),
                 BulkAction::make('deactivateSelected')
-                    ->label('Deactivate selected')
+                    ->label(__('Deactivate selected'))
                     ->requiresConfirmation()
                     ->color('warning')
                     ->action(function (Collection $records): void {

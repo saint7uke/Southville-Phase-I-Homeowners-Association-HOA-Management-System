@@ -22,19 +22,19 @@ final class StaffOverview extends StatsOverviewWidget
     {
         return [
             Stat::make('Active homeowners', Homeowner::query()->where('status', 'Active')->count())
-                ->description('Verified resident records')
+                ->description(__('Verified resident records'))
                 ->icon(Heroicon::OutlinedHomeModern)
                 ->color('success'),
             Stat::make("Today's payments", Payment::query()->whereDate('payment_date', today())->count())
-                ->description('Records entered today')
+                ->description(__('Records entered today'))
                 ->icon(Heroicon::OutlinedBanknotes)
                 ->color('info'),
             Stat::make('Open complaints', Complaint::query()->whereIn('status', ['Pending', 'Under Review'])->count())
-                ->description('Pending or under review')
+                ->description(__('Pending or under review'))
                 ->icon(Heroicon::OutlinedExclamationTriangle)
                 ->color('warning'),
             Stat::make('Pending requests', ServiceRequest::query()->whereIn('status', ['Pending', 'Processing'])->count())
-                ->description('Awaiting staff action')
+                ->description(__('Awaiting staff action'))
                 ->icon(Heroicon::OutlinedClipboardDocumentList)
                 ->color('primary'),
         ];

@@ -19,8 +19,8 @@ class CreateDuesSetting extends CreateRecord
     {
         return parent::getCreateFormAction()
             ->requiresConfirmation()
-            ->modalHeading('Create dues schedule?')
-            ->modalDescription('Review the amount and effective billing period. Financial terms become locked after obligations are generated.');
+            ->modalHeading(__('Create dues schedule?'))
+            ->modalDescription(__('Review the amount and effective billing period. Financial terms become locked after obligations are generated.'));
     }
 
     /** @param array<string, mixed> $data */

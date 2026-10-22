@@ -26,14 +26,14 @@ final class WorkflowStatusChanged extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $message = (new MailMessage)
-            ->subject("HOA {$this->recordType} update")
-            ->greeting('Hello '.$notifiable->full_name.'.')
-            ->line("Your {$this->recordType} {$this->reference} is now {$this->status}.");
+            ->subject(__('HOA :type update', ['type' => __($this->recordType)]))
+            ->greeting(__('Hello :name.', ['name' => $notifiable->full_name]))
+            ->line(__('Your :type :reference is now :status.', ['type' => __($this->recordType), 'reference' => $this->reference, 'status' => __($this->status)]));
 
         if (filled($this->remarks)) {
-            $message->line('HOA remarks: '.$this->remarks);
+            $message->line(__('HOA remarks:').' '.$this->remarks);
         }
 
-        return $message->action('Open homeowner panel', url('/homeowner'));
+        return $message->action(__('Open homeowner panel'), url('/homeowner'));
     }
 }

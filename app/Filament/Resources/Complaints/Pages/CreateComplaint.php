@@ -25,8 +25,8 @@ class CreateComplaint extends CreateRecord
     {
         return parent::getCreateFormAction()
             ->requiresConfirmation()
-            ->modalHeading('Review and create complaint')
-            ->modalDescription('Confirm the resident, complaint details, priority, assignment, and attachments before creating this complaint.');
+            ->modalHeading(__('Review and create complaint'))
+            ->modalDescription(__('Confirm the resident, complaint details, priority, assignment, and attachments before creating this complaint.'));
     }
 
     /** @param array<string, mixed> $data */
@@ -39,7 +39,7 @@ class CreateComplaint extends CreateRecord
 
         $homeowner = Homeowner::query()->find($data['homeowner_id'] ?? null);
         if (! $homeowner instanceof Homeowner) {
-            throw ValidationException::withMessages(['homeowner_id' => 'Select a current resident.']);
+            throw ValidationException::withMessages(['homeowner_id' => __('Select a current resident.')]);
         }
 
         $attachments = $data['attachments'] ?? [];
@@ -53,8 +53,8 @@ class CreateComplaint extends CreateRecord
             report($exception);
             Notification::make()
                 ->danger()
-                ->title('Complaint could not be created')
-                ->body('Nothing was saved. Please review the form and try again.')
+                ->title(__('Complaint could not be created'))
+                ->body(__('Nothing was saved. Please review the form and try again.'))
                 ->send();
             $this->halt(shouldRollbackDatabaseTransaction: true);
         }

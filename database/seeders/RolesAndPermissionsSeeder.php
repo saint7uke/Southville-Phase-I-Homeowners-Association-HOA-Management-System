@@ -14,7 +14,7 @@ final class RolesAndPermissionsSeeder extends Seeder
     public function run(): void
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
-        $admin = ['manage_users', 'manage_roles', 'approve_homeowner_registrations', 'manage_settings', 'manage_dues', 'view_audit_logs', 'manage_homeowners', 'delete_homeowners', 'manage_payments', 'delete_payments', 'export_reports', 'manage_complaints', 'manage_requests', 'manage_contact_messages', 'manage_announcements', 'publish_announcements', 'view_published_announcements'];
+        $admin = ['manage_projects', 'manage_users', 'manage_roles', 'approve_homeowner_registrations', 'manage_settings', 'manage_dues', 'view_audit_logs', 'manage_homeowners', 'delete_homeowners', 'manage_payments', 'delete_payments', 'export_reports', 'manage_complaints', 'manage_requests', 'manage_contact_messages', 'manage_announcements', 'publish_announcements', 'view_published_announcements'];
         $resident = ['submit_own_complaint', 'view_own_complaints', 'submit_own_request', 'view_own_requests', 'view_own_payments', 'view_own_certificates', 'view_published_announcements', 'update_own_profile', 'submit_own_payment_proof'];
 
         collect([...$admin, ...$resident])->unique()->each(fn (string $name) => Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']));

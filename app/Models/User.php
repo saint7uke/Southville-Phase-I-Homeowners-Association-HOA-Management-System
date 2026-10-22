@@ -9,6 +9,7 @@ use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -18,7 +19,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
-final class User extends Authenticatable implements FilamentUser, MustVerifyEmailContract
+final class User extends Authenticatable implements FilamentUser, HasLocalePreference, MustVerifyEmailContract
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable, SoftDeletes;
@@ -50,6 +51,11 @@ final class User extends Authenticatable implements FilamentUser, MustVerifyEmai
     public function homeowner(): HasOne
     {
         return $this->hasOne(Homeowner::class);
+    }
+
+    public function preferredLocale(): string
+    {
+        return in_array($this->preferred_locale, ['en', 'fil'], true) ? $this->preferred_locale : 'en';
     }
 
     public function approver(): BelongsTo

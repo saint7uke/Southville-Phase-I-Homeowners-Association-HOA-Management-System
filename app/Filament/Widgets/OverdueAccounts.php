@@ -20,11 +20,11 @@ final class OverdueAccounts extends TableWidget
     public function table(Table $table): Table
     {
         return $table->query(DuesObligation::query()->with(['homeowner.user', 'duesSetting'])->where('status', 'Overdue')->oldest('due_date')->limit(10))->columns([
-            TextColumn::make('homeowner.user.full_name')->label('Homeowner'),
-            TextColumn::make('duesSetting.name')->label('Dues'),
+            TextColumn::make('homeowner.user.full_name')->label(__('Homeowner')),
+            TextColumn::make('duesSetting.name')->label(__('Dues')),
             TextColumn::make('amount_due')->money('PHP'),
             TextColumn::make('due_date')->date(),
-            TextColumn::make('overdue_days')->label('Days overdue')->state(fn (DuesObligation $record): int => $record->due_date->diffInDays(today())),
+            TextColumn::make('overdue_days')->label(__('Days overdue'))->state(fn (DuesObligation $record): int => $record->due_date->diffInDays(today())),
         ])->paginated(false);
     }
 }

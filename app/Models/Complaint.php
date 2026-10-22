@@ -50,7 +50,7 @@ final class Complaint extends Model
     public function reopen(): bool
     {
         if ($this->status !== 'Resolved' || $this->trashed()) {
-            throw ValidationException::withMessages(['status' => 'Only a resolved complaint can be reopened.']);
+            throw ValidationException::withMessages(['status' => __('Only a resolved complaint can be reopened.')]);
         }
 
         $this->isReopening = true;
@@ -70,7 +70,7 @@ final class Complaint extends Model
         self::creating(fn (Complaint $complaint) => $complaint->ticket_number ??= 'CMP-'.now()->format('Y').'-'.Str::upper(Str::random(8)));
         self::deleting(function (Complaint $complaint): void {
             if (in_array($complaint->status, ['Resolved', 'Rejected', 'Closed', 'Dismissed'], true)) {
-                throw ValidationException::withMessages(['status' => 'Finalized complaints cannot be deleted.']);
+                throw ValidationException::withMessages(['status' => __('Finalized complaints cannot be deleted.')]);
             }
         });
         self::updating(function (Complaint $complaint): void {
@@ -78,12 +78,12 @@ final class Complaint extends Model
 
             if (in_array($from, ['Resolved', 'Rejected', 'Closed', 'Dismissed'], true)) {
                 if (! $complaint->isReopening) {
-                    throw ValidationException::withMessages(['status' => 'Finalized complaints are read-only. Reopen a resolved complaint before making changes.']);
+                    throw ValidationException::withMessages(['status' => __('Finalized complaints are read-only. Reopen a resolved complaint before making changes.')]);
                 }
 
                 $unexpectedChanges = array_diff(array_keys($complaint->getDirty()), ['status', 'resolved_at', 'updated_at']);
                 if ($from !== 'Resolved' || $complaint->status !== 'Under Review' || $complaint->resolved_at !== null || $unexpectedChanges !== []) {
-                    throw ValidationException::withMessages(['status' => 'The complaint could not be reopened safely.']);
+                    throw ValidationException::withMessages(['status' => __('The complaint could not be reopened safely.')]);
                 }
 
                 return;
@@ -107,7 +107,7 @@ final class Complaint extends Model
             }
 
             if (in_array($complaint->status, ['Resolved', 'Rejected', 'Closed', 'Dismissed'], true) && blank($complaint->admin_remarks)) {
-                throw ValidationException::withMessages(['admin_remarks' => 'Resolution notes are required for a terminal complaint status.']);
+                throw ValidationException::withMessages(['admin_remarks' => __('Resolution notes are required for a terminal complaint status.')]);
             }
 
             $complaint->handled_by ??= app(AuthenticatedActor::class)->id();

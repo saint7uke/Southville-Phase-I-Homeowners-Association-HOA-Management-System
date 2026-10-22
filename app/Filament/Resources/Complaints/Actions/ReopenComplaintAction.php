@@ -18,17 +18,17 @@ final class ReopenComplaintAction
     public static function make(): Action
     {
         return Action::make('reopen')
-            ->label('Reopen complaint')
+            ->label(__('Reopen complaint'))
             ->icon('heroicon-o-arrow-path')
             ->color('warning')
             ->requiresConfirmation()
-            ->modalHeading('Reopen resolved complaint')
-            ->modalDescription('The complaint will return to Under Review. Its current assignee and previous resolution notes will be retained.')
-            ->modalSubmitActionLabel('Reopen complaint')
+            ->modalHeading(__('Reopen resolved complaint'))
+            ->modalDescription(__('The complaint will return to Under Review. Its current assignee and previous resolution notes will be retained.'))
+            ->modalSubmitActionLabel(__('Reopen complaint'))
             ->schema([
                 Textarea::make('reason')
-                    ->label('Reason for reopening')
-                    ->helperText('Explain what further action is required. This reason will be retained in the audit trail.')
+                    ->label(__('Reason for reopening'))
+                    ->helperText(__('Explain what further action is required. This reason will be retained in the audit trail.'))
                     ->required()
                     ->minLength(10)
                     ->maxLength(1000)
@@ -47,6 +47,6 @@ final class ReopenComplaintAction
 
                 app(ReopenComplaint::class)->handle($record, $actor, (string) ($data['reason'] ?? ''));
             })
-            ->successNotificationTitle('Complaint reopened');
+            ->successNotificationTitle(__('Complaint reopened'));
     }
 }

@@ -24,7 +24,7 @@
         <div class="sub">Brgy. Inocencio - Official payment receipt</div>
     </div>
 
-    <h1>Payment Receipt</h1>
+    <h1>Monthly Dues Receipt</h1>
     <p class="receipt-number">Official receipt: {{ $payment->or_number }}</p>
 
     <table>
@@ -33,6 +33,9 @@
         <tr><th>Property</th><td>{{ $payment->homeowner->full_address }}</td></tr>
         <tr><th>Dues type</th><td>{{ $payment->duesSetting->name }}</td></tr>
         <tr><th>Covered period</th><td>{{ $payment->covered_period }}</td></tr>
+        <tr><th>Month / Year</th><td>{{ $payment->duesObligation ? sprintf('%02d / %04d', $payment->duesObligation->billing_month, $payment->duesObligation->billing_year) : $payment->covered_period }}</td></tr>
+        <tr><th>Block / Lot</th><td>{{ $payment->homeowner->block }} / {{ $payment->homeowner->lot }}</td></tr>
+        <tr><th>Paid to</th><td>{{ $payment->recorder?->full_name ?? $payment->reviewer?->full_name ?? 'HOA Office' }}</td></tr>
         <tr><th>Payment date</th><td>{{ $payment->payment_date->format('F d, Y') }}</td></tr>
         <tr><th>Method</th><td>{{ $payment->payment_method }}</td></tr>
         @if($payment->transaction_reference)<tr><th>Transaction reference</th><td>{{ $payment->transaction_reference }}</td></tr>@endif

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Actions\Certificates\IssueCertificate;
 use App\Actions\Dues\GenerateSettingObligations;
 use App\Actions\Homeowners\RegisterHomeowner;
 use App\Actions\Payments\ChangePaymentDeletionState;
@@ -25,6 +24,7 @@ use App\Models\DuesSetting;
 use App\Models\Homeowner;
 use App\Models\Payment;
 use App\Models\ServiceRequest;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\LandlordMatcher;
 use App\Services\PropertyDuesAccounts;
@@ -44,16 +44,20 @@ use Livewire\Livewire;
 use Mockery;
 use RuntimeException;
 use Spatie\Permission\Models\Role;
+use Tests\Support\LegacyPaymentProof;
+use Tests\Support\UsesUploadedResidency;
 use Tests\TestCase;
 
 final class SystemAuditRegressionTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesUploadedResidency;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+        SystemSetting::current()->forceFill(['certificate_signatory_name' => 'Test Authorized Signatory', 'certificate_signatory_title' => 'President', 'signatory_confirmed_at' => now()])->save();
     }
 
     public function test_invalid_legacy_payment_does_not_leave_an_obligation(): void
@@ -89,7 +93,7 @@ final class SystemAuditRegressionTest extends TestCase
             'payment_date' => today()->toDateString(), 'payment_method' => 'Cash',
         ], $staff);
         $this->assertSame('Partial', $due->fresh()->status);
-        $proof = app(SubmitPaymentProof::class)->handle($owner->user, $due->fresh(), $this->payload(), UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'));
+        $proof = LegacyPaymentProof::create($owner->user, $due->fresh(), $this->payload(), UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'));
         app(ReviewPaymentProof::class)->approve($proof, $staff);
         $this->assertSame('Partial', $due->fresh()->status);
         app(ChangePaymentDeletionState::class)->delete($recorded, $staff);
@@ -167,11 +171,11 @@ final class SystemAuditRegressionTest extends TestCase
         [$owner, $setting] = $this->property();
         $due = $this->obligation($owner, $setting);
         $payload = $this->payload();
-        app(SubmitPaymentProof::class)->handle($owner->user, $due, $payload, UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'));
+        LegacyPaymentProof::create($owner->user, $due, $payload, UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'));
         $staff = User::factory()->create();
         $staff->assignRole('hoa_staff');
         $this->expectException(ValidationException::class);
-        app(RecordPayment::class)->handle([...$payload, 'dues_obligation_id' => $due->id, 'payer_homeowner_id' => $owner->id], $staff);
+        app(RecordPayment::class)->handle([...$payload, 'payment_method' => 'Cash', 'dues_obligation_id' => $due->id, 'payer_homeowner_id' => $owner->id], $staff);
     }
 
     public function test_delinquent_active_owner_remains_billable_and_can_pay(): void
@@ -223,7 +227,7 @@ final class SystemAuditRegressionTest extends TestCase
                 'first_name' => 'Audit', 'last_name' => 'Registration', 'sex' => 'Male',
                 'contact_number' => '09171234567', 'date_of_birth' => '1990-01-01',
                 'email' => 'audit-storage@example.test', 'password' => 'AuditPassword2026!',
-                'house_number' => '2', 'street' => 'Storage Street', 'block' => '1', 'lot' => '2',
+                'phase_suffix' => 'A', 'street' => 'Storage Street', 'block' => '1', 'lot' => '2',
                 'ownership_type' => 'Owner', 'residency_date' => '2020-01-01',
                 'verification_document' => UploadedFile::fake()->create('document.pdf', 10, 'application/pdf'),
             ]);
@@ -256,7 +260,7 @@ final class SystemAuditRegressionTest extends TestCase
             'dues_obligation_id' => $due->id, 'amount_paid' => '75.00',
             'payment_date' => today()->toDateString(), 'payment_method' => 'Cash',
         ], $admin);
-        app(SubmitPaymentProof::class)->handle($owner->user, $due->fresh(), $this->payload(), UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'));
+        LegacyPaymentProof::create($owner->user, $due->fresh(), $this->payload(), UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'));
         $this->actingAs($admin, 'admin');
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         Livewire::test(HoaOverview::class)->assertSee('PHP 75.00')->assertDontSee('PHP 150.00');
@@ -346,7 +350,7 @@ final class SystemAuditRegressionTest extends TestCase
             }
         });
         try {
-            app(IssueCertificate::class)->handle(['homeowner_id' => $owner->id, 'type' => 'Certificate of Residency'], $admin);
+            $this->issueCertificate(['homeowner_id' => $owner->id, 'type' => 'Certificate of Residency'], $admin);
             $this->fail('The simulated persistence failure must abort issuance.');
         } catch (RuntimeException $exception) {
             $this->assertSame('Simulated persistence failure.', $exception->getMessage());
@@ -366,8 +370,8 @@ final class SystemAuditRegressionTest extends TestCase
             'subject' => 'Long request', 'details' => str_repeat('Valid request detail. ', 40), 'status' => 'Approved',
         ]);
         $details = $request->details;
-        $certificate = app(IssueCertificate::class)->fromApprovedRequest($request, $admin);
-        $this->assertSame(255, mb_strlen($certificate->purpose));
+        $certificate = $this->issueRequestedCertificate($request, $admin, 'Barangay clearance');
+        $this->assertSame('Barangay clearance', $certificate->purpose);
         $this->assertSame($details, $request->fresh()->details);
         $this->assertSame('Completed', $request->fresh()->status);
     }

@@ -34,7 +34,7 @@ final class LandlordTenantManagementTest extends TestCase
         [$landlord] = $this->resident('Owner', [], ['first_name' => 'Juan', 'middle_name' => null, 'last_name' => 'Dela Cruz', 'suffix' => 'Jr.']);
 
         $this->postJson(route('homeowner.register.landlord-availability'), [
-            ...$this->address(['street' => 'Narra St.', 'block' => 'Block 7', 'lot' => 'Lot 8', 'house_number' => 'No. 12']),
+            ...$this->address(['street' => 'Narra St.', 'block' => 'Block 7', 'lot' => 'Lot 8', 'phase_suffix' => ' a ']),
             'landlord_name' => '  JUAN   DELA-CRUZ JR. ',
         ])->assertExactJson([
             'valid' => true,
@@ -92,7 +92,7 @@ final class LandlordTenantManagementTest extends TestCase
     {
         $this->postJson(route('homeowner.register.landlord-availability'), [])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['landlord_name', 'house_number', 'street', 'block', 'lot']);
+            ->assertJsonValidationErrors(['landlord_name', 'phase_suffix', 'street', 'block', 'lot']);
 
         $middleware = Route::getRoutes()->getByName('homeowner.register.landlord-availability')->gatherMiddleware();
         $this->assertContains('throttle:30,1', $middleware);
@@ -222,8 +222,12 @@ final class LandlordTenantManagementTest extends TestCase
         [, $unmatched] = $this->resident('Tenant', ['landlord_name' => 'Missing Owner'], ['email' => 'unmatched@example.test']);
         $migration = require database_path('migrations/2026_10_18_000001_link_tenants_to_landlords.php');
 
+        // Roll back newer dependent structures first, just as an actual ordered rollback must.
+        $households = require database_path('migrations/2026_10_20_000002_add_households_projects_and_locale.php');
+        $households->down();
         $migration->down();
         $migration->up();
+        $households->up();
 
         $this->assertSame($ownerRecord->id, $matched->fresh()->landlord_homeowner_id);
         $this->assertNull($unmatched->fresh()->landlord_homeowner_id);
@@ -250,7 +254,7 @@ final class LandlordTenantManagementTest extends TestCase
     /** @param array<string, mixed> $overrides @return array<string, mixed> */
     private function address(array $overrides = []): array
     {
-        return ['house_number' => '12', 'street' => 'Narra Street', 'block' => '7', 'lot' => '8', ...$overrides];
+        return ['phase_suffix' => 'A', 'street' => 'Narra Street', 'block' => '7', 'lot' => '8', ...$overrides];
     }
 
     /** @return array<string, mixed> */

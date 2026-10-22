@@ -22,14 +22,14 @@ final class HomeownerAccountStatusChanged extends Notification implements Should
 
     public function toMail(object $notifiable): MailMessage
     {
-        $message = (new MailMessage)->subject('Southville resident account update')->greeting('Hello '.$notifiable->first_name.'.');
+        $message = (new MailMessage)->subject(__('Southville resident account update'))->greeting(__('Hello :name.', ['name' => $notifiable->first_name]));
         if ($this->status === 'Active') {
-            return $message->line('Your resident application has been approved.')->action('Open homeowner panel', url('/homeowner/login'));
+            return $message->line(__('Your resident application has been approved.'))->action(__('Open homeowner panel'), url('/homeowner/login'));
         }
         if ($this->status === 'Rejected') {
-            return $message->line('Your resident application was not approved.')->line($this->reason ? 'Reason: '.$this->reason : 'Contact the HOA office if you need assistance.');
+            return $message->line(__('Your resident application was not approved.'))->line($this->reason ? __('Reason:').' '.$this->reason : __('Contact the HOA office if you need assistance.'));
         }
 
-        return $message->line('Your resident account status is now '.$this->status.'.');
+        return $message->line(__('Your resident account status is now :status.', ['status' => __($this->status)]));
     }
 }

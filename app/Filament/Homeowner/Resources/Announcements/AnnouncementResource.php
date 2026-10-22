@@ -53,7 +53,7 @@ final class AnnouncementResource extends Resource
                         ->weight(fn (Announcement $record): string => $record->is_read ? 'normal' : 'bold')
                         ->color(fn (Announcement $record): ?string => ! $record->is_read ? 'danger' : null),
                     TextColumn::make('content')->limit(180)->wrap(),
-                    TextColumn::make('published_at')->label('Published')->dateTime('M d, Y')->sortable(),
+                    TextColumn::make('published_at')->label(__('Published'))->dateTime('M d, Y')->sortable(),
                 ])->space(3),
             ])
             ->contentGrid([
@@ -62,7 +62,7 @@ final class AnnouncementResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('category')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->options(array_combine(Announcement::CATEGORIES, Announcement::CATEGORIES)),
             ])
             ->defaultSort('published_at', 'desc')

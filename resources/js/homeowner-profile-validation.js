@@ -1,3 +1,5 @@
+import { translate, translationKey } from './translations';
+
 const PROFILE_FIELDS = [
     'first_name', 'middle_name', 'last_name', 'suffix', 'sex', 'date_of_birth',
     'contact_number', 'email', 'house_number', 'street', 'block', 'lot',
@@ -5,12 +7,15 @@ const PROFILE_FIELDS = [
     'profile_photo_upload',
 ];
 const ADDRESS_FIELDS = ['house_number', 'street', 'block', 'lot'];
-const REQUIRED_PROFILE_FIELDS = PROFILE_FIELDS.filter((field) => !['middle_name', 'suffix', 'profile_photo_upload'].includes(field));
+const REQUIRED_PROFILE_FIELDS = PROFILE_FIELDS.filter((field) => !['middle_name', 'suffix', 'house_number', 'profile_photo_upload'].includes(field));
 const NAME_FIELDS = ['first_name', 'middle_name', 'last_name', 'emergency_contact_name'];
 const PHONE_FIELDS = ['contact_number', 'emergency_contact_number'];
 const NAME_PATTERN = /^[\p{L}\s'.-]+$/u;
 const PHONE_PATTERN = /^09\d{9}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Livewire can remove browser-created messages during an unrelated morph.
+// Remember feedback only (never field values/passwords), and restore it without remounting a form.
+const feedback = new WeakMap();
 
 const today = () => new Date().toISOString().slice(0, 10);
 const canonicalText = (value) => value.normalize('NFKC').trim().replace(/\s+/gu, ' ');
@@ -60,8 +65,16 @@ const ensureStatus = (wrapper, field) => {
 };
 
 const setStatus = (wrapper, field, message = '', state = 'neutral') => {
+    const form = wrapper?.closest('form');
+    if (form) {
+        const remembered = feedback.get(form) || new Map();
+        remembered.set(field, { message, state, profileField: wrapper.dataset.profileFieldWrapper, passwordField: wrapper.dataset.passwordFieldWrapper });
+        feedback.set(form, remembered);
+    }
     const status = ensureStatus(wrapper, field);
-    status.textContent = message === '' ? '' : `${state === 'success' ? '✓' : state === 'error' ? '!' : '…'} ${message}`;
+    status.dataset.i18n = translationKey(message);
+    status.dataset.i18nPrefix = message === '' ? '' : `${state === 'success' ? '✓' : state === 'error' ? '!' : '…'} `;
+    status.textContent = status.dataset.i18nPrefix + translate(message, document.documentElement.lang);
     status.dataset.state = state;
     status.hidden = message === '';
 
@@ -91,11 +104,13 @@ const showClientSummary = (form, messages, kind) => {
     }
     summary.replaceChildren();
     const heading = document.createElement('strong');
-    heading.textContent = `Please correct the following ${kind} fields.`;
+    heading.dataset.i18n = kind === 'password' ? 'Please correct the following password fields.' : 'Please correct the following profile fields.';
+    heading.textContent = translate(heading.dataset.i18n, document.documentElement.lang);
     const list = document.createElement('ul');
     messages.forEach((message) => {
         const item = document.createElement('li');
-        item.textContent = message;
+        item.dataset.i18n = translationKey(message);
+        item.textContent = translate(message, document.documentElement.lang);
         list.append(item);
     });
     summary.append(heading, list);
@@ -479,8 +494,15 @@ const initializePasswordForm = (form) => {
 const initialize = () => {
     document.querySelectorAll('[data-profile-validation-form]').forEach(initializeProfileForm);
     document.querySelectorAll('[data-password-validation-form]').forEach(initializePasswordForm);
+    document.querySelectorAll('[data-profile-validation-form], [data-password-validation-form]').forEach(form => {
+        feedback.get(form)?.forEach(({ message, state, profileField, passwordField }, field) => {
+            const wrapper = form.querySelector(profileField ? `[data-profile-field-wrapper="${profileField}"]` : `[data-password-field-wrapper="${passwordField}"]`);
+            if (wrapper && !wrapper.querySelector(`[data-realtime-status="${field}"]`)) setStatus(wrapper, field, message, state);
+        });
+    });
 };
 
 document.addEventListener('DOMContentLoaded', initialize);
 document.addEventListener('livewire:navigated', initialize);
+window.addEventListener('hoa:locale', initialize);
 new MutationObserver(initialize).observe(document.documentElement, { childList: true, subtree: true });

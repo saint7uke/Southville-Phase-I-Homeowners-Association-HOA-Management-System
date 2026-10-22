@@ -12,6 +12,7 @@ use App\Models\UserEmailReservation;
 use App\Services\PropertyAddressAvailability;
 use App\Validation\HomeownerProfileValidator;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -33,6 +34,69 @@ final class HomeownerProfileTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+    }
+
+    public function test_new_resident_without_house_number_can_save_and_refresh_profile(): void
+    {
+        [$resident, $homeowner] = $this->homeowner();
+        $homeowner->update(['house_number' => null, 'phase_suffix' => 'A']);
+        Filament::setCurrentPanel(Filament::getPanel('homeowner'));
+        Livewire::actingAs($resident->fresh(), 'homeowner')->test(MyProfile::class)
+            ->fillForm($this->profilePayload(['email' => $resident->email, 'house_number' => null]), 'profileForm')
+            ->call('saveProfile')->assertHasNoFormErrors()->assertNotified('Profile updated successfully!');
+        $this->assertSame('A', $homeowner->fresh()->phase_suffix);
+        $this->assertEmpty($homeowner->fresh()->house_number);
+    }
+
+    public function test_filament_profile_saves_completed_phone_fields_and_persists_after_remount(): void
+    {
+        [$resident] = $this->homeowner();
+        Filament::setCurrentPanel(Filament::getPanel('homeowner'));
+        Livewire::actingAs($resident, 'homeowner')
+            ->test(MyProfile::class)
+            ->fillForm($this->profilePayload([
+                'email' => $resident->email,
+                'contact_number' => '0917-123-4567',
+                'emergency_contact_number' => '0998 765 4321',
+            ]), 'profileForm')
+            ->call('saveProfile')
+            ->assertHasNoFormErrors()
+            ->assertNotified('Profile updated successfully!');
+
+        $this->assertSame('09171234567', $resident->fresh()->contact_number);
+        $this->assertSame('09987654321', $resident->homeowner()->first()->emergency_contact_number);
+        Livewire::actingAs($resident->fresh(), 'homeowner')->test(MyProfile::class)
+            ->assertFormSet(['contact_number' => '09171234567', 'emergency_contact_number' => '09987654321'], 'profileForm');
+    }
+
+    public function test_filament_missing_phone_keeps_entered_values_and_does_not_write_partial_changes(): void
+    {
+        [$resident] = $this->homeowner();
+        $originalName = $resident->first_name;
+        Filament::setCurrentPanel(Filament::getPanel('homeowner'));
+        Livewire::actingAs($resident, 'homeowner')->test(MyProfile::class)
+            ->fillForm($this->profilePayload([
+                'email' => $resident->email, 'first_name' => 'Retained',
+                'contact_number' => '', 'emergency_contact_name' => 'Retained Contact',
+            ]), 'profileForm')
+            ->call('saveProfile')
+            ->assertHasFormErrors(['contact_number' => 'required'], 'profileForm')
+            ->assertFormSet(['first_name' => 'Retained', 'emergency_contact_name' => 'Retained Contact'], 'profileForm');
+        $this->assertSame($originalName, $resident->fresh()->first_name);
+    }
+
+    public function test_legacy_missing_phase_does_not_block_personal_details_or_rewrite_the_phase(): void
+    {
+        [$resident, $homeowner] = $this->homeowner([], ['phase' => null]);
+        Filament::setCurrentPanel(Filament::getPanel('homeowner'));
+        Livewire::actingAs($resident, 'homeowner')->test(MyProfile::class)
+            ->assertFormSet(['phase' => 'Southville Phase I'], 'profileForm')
+            ->fillForm(['contact_number' => '09171234567'], 'profileForm')
+            ->call('saveProfile')
+            ->assertHasNoFormErrors()
+            ->assertNotified('Profile updated successfully!');
+        $this->assertNull($homeowner->fresh()->phase);
+        $this->assertSame('09171234567', $resident->fresh()->contact_number);
     }
 
     public function test_portal_owner_updates_a_complete_normalized_profile_and_reverifies_changed_email(): void
@@ -234,7 +298,7 @@ final class HomeownerProfileTest extends TestCase
             'date_of_birth' => today()->toDateString(),
             'contact_number' => '08123456789',
             'email' => 'not-an-email',
-            'house_number' => '   ',
+            'house_number' => str_repeat('1', 51),
             'street' => '   ',
             'block' => '   ',
             'lot' => '   ',

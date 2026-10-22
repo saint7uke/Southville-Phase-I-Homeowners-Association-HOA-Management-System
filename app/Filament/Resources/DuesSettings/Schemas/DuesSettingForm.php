@@ -27,16 +27,16 @@ class DuesSettingForm
                     ->required()
                     ->numeric(),
                 Select::make('frequency')
-                    ->label('Type')
-                    ->options(['Monthly' => 'Monthly', 'Annual' => 'Annual', 'Special Assessment' => 'Special Assessment'])
+                    ->label(__('Type'))
+                    ->options(['Monthly' => __('Monthly'), 'Annual' => __('Annual'), 'Special Assessment' => __('Special Assessment')])
                     ->default('Monthly')
                     ->disabled(fn (?DuesSetting $record): bool => $record?->obligations()->exists() ?? false)->dehydrated()
                     ->required(),
-                TextInput::make('due_day')->label('Due day of month')->integer()->minValue(1)->maxValue(31)->default(10)
+                TextInput::make('due_day')->label(__('Due day of month'))->integer()->minValue(1)->maxValue(31)->default(10)
                     ->disabled(fn (?DuesSetting $record): bool => $record?->obligations()->exists() ?? false)->dehydrated()->required(),
-                DatePicker::make('starts_on')->label('Effective from')->native(false)
+                DatePicker::make('starts_on')->label(__('Effective from'))->native(false)
                     ->disabled(fn (?DuesSetting $record): bool => $record?->obligations()->exists() ?? false)->dehydrated()->required(),
-                DatePicker::make('ends_on')->label('Effective until')->native(false)->afterOrEqual('starts_on')
+                DatePicker::make('ends_on')->label(__('Effective until'))->native(false)->afterOrEqual('starts_on')
                     ->disabled(fn (?DuesSetting $record): bool => $record?->obligations()->exists() ?? false)->dehydrated(),
                 Textarea::make('description')->maxLength(2000)->columnSpanFull(),
                 Toggle::make('is_active')

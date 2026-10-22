@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Announcement;
 use App\Models\Payment;
 use App\Services\PropertyDuesAccounts;
+use App\Support\PropertyIdentity;
 use Illuminate\View\View;
 
 final class DashboardController extends Controller
@@ -20,7 +21,7 @@ final class DashboardController extends Controller
             ->where('payer_homeowner_id', $homeowner->id)
             ->orWhere('homeowner_id', $homeowner->id))
             ->latest('payment_date')->limit(5)->get();
-        $liable = app(PropertyDuesAccounts::class)->primaryForAddress($homeowner->address_key);
+        $liable = app(PropertyDuesAccounts::class)->primaryForAddress(PropertyIdentity::key($homeowner));
         $duesObligations = ($liable && app(PropertyDuesAccounts::class)->payerIsEligible($homeowner->loadMissing('user'), $liable->loadMissing('user'))
             ? $liable->duesObligations()
             : $homeowner->duesObligations())

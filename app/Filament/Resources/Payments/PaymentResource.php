@@ -8,6 +8,7 @@ use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Filament\Resources\Payments\Schemas\PaymentForm;
 use App\Filament\Resources\Payments\Tables\PaymentsTable;
 use App\Models\Payment;
+use App\Services\PaymentReceiptResolver;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -39,6 +40,11 @@ class PaymentResource extends Resource
         return [
             //
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return app(PaymentReceiptResolver::class)->withReceipts(parent::getEloquentQuery());
     }
 
     public static function getPages(): array

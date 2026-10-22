@@ -42,24 +42,24 @@ final class ComplaintResource extends Resource
             Select::make('category')->options(array_combine(ComplaintSubmissionValidator::CATEGORIES, ComplaintSubmissionValidator::CATEGORIES))->required(),
             Select::make('priority')->options(array_combine(ComplaintSubmissionValidator::PRIORITIES, ComplaintSubmissionValidator::PRIORITIES))->required()->default('Medium'),
             Textarea::make('description')->required()->minLength(20)->maxLength(5000)->columnSpanFull(),
-            FileUpload::make('attachments')->label('Supporting attachments')->multiple()->maxFiles(3)->storeFiles(false)->acceptedFileTypes(CaseAttachmentRules::MIME_TYPES)->maxSize(5120)->columnSpanFull(),
-            Placeholder::make('status_summary')->label('Current status')->content(fn (?Complaint $record): string => $record?->status ?? '-')->visible(fn (string $operation): bool => $operation === 'view'),
-            Placeholder::make('handler_summary')->label('Handled by')->content(fn (?Complaint $record): string => $record?->handler?->full_name ?? 'Not yet assigned')->visible(fn (string $operation): bool => $operation === 'view'),
-            Placeholder::make('timeline_summary')->label('Status timeline')->content(fn (?Complaint $record): string => $record === null ? '-' : 'Submitted '.$record->created_at->format('M d, Y g:i A').' · Last updated '.$record->updated_at->format('M d, Y g:i A').($record->resolved_at ? ' · Closed '.$record->resolved_at->format('M d, Y g:i A') : ''))->visible(fn (string $operation): bool => $operation === 'view')->columnSpanFull(),
-            Placeholder::make('resolution_summary')->label('Resolution notes')->content(fn (?Complaint $record): string => $record?->admin_remarks ?: 'No resolution notes yet.')->visible(fn (string $operation): bool => $operation === 'view')->columnSpanFull(),
+            FileUpload::make('attachments')->label(__('Supporting attachments'))->multiple()->maxFiles(3)->storeFiles(false)->acceptedFileTypes(CaseAttachmentRules::MIME_TYPES)->maxSize(5120)->columnSpanFull(),
+            Placeholder::make('status_summary')->label(__('Current status'))->content(fn (?Complaint $record): string => $record?->status ?? '-')->visible(fn (string $operation): bool => $operation === 'view'),
+            Placeholder::make('handler_summary')->label(__('Handled by'))->content(fn (?Complaint $record): string => $record?->handler?->full_name ?? 'Not yet assigned')->visible(fn (string $operation): bool => $operation === 'view'),
+            Placeholder::make('timeline_summary')->label(__('Status timeline'))->content(fn (?Complaint $record): string => $record === null ? '-' : 'Submitted '.$record->created_at->format('M d, Y g:i A').' · Last updated '.$record->updated_at->format('M d, Y g:i A').($record->resolved_at ? ' · Closed '.$record->resolved_at->format('M d, Y g:i A') : ''))->visible(fn (string $operation): bool => $operation === 'view')->columnSpanFull(),
+            Placeholder::make('resolution_summary')->label(__('Resolution notes'))->content(fn (?Complaint $record): string => $record?->admin_remarks ?: 'No resolution notes yet.')->visible(fn (string $operation): bool => $operation === 'view')->columnSpanFull(),
         ])->columns(2);
     }
 
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('ticket_number')->label('Ticket')->searchable(),
+            TextColumn::make('ticket_number')->label(__('Ticket'))->searchable(),
             TextColumn::make('subject')->searchable()->wrap(),
             TextColumn::make('category')->badge(),
-            TextColumn::make('priority')->badge(),
-            TextColumn::make('status')->badge(),
+            TextColumn::make('priority')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
+            TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
             TextColumn::make('created_at')->dateTime()->sortable(),
-            TextColumn::make('updated_at')->label('Last updated')->dateTime()->sortable(),
+            TextColumn::make('updated_at')->label(__('Last updated'))->dateTime()->sortable(),
         ])->defaultSort('created_at', 'desc')->recordActions([ViewAction::make()]);
     }
 
