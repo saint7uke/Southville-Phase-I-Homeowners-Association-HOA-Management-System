@@ -6,6 +6,7 @@ use App\Actions\Projects\ManageProject;
 use App\Models\Project;
 use App\Support\AuthenticatedActor;
 use App\Support\OperationalAccess;
+use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -15,6 +16,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -27,6 +29,8 @@ final class Projects extends Page implements HasTable
     use InteractsWithTable;
 
     protected string $view = 'filament.pages.projects';
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedWrenchScrewdriver;
 
     protected static string|\UnitEnum|null $navigationGroup = 'Community';
 

@@ -11,11 +11,13 @@ use App\Models\Household;
 use App\Support\AuthenticatedActor;
 use App\Support\OperationalAccess;
 use App\Support\PropertyIdentity;
+use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -30,6 +32,8 @@ final class Households extends Page implements HasTable
     protected string $view = 'filament.pages.households';
 
     protected static ?string $navigationLabel = 'Households & Provisional RBI';
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHomeModern;
 
     protected static string|\UnitEnum|null $navigationGroup = 'Community';
 
