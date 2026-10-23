@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Support\PropertyIdentity;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +16,38 @@ final class AuditDataIntegrity extends Command
 
     public function handle(): int
     {
+        // Join only selected address columns; normalize in the shared resolver, not
+        // through database-specific Unicode/collation guesses or legacy street keys.
+        $landlordLinks = DB::table('homeowners as t')->leftJoin('homeowners as l', 'l.id', '=', 't.landlord_homeowner_id')
+            ->whereNull('t.deleted_at')->whereNotNull('t.landlord_homeowner_id')
+            ->select(['t.id', 't.ownership_type', 'l.id as landlord_id', 'l.ownership_type as landlord_type', 'l.deleted_at as landlord_deleted_at']);
+        foreach (['phase', 'phase_suffix', 'block', 'lot', 'house_number', 'street', 'address_key'] as $field) {
+            $landlordLinks->addSelect(["t.{$field} as tenant_{$field}", "l.{$field} as landlord_{$field}"]);
+        }
+        $invalidLinks = 0;
+        $unresolvedLinks = 0;
+        foreach ($landlordLinks->cursor() as $link) {
+            if ($link->ownership_type !== 'Tenant' || $link->landlord_id === null || $link->landlord_deleted_at !== null
+                || ! in_array($link->landlord_type, ['Owner', 'Co-owner'], true) || $link->id === $link->landlord_id) {
+                $invalidLinks++;
+
+                continue;
+            }
+            $tenant = $landlord = [];
+            foreach (['phase', 'phase_suffix', 'block', 'lot', 'house_number', 'street', 'address_key'] as $field) {
+                $tenant[$field] = $link->{'tenant_'.$field};
+                $landlord[$field] = $link->{'landlord_'.$field};
+            }
+            if (PropertyIdentity::confirmedKey($tenant) === null || PropertyIdentity::confirmedKey($landlord) === null) {
+                $unresolvedLinks++;
+                // A different base property is definitely invalid. A missing suffix
+                // alone requires review, not a guessed match or automatic repair.
+                $invalidLinks += PropertyIdentity::baseKey($tenant) !== PropertyIdentity::baseKey($landlord) ? 1 : 0;
+            } else {
+                $invalidLinks += PropertyIdentity::same($tenant, $landlord) ? 0 : 1;
+            }
+        }
+        $propertyKey = PropertyIdentity::storedKeyExpression('h');
         $accepted = DB::table('payments')->whereNull('deleted_at')->whereIn('review_status', ['Approved', 'Recorded'])
             ->whereNotNull('dues_obligation_id')->selectRaw('dues_obligation_id, SUM(amount_paid) AS accepted_paid, SUM(penalty) AS accepted_penalty')
             ->groupBy('dues_obligation_id');
@@ -32,19 +65,18 @@ final class AuditDataIntegrity extends Command
                 ->whereRaw('p.homeowner_id <> d.homeowner_id OR p.dues_setting_id <> d.dues_setting_id')->count(),
             'current_homeowners_with_deleted_or_missing_users' => DB::table('homeowners as h')->leftJoin('users as u', 'u.id', '=', 'h.user_id')
                 ->whereNull('h.deleted_at')->where(fn ($query) => $query->whereNull('u.id')->orWhereNotNull('u.deleted_at'))->count(),
-            'invalid_current_landlord_links' => DB::table('homeowners as t')->leftJoin('homeowners as l', 'l.id', '=', 't.landlord_homeowner_id')
-                ->whereNull('t.deleted_at')->whereNotNull('t.landlord_homeowner_id')
-                ->where(fn ($query) => $query->where('t.ownership_type', '!=', 'Tenant')->orWhereNull('l.id')->orWhereNotNull('l.deleted_at')
-                    ->orWhereNotIn('l.ownership_type', ['Owner', 'Co-owner'])->orWhereColumn('t.id', 'l.id')->orWhereColumn('t.address_key', '!=', 'l.address_key'))->count(),
+            'invalid_current_landlord_links' => $invalidLinks,
         ];
 
         $observations = [
             'legacy_payments_without_obligations' => DB::table('payments')->whereNull('dues_obligation_id')->count(),
             'unlinked_current_tenants' => DB::table('homeowners')->whereNull('deleted_at')->where('ownership_type', 'Tenant')->whereNull('landlord_homeowner_id')->count(),
+            'unresolved_current_landlord_links' => $unresolvedLinks,
+            'unresolved_property_billing_records' => DB::table('dues_obligations as d')->join('homeowners as h', 'h.id', '=', 'd.homeowner_id')->whereNull('h.property_key')->count(),
             'duplicate_property_billing_groups' => DB::query()->fromSub(DB::table('dues_obligations as d')
-                ->join('homeowners as h', 'h.id', '=', 'd.homeowner_id')->whereNotNull('h.address_key')
-                ->selectRaw('h.address_key, d.dues_setting_id, d.billing_year, d.billing_month, COUNT(*) AS records')
-                ->groupBy('h.address_key', 'd.dues_setting_id', 'd.billing_year', 'd.billing_month')->havingRaw('COUNT(*) > 1'), 'duplicates')->count(),
+                ->join('homeowners as h', 'h.id', '=', 'd.homeowner_id')->whereRaw("{$propertyKey} IS NOT NULL")
+                ->selectRaw("{$propertyKey} AS resolved_property, d.dues_setting_id, d.billing_year, d.billing_month, COUNT(*) AS records")
+                ->groupByRaw($propertyKey)->groupBy('d.dues_setting_id', 'd.billing_year', 'd.billing_month')->havingRaw('COUNT(*) > 1'), 'duplicates')->count(),
             'equivalent_email_groups' => DB::query()->fromSub(DB::table('users')->selectRaw('LOWER(TRIM(email)) AS normalized_email, COUNT(*) AS records')
                 ->groupByRaw('LOWER(TRIM(email))')->havingRaw('COUNT(*) > 1'), 'duplicates')->count(),
             'overlapping_equivalent_dues_schedules' => DB::table('dues_settings as a')->join('dues_settings as b', function ($join): void {

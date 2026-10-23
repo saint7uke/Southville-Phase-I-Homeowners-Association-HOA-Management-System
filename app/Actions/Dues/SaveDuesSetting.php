@@ -7,6 +7,7 @@ namespace App\Actions\Dues;
 use App\Jobs\GenerateDuesForSetting;
 use App\Models\DuesSetting;
 use App\Models\User;
+use App\Services\DuesSchedulePeriods;
 use App\Validation\DuesSettingValidator;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +25,7 @@ final class SaveDuesSetting
         $validated = $this->validator->validate($data);
 
         $setting = DB::transaction(function () use ($validated, $actor): DuesSetting {
-            $this->lockNameAndEnsureNoOverlap($validated);
+            app(DuesSchedulePeriods::class)->lockAndAssertNoOverlap($validated);
 
             return DuesSetting::query()->create([...$validated, 'created_by' => $actor->id]);
         });
@@ -42,9 +43,14 @@ final class SaveDuesSetting
     {
         Gate::forUser($actor)->authorize('update', $setting);
         $validated = $this->validator->validate($data);
+        $expectedName = $setting->fresh()->normalized_name;
 
-        return DB::transaction(function () use ($setting, $validated): DuesSetting {
+        return DB::transaction(function () use ($setting, $validated, $expectedName): DuesSetting {
+            app(DuesSchedulePeriods::class)->lockNames([$expectedName, $validated['normalized_name']]);
             $locked = DuesSetting::query()->lockForUpdate()->findOrFail($setting->id);
+            if ($locked->normalized_name !== $expectedName) {
+                throw ValidationException::withMessages(['name' => __('This dues schedule changed while you were editing. Reload it before making changes.')]);
+            }
             if ($locked->obligations()->exists()) {
                 foreach (['name', 'normalized_name', 'amount', 'frequency', 'due_day', 'starts_on', 'ends_on', 'is_active'] as $field) {
                     $incoming = $this->comparable($field, $validated[$field] ?? null);
@@ -57,7 +63,7 @@ final class SaveDuesSetting
                 }
             }
 
-            $this->lockNameAndEnsureNoOverlap($validated, $locked->id);
+            app(DuesSchedulePeriods::class)->lockAndAssertNoOverlap($validated, $locked->id);
             $locked->update($validated);
 
             return $locked->refresh();
@@ -80,38 +86,5 @@ final class SaveDuesSetting
         }
 
         return (string) ($value ?? '');
-    }
-
-    /** @param array<string, mixed> $data */
-    private function lockNameAndEnsureNoOverlap(array $data, ?int $exceptId = null): void
-    {
-        DB::table('dues_setting_name_locks')->insertOrIgnore([
-            'normalized_name' => $data['normalized_name'],
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        DB::table('dues_setting_name_locks')->where('normalized_name', $data['normalized_name'])->lockForUpdate()->first();
-
-        $start = CarbonImmutable::parse($data['starts_on'])->startOfMonth()->toDateString();
-        $end = filled($data['ends_on'] ?? null)
-            ? CarbonImmutable::parse($data['ends_on'])->endOfMonth()->toDateString()
-            : null;
-
-        $conflict = DuesSetting::query()
-            ->where('normalized_name', $data['normalized_name'])
-            ->when($exceptId, fn ($query) => $query->whereKeyNot($exceptId))
-            ->where(function ($query) use ($end): void {
-                if ($end !== null) {
-                    $query->whereDate('starts_on', '<=', $end);
-                }
-            })
-            ->where(fn ($query) => $query->whereNull('ends_on')->orWhereDate('ends_on', '>=', $start))
-            ->exists();
-
-        if ($conflict) {
-            throw ValidationException::withMessages([
-                'name' => __('An equivalent dues schedule already covers part of this billing period.'),
-            ]);
-        }
     }
 }

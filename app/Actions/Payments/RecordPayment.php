@@ -94,7 +94,15 @@ final class RecordPayment
 
         try {
             return DB::transaction(function () use ($validated, $recorder): Payment {
-                $obligation = DuesObligation::query()->lockForUpdate()->with(['homeowner.user'])->findOrFail($validated['dues_obligation_id']);
+                // Match profile/landlord editing: property mutex before financial rows.
+                $snapshot = DuesObligation::query()->with('homeowner')->findOrFail($validated['dues_obligation_id']);
+                app(PropertyAddressAvailability::class)->lockProperty($snapshot->homeowner->getAttributes());
+                $liable = Homeowner::withTrashed()->lockForUpdate()->findOrFail($snapshot->homeowner_id);
+                $obligation = DuesObligation::query()->lockForUpdate()->findOrFail($validated['dues_obligation_id']);
+                if ($obligation->homeowner_id !== $liable->id || ! PropertyIdentity::same($snapshot->homeowner, $liable)) {
+                    throw ValidationException::withMessages(['dues_obligation_id' => __('The property details changed. Reload the payment form before recording this payment.')]);
+                }
+                $obligation->setRelation('homeowner', $liable);
                 if ($existing = Payment::withTrashed()->where('submission_token', $validated['submission_token'])->lockForUpdate()->first()) {
                     return $this->idempotentResult($existing, $validated);
                 }
@@ -102,8 +110,11 @@ final class RecordPayment
                     throw ValidationException::withMessages(['dues_obligation_id' => __('Select an open dues obligation.')]);
                 }
 
-                $payer = Homeowner::query()->with('user')->findOrFail($validated['payer_homeowner_id'] ?? $obligation->homeowner_id);
-                if (! $this->accounts->payerIsEligible($payer, $obligation->homeowner)) {
+                // Locking reads include the linked landlord and account-status checks.
+                // Under REPEATABLE READ they must see changes committed while waiting.
+                $payer = $this->accounts->eligiblePayers($liable, lock: true)
+                    ->whereKey($validated['payer_homeowner_id'] ?? $obligation->homeowner_id)->first();
+                if ($payer === null) {
                     throw ValidationException::withMessages(['payer_homeowner_id' => __('Select an active household member associated with this property.')]);
                 }
 

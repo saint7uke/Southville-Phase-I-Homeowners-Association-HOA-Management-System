@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuditLogExportController;
 use App\Http\Controllers\Admin\HoaReportController;
+use App\Http\Controllers\Admin\HouseholdExportController;
 use App\Http\Controllers\Admin\PaymentExportController;
 use App\Http\Controllers\Admin\QueuedReportDownloadController;
 use App\Http\Controllers\BrandingLogoController;
@@ -150,6 +151,9 @@ Route::get('/case-attachments/{caseAttachment}', CaseAttachmentController::class
     ->name('case-attachments.download');
 
 Route::middleware('account.active')->group(function (): void {
+    Route::get('/admin/households/{household}/summary.{format}', HouseholdExportController::class)
+        ->middleware(['auth:admin', 'role:hoa_admin', 'permission:manage_homeowners', 'throttle:20,1'])
+        ->whereIn('format', ['pdf', 'xlsx'])->name('admin.households.export');
     Route::get('/admin/reports/payments.xlsx', PaymentExportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:5,1'])->name('admin.reports.payments');
     Route::get('/admin/reports/audit-logs.csv', AuditLogExportController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:view_audit_logs', 'throttle:5,1'])->name('admin.reports.audit-logs');
     Route::get('/admin/reports/queued/{reportExport}', QueuedReportDownloadController::class)->middleware(['auth:admin,staff,web', 'role:hoa_admin', 'permission:export_reports', 'throttle:10,1'])->name('admin.reports.queued.download');

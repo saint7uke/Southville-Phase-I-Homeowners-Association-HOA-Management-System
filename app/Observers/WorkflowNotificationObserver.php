@@ -28,9 +28,9 @@ final class WorkflowNotificationObserver
         }
 
         $alert = match (true) {
-            $model instanceof Complaint && $settings->complaint_notifications => new OperationalAlert('New homeowner complaint', 'Complaint :reference: :subject', url('/staff/complaints'), ['reference' => $model->ticket_number, 'subject' => $model->subject]),
-            $model instanceof ServiceRequest && $settings->request_notifications => new OperationalAlert('New homeowner service request', 'Request :reference: :type', url('/staff/service-requests'), ['reference' => $model->ticket_number, 'type' => $model->request_type]),
-            $model instanceof ContactMessage && $settings->contact_notifications => new OperationalAlert('New public contact message', ':name: :subject', url('/staff/contact-messages'), ['name' => $model->name, 'subject' => $model->subject]),
+            $model instanceof Complaint && $settings->complaint_notifications => new OperationalAlert('New homeowner complaint', 'Complaint :reference: :subject', url('/staff/complaints'), ['reference' => $model->ticket_number, 'subject' => $model->subject], 'manage_complaints'),
+            $model instanceof ServiceRequest && $settings->request_notifications => new OperationalAlert('New homeowner service request', 'Request :reference: :type', url('/staff/service-requests'), ['reference' => $model->ticket_number, 'type' => $model->request_type], 'manage_requests'),
+            $model instanceof ContactMessage && $settings->contact_notifications => new OperationalAlert('New public contact message', ':name: :subject', url('/staff/contact-messages'), ['name' => $model->name, 'subject' => $model->subject], 'manage_contact_messages'),
             default => null,
         };
 
@@ -38,7 +38,11 @@ final class WorkflowNotificationObserver
             User::query()
                 ->whereHas('roles', fn ($query) => $query->where('name', 'hoa_staff')->where('guard_name', 'web'))
                 ->where('account_status', 'Active')
-                ->each(fn (User $user) => $user->notify($alert));
+                ->each(function (User $user) use ($alert): void {
+                    if ($alert->recipientCanReceive($user)) {
+                        $user->notify($alert);
+                    }
+                });
         }
     }
 

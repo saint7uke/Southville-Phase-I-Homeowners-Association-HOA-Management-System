@@ -1,5 +1,23 @@
 # System-wide audit and targeted repairs
 
+## Scoped admin export letterhead — 2026-10-23
+
+Admin Reports PDF/XLSX and admin Household PDF/new Excel exports now explicitly use the original Cohabitation association letterhead. Shared/unrelated exports do not opt in. [Source preservation, permission/data checks and actual results](export-only-cohabitation-letterhead.md) include the multi-page synthetic checks and remaining browser/native-print limits. No new migration, live data repair, historical regeneration or source approval; existing SEC-01 release limits remain.
+
+Final focused evidence: **70 related tests / 536 assertions**, then **120 export/certificate tests / 706 assertions** after the last print-height refinement, all passing with no skips. These overlap; they are not a full-system rerun. Native Word crop comparison, synthetic PDF row/geometry checks, formatting/syntax/parity and build checks pass.
+
+## SC-07 follow-up — 2026-10-23
+
+The user authorized property-based payment eligibility for verified Tenants linked to an eligible same-property Owner or Co-owner. [Implementation and current evidence](sc07-tenant-property-payments.md) cover shared eligibility, locked revalidation, permitted dues visibility, retained liable ownership and unchanged private payment/receipt rights. This supersedes the older SC-07 “awaiting decision” state below. No live migration, ledger rewrite, source approval or push is included; SEC-01 remains externally blocked. The legacy unique block/lot rollback limitation is documented, not repaired by deleting shared records.
+
+SC-07 final evidence: **561 SQLite passes, 13 native-only skips, 6,284 assertions**; focused **74 native MySQL 8.4.9 passes, 368 assertions**, including concurrent unlinking, landlord deactivation and payment allocation. Formatting, scoped syntax, translation parity and the production build passed. Initial fixture/rollback-harness failures are retained in the linked report; this is not a new full-native, browser, physical-print or operational-security certification.
+
+## Authorized scan remediation — 2026-10-22
+
+The `c21509a` read-only findings now have focused repairs for SC-01–SC-06, targeted development dependency updates, reviewed missing UI translations and a build/export/asset-preflight browser workflow. See [the findings register and execution evidence](sc-remediation-20261022.md) for per-finding causes, changed modules, actual test results, failed attempts and remaining acceptance limits. No live migration, financial repair, source approval, push or deployment is included. SC-07 payer eligibility is unchanged pending an HOA policy decision; SEC-01 independent recovery remains a production-release blocker.
+
+Final verification: **523 passed / 10 native-only skips / 6,053 assertions** on SQLite; **57 focused native MySQL 8.4.9 passes / 233 assertions**; **15 combined Chromium/Firefox/WebKit passes** without retries. Full formatting, 514-file PHP syntax, Composer, npm security and production build checks passed. Earlier browser/native test failures remain disclosed. Current MariaDB read-only diagnostics return zero across six checks/seven observations; the household review flag and nine unprocessed jobs remain unchanged. Bounded checks do not establish full browser/operational/security acceptance.
+
 ## Original receipt PDF correction — 2026-10-21
 
 The configured ten-slip DOCX export did not match the newly uploaded single-slip PDF. The new PDF is preserved under a separate versioned asset directory and served byte-for-byte for private source review; original-font blank overlays are remapped to its actual geometry. Historical sources/documents remain intact and no old approval is inherited. Empty monthly-receipt history now explains that only generated PDFs appear and links to the existing permission-checked receipt form. The interrupted list-page syntax error is repaired. See [the correction audit](receipt-pdf-source-correction.md) for engineering evidence and final tests; no financial repairs, live approval or schema change were performed.

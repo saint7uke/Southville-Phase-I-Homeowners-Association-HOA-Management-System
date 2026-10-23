@@ -76,6 +76,16 @@ final class PropertyIdentity
         return self::key($left) === self::key($right);
     }
 
+    /** SQL equivalent for persisted keys maintained by the homeowner saving hook. */
+    public static function storedKeyExpression(string $alias): string
+    {
+        if (! preg_match('/^[a-z][a-z0-9_]*$/Di', $alias)) {
+            throw new \InvalidArgumentException('Invalid property table alias.');
+        }
+
+        return "COALESCE({$alias}.property_key, {$alias}.address_key)";
+    }
+
     public static function scope(Builder $query, array|Model $address): Builder
     {
         $key = self::confirmedKey($address);

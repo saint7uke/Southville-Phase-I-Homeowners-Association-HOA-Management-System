@@ -13,12 +13,14 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\ValidationException;
 
 class DuesSettingsTable
 {
@@ -66,10 +68,15 @@ class DuesSettingsTable
                     ->modalDescription(__('The schedule will end after its latest generated billing month and will no longer generate obligations.'))
                     ->color('warning')
                     ->visible(fn (DuesSetting $record): bool => $record->is_active)
-                    ->action(function (DuesSetting $record): void {
+                    ->action(function (DuesSetting $record, Action $action): void {
                         $actor = app(AuthenticatedActor::class)->user();
                         abort_unless($actor instanceof User, 403);
-                        app(CloseDuesSetting::class)->handle($record, $actor);
+                        try {
+                            app(CloseDuesSetting::class)->handle($record, $actor);
+                        } catch (ValidationException $exception) {
+                            Notification::make()->danger()->title(__('Please review the form'))->body(collect($exception->errors())->flatten()->first())->send();
+                            $action->halt();
+                        }
                     }),
                 DeleteAction::make()->visible(fn (): bool => Filament::getCurrentPanel()?->getId() === 'admin'),
             ])

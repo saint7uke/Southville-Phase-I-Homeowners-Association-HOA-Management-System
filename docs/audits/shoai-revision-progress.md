@@ -1,5 +1,23 @@
 # SHOAI phased revision — 2026-10-20
 
+## Export-only association letterhead — 2026-10-23
+
+Implemented the original Cohabitation document's logo/three-line letterhead only for admin Reports PDF/XLSX (including new queued admin XLSX) and dedicated admin Household PDF/new XLSX downloads. Staff/homeowner/shared downloads, CSV, previews, legacy payment/audit exports, certificates, receipts and saved exports remain unchanged. The original DOCX is unchanged; native Word extraction and pixel comparison are documented. [Affected modules, evidence and coverage limits](export-only-cohabitation-letterhead.md). No migration, live-record change or source approval.
+
+Verification: **70 related checks / 536 assertions** passed, followed by **120 export/original-document checks / 706 assertions** after the metadata-height refinement (overlapping selections, not 190 unique tests). Native-crop decoded pixels match; synthetic three-page household/report PDFs retain 85/65 rows without overlap. Pint, 14-file PHP syntax, dictionary parity and production build pass. No new full-native, browser, Excel-native or physical-print acceptance is claimed.
+
+## SC-07 property-based tenant payments — 2026-10-23
+
+Implemented the user's approved rule: an eligible verified Tenant linked to an Owner or Co-owner at the same confirmed property may pay, while the existing Owner remains liable. One current-state query drives payer selection, validation and permitted dues reading; transactional recording rechecks the property and landlord/account status. Cash-only recording, one assessment per property, actual-payer history and private receipt access are preserved. Unresolved legacy identities gain no indirect access. [Changed files, actual verification and remaining release boundaries](sc07-tenant-property-payments.md) include the pre-existing rollback limitation. No new migration or live-record repair.
+
+Final verification: **561 SQLite passes / 13 native-only skips / 6,284 assertions**; focused **native MySQL 8.4.9: 74 passes / 368 assertions**, including actual concurrent link/status revocation and payment allocation. Pint, scoped PHP syntax, translation parity and production build passed. Initial test-harness failures remain disclosed; no new authenticated browser or physical-print acceptance is claimed. Earlier dated SC-07 pending-decision notes below are superseded by this increment; independent SEC-01 recovery remains blocked.
+
+## System-audit remediation — 2026-10-22
+
+Implemented the authorized `c21509a` follow-up: locked complaint updates (including direct stale Eloquent saves), fresh schedule-locked assessments, bounded serialized closure, atomic role/audit writes with rollback-safe permission caching, module-aware queued operational alerts and resolved-property integrity diagnostics. Targeted npm patches address the reported development advisories; UI dictionaries and static-fixture preflight/CI coverage are updated. [Per-finding evidence and remaining gates](sc-remediation-20261022.md) distinguish actual tests and initial failures from pending acceptance. No migration or live-record repair; SC-07 and independent SEC-01 recovery remain unresolved, with no automatic approval or push.
+
+Final evidence: **523 SQLite passes / 10 native-only skips / 6,053 assertions**; focused **native MySQL 8.4.9: 57 passes / 233 assertions**; combined **15 browser passes** across Chromium/Firefox/WebKit without retries. Pint, 514-file PHP syntax, Node tooling/syntax, Composer checks, production build and npm audits pass. Existing MariaDB integrity inspection was read-only; household review/queue counts are unchanged. Native results are focused, not a final full-native acceptance or host-trust sign-off.
+
 ## Global English/Filipino switcher — 2026-10-22
 
 Implemented the selected compact native dropdown with a hidden accessible label, 14px text,

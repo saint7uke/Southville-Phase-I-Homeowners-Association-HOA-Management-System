@@ -222,6 +222,12 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Build, export and preflight synthetic browser fixtures
+        id: static-browser
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:browser:static -- --project=${{ matrix.browser }} 2>&1 | tee storage/logs/playwright-static-${{ matrix.browser }}.log
       - name: Run Playwright with retained diagnostics
         id: playwright
         shell: bash
@@ -251,12 +257,14 @@ jobs:
           exit "$status"
         env: *browser-env
       - name: Upload Playwright failure evidence
-        if: failure() && steps.playwright.outcome == 'failure'
+        if: failure() && (steps.playwright.outcome == 'failure' || steps.static-browser.outcome == 'failure')
         uses: actions/upload-artifact@v7
         with:
           name: playwright-${{ matrix.browser }}-${{ github.run_attempt }}
           path: |
             storage/logs/playwright-${{ matrix.browser }}.log
+            storage/logs/playwright-static-${{ matrix.browser }}.log
+            storage/framework/testing/static-browser-results/
             playwright-report/
             test-results/
           if-no-files-found: warn

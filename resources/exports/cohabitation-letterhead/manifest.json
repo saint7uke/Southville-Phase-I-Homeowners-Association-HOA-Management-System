@@ -1,0 +1,21 @@
+{
+    "source_filename": "Cohabilitation Certificate.docx",
+    "source_sha256": "9b572c18fc08ecc0edc909dced3069b3ead51f29c1be6beb6737cc0a3a0fe436",
+    "word_pdf_sha256": "c8b59b219fa27c6a30d13250479998898ecb629e74edd259a54d61140bcac68c",
+    "page_points": [
+        612,
+        792
+    ],
+    "crop_points": [
+        36.0,
+        28.0,
+        576.0,
+        128.0
+    ],
+    "dpi": 600,
+    "width": 4500,
+    "height": 834,
+    "sha256": "d31dc1dcd91f3b1971178ff32a4fff9a199da4783157419fe9cf232d2821f73d",
+    "tool": "PyMuPDF 2.0",
+    "review_date": "2026-10-23"
+}

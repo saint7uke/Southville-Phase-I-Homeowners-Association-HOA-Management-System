@@ -45,45 +45,52 @@ final class PropertyDuesAccounts
 
     public function payerIsEligible(Homeowner $payer, Homeowner $liable): bool
     {
-        if ($payer->trashed() || ! in_array($payer->status, ['Active', 'Delinquent'], true)
-            || $payer->user?->account_status !== 'Active' || $payer->user?->trashed()) {
-            return false;
-        }
-
-        if ($payer->id === $liable->id) {
-            return true;
-        }
-
-        if (! PropertyIdentity::same($payer, $liable)) {
-            return false;
-        }
-
-        return $payer->ownership_type === 'Co-owner'
-            || ($payer->ownership_type === 'Tenant' && $payer->landlord_homeowner_id === $liable->id);
+        // Query current records, not cached user/landlord relations or browser state.
+        return $payer->exists && ! $payer->trashed()
+            && $this->eligiblePayers($liable)->whereKey($payer->id)->exists();
     }
 
     /** @return Builder<Homeowner> */
-    public function eligiblePayers(Homeowner $liable): Builder
+    public function eligiblePayers(Homeowner $liable, bool $lock = false): Builder
     {
-        return PropertyIdentity::scope(Homeowner::query(), $liable)
-            ->whereIn('status', ['Active', 'Delinquent'])
-            ->whereHas('user', fn (Builder $query) => $query->where('account_status', 'Active')->whereNull('users.deleted_at'))
-            ->where(function (Builder $query) use ($liable): void {
+        if ($lock && DB::transactionLevel() === 0) {
+            throw new \LogicException('Locking payer eligibility requires a transaction.');
+        }
+
+        return $this->eligibleResidents(PropertyIdentity::scope(Homeowner::query(), $liable), $lock)
+            ->where(function (Builder $query) use ($liable, $lock): void {
                 $query->whereKey($liable->id)
                     ->orWhere('ownership_type', 'Co-owner')
                     ->orWhere(fn (Builder $query) => $query
                         ->where('ownership_type', 'Tenant')
-                        ->where('landlord_homeowner_id', $liable->id));
-            });
+                        ->whereHas('landlord', function (Builder $landlord) use ($liable, $lock): void {
+                            $this->eligibleResidents(PropertyIdentity::scope($landlord, $liable), $lock)
+                                ->whereIn('ownership_type', ['Owner', 'Co-owner']);
+                            // Preserve supported direct-landlord legacy payments, but
+                            // never infer a new indirect relationship from an unknown phase.
+                            if (PropertyIdentity::confirmedKey($liable) === null) {
+                                $landlord->whereKey($liable->id);
+                            }
+                        }));
+            })
+            ->when($lock, fn (Builder $query) => $query->lockForUpdate());
     }
 
     /** @return Builder<Homeowner> */
     public function activeOwners(): Builder
     {
-        return Homeowner::query()
-            ->whereIn('status', ['Active', 'Delinquent'])
+        return $this->eligibleResidents(Homeowner::query())
             ->whereIn('ownership_type', ['Owner', 'Co-owner'])
-            ->whereNotNull('address_key')
-            ->whereHas('user', fn (Builder $query) => $query->where('account_status', 'Active')->whereNull('users.deleted_at'));
+            ->whereNotNull('address_key');
+    }
+
+    /** Explicit deleted checks also protect the withTrashed landlord relationship. */
+    private function eligibleResidents(Builder $query, bool $lock = false): Builder
+    {
+        return $query->whereNull($query->getModel()->getQualifiedDeletedAtColumn())
+            ->whereIn('status', ['Active', 'Delinquent'])
+            ->whereHas('user', fn (Builder $user) => $user->where('account_status', 'Active')->whereNull('users.deleted_at')
+                ->when($lock, fn (Builder $user) => $user->lockForUpdate()))
+            ->when($lock, fn (Builder $query) => $query->lockForUpdate());
     }
 }

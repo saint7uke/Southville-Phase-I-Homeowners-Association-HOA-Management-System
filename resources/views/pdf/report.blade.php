@@ -23,7 +23,12 @@
     </style>
 </head>
 <body>
-    <h1>Southville Phase I Homeowners Association</h1>
+    @if(!empty($letterhead))
+        @include('pdf.partials.export-letterhead')
+        <h1>{{ $title }}</h1>
+    @else
+        <h1>Southville Phase I Homeowners Association</h1>
+    @endif
     <div class="meta">
         {{ $title }} | Generated {{ now()->format('Y-m-d H:i') }} by {{ $generatedBy }}
         @if(!empty($filters['from']) || !empty($filters['to']))

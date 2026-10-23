@@ -16,6 +16,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use DomainException;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -48,6 +49,25 @@ final class ReleaseReadinessTest extends TestCase
         app()->setLocale('fil');
         $this->assertSame('Maglagay ng 11-digit na mobile number sa Pilipinas na nagsisimula sa 09.', app(HomeownerProfileValidator::class)->messages()['contact_number.regex']);
         $this->assertSame('Active', $homeowner->fresh()->status);
+    }
+
+    public function test_reviewed_document_actions_and_new_validation_copy_render_in_filipino(): void
+    {
+        app()->setLocale('fil');
+        $html = Blade::render('<button>{{ __("Close") }}</button><a>{{ __("Download") }}</a><span>{{ __("Certificate") }}</span><p>{{ __("Generated payment documents are immutable.") }}</p>');
+        $this->assertStringContainsString('<button>Isara</button>', $html);
+        $this->assertStringContainsString('<a>I-download</a>', $html);
+        $this->assertStringContainsString('<span>Sertipiko</span>', $html);
+        $this->assertStringContainsString('Hindi maaaring baguhin', $html);
+        foreach ([
+            'Assigned staff cannot change the resident\'s original complaint or assignment.',
+            'Select a permitted next complaint status. Move Pending complaints to Under Review before resolving them.',
+            'Generated obligations extend beyond this schedule\'s end. Contact the HOA for review; no records were changed.',
+            'This complaint changed while you were editing. Reload it before making changes.',
+            'Unsupported original-document font.',
+        ] as $message) {
+            $this->assertNotSame($message, __($message));
+        }
     }
 
     public function test_notification_translates_status_but_preserves_names_remarks_and_reference(): void

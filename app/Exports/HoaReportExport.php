@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace App\Exports;
 
+use App\Exports\Concerns\HasAdminExportLetterhead;
 use App\Services\Reporting\HoaReportCatalog;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
+use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+use Maatwebsite\Excel\Concerns\WithDrawings;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithProperties;
 
-final class HoaReportExport implements FromQuery, WithHeadings, WithMapping, WithProperties
+final class HoaReportExport implements FromQuery, WithCustomStartCell, WithDrawings, WithEvents, WithHeadings, WithMapping, WithProperties
 {
+    use HasAdminExportLetterhead;
+
     /** @var array<string, mixed> */
     private array $filters;
 
@@ -26,6 +32,7 @@ final class HoaReportExport implements FromQuery, WithHeadings, WithMapping, Wit
         ?string $status = null,
         array $filters = [],
         private readonly ?string $generatedBy = null,
+        private readonly bool $withAdminLetterhead = false,
     ) {
         $this->filters = [
             'from' => $from,
@@ -57,6 +64,26 @@ final class HoaReportExport implements FromQuery, WithHeadings, WithMapping, Wit
     public function map($record): array
     {
         return $this->catalog()->map($this->report, $record);
+    }
+
+    protected function usesAdminLetterhead(): bool
+    {
+        return $this->withAdminLetterhead;
+    }
+
+    protected function letterheadTitle(): string
+    {
+        return $this->title();
+    }
+
+    protected function letterheadMetadata(): string
+    {
+        return 'Generated '.now()->toIso8601String().' by '.($this->generatedBy ?? 'Southville Phase I HOA').' | '.$this->properties()['description'];
+    }
+
+    protected function letterheadLandscape(): bool
+    {
+        return true;
     }
 
     private function catalog(): HoaReportCatalog

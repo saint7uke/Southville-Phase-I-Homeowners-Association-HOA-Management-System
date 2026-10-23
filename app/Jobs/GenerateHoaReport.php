@@ -53,7 +53,7 @@ final class GenerateHoaReport implements ShouldQueue
             $catalog->authorize($user, $record->panel, $record->report, $format, (string) ($filters['scope'] ?? 'current'));
             $filters = $catalog->validateFilters($record->report, $filters, $record->panel === 'admin');
             $stored = Excel::store(
-                new HoaReportExport($record->report, filters: $filters, generatedBy: $user->full_name),
+                new HoaReportExport($record->report, filters: $filters, generatedBy: $user->full_name, withAdminLetterhead: $record->panel === 'admin' && $format === 'xlsx'),
                 $path,
                 'local',
                 $format === 'csv' ? ExcelFormat::CSV : ExcelFormat::XLSX,

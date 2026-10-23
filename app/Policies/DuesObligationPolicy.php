@@ -6,6 +6,7 @@ namespace App\Policies;
 
 use App\Models\DuesObligation;
 use App\Models\User;
+use App\Services\PropertyDuesAccounts;
 use Illuminate\Auth\Access\Response;
 
 final class DuesObligationPolicy
@@ -17,7 +18,12 @@ final class DuesObligationPolicy
 
     public function view(User $user, DuesObligation $obligation): Response
     {
-        return $user->can('manage_payments') || $obligation->homeowner->user_id === $user->id
+        if ($user->can('manage_payments') || $obligation->homeowner->user_id === $user->id) {
+            return Response::allow();
+        }
+        $resident = $user->can('view_own_payments') ? $user->homeowner()->first() : null;
+
+        return $resident !== null && app(PropertyDuesAccounts::class)->payerIsEligible($resident, $obligation->homeowner)
             ? Response::allow()
             : Response::denyAsNotFound();
     }

@@ -13,6 +13,7 @@ use App\Support\OperationalAccess;
 use App\Support\PropertyIdentity;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -60,7 +61,14 @@ final class Households extends Page implements HasTable
                         Notification::make()->success()->title(__('Changes saved'))->send();
                     }),
                 Action::make('members')->label(__('View / manage members'))->url(fn (Household $record): string => HouseholdMembers::getUrl(['household' => $record->id])),
-                Action::make('pdf')->label(__('Provisional RBI PDF'))->url(fn (Household $record): string => route('households.pdf', $record))->openUrlInNewTab()->visible(fn (Household $record): bool => ! $record->trashed()),
+                Action::make('pdf')->label(__('Provisional RBI PDF'))
+                    ->url(fn (Household $record): string => Filament::getCurrentPanel()?->getId() === 'admin'
+                        ? route('admin.households.export', ['household' => $record, 'format' => 'pdf']) : route('households.pdf', $record))
+                    ->openUrlInNewTab()->visible(fn (Household $record): bool => ! $record->trashed()),
+                Action::make('excel')->label(__('Provisional RBI Excel'))
+                    ->url(fn (Household $record): string => route('admin.households.export', ['household' => $record, 'format' => 'xlsx']))
+                    ->visible(fn (Household $record): bool => ! $record->trashed() && Filament::getCurrentPanel()?->getId() === 'admin'
+                        && OperationalAccess::allows(app(AuthenticatedActor::class)->user(), 'manage_homeowners', true)),
                 Action::make('archive')->label(__('Archive'))->color('danger')->requiresConfirmation()->visible(fn (Household $record): bool => ! $record->trashed() && app(AuthenticatedActor::class)->user()?->hasRole('hoa_admin'))
                     ->action(fn (Household $record) => $this->runValidatedDomainAction(fn () => app(ManageHousehold::class)->archive('household', $record->id, false, app(AuthenticatedActor::class)->user()))),
                 Action::make('restore')->label(__('Restore'))->requiresConfirmation()->visible(fn (Household $record): bool => $record->trashed() && app(AuthenticatedActor::class)->user()?->hasRole('hoa_admin'))

@@ -1,5 +1,19 @@
 # Native MySQL 8.4 acceptance recipe
 
+## SC-07 continuation — 2026-10-23
+
+The focused property-payment selection passed on **native MySQL Community Server 8.4.9: 74 tests / 368 assertions / no skips** (JUnit 156.84 seconds), including three new real concurrent tenant-link/account-status/payment-allocation cases and two existing payment races. It used a newly initialized loopback-only standalone instance on port `33187`, disposable database `hoa_native_test_sc07_20261023`, a test-only database-scoped user, explicit destructive-test opt-in and the native-version preflight. No existing service, `hoa_system`, `.env`, live queue or historical ledger was modified. See [SC-07 evidence, earlier attempts and rollback limitations](sc07-tenant-property-payments.md).
+
+The final legacy-entry case passed separately on the same native server (**1 test / 4 assertions**, 37.73 seconds). The standalone port-33187 instance was then shut down through its own `mysqladmin` connection; ignored diagnostic evidence remains available.
+
+This is focused acceptance of the uncommitted `c21509a`-based worktree, not a replacement for a final full-native suite or trusted-host release sign-off. In particular, the pre-existing down migration that reinstates unique block/lot values cannot safely run over legitimate shared-property data; no records were merged or deleted to work around it. New concurrency tests use guarded disposable-schema truncation rather than that populated rollback.
+
+## Audit-repair continuation — 2026-10-22
+
+The SC remediation selection passed on a separately initialized **native MySQL Community Server 8.4.9** instance: **57 tests / 233 assertions / no skips**, 221.74 seconds. This includes six actual concurrent tests for current schedule values, closure, frozen assessment snapshots, finalized complaints and payment allocation/idempotency, plus related financial and diagnostic regressions. This is a focused current-worktree result, **not a replacement final full-native run**. See [the evidence and earlier failed attempts](sc-remediation-20261022.md).
+
+Isolation used loopback port `33186`, a fresh `storage/framework/testing/mysql84-sc-repairs-20261022` datadir and database `hoa_native_test_sc_repairs_20261022`, with explicit destructive-test opt-in and a test-only database-scoped user. `hoa:verify-native-mysql` verified the actual server. The standalone instance was shut down after testing; its ignored diagnostic files are retained. Existing XAMPP services, `hoa_system`, `.env` and historical data were not modified. Workstation results still do not close SEC-01 or replace release evidence from a trusted recovered environment.
+
 Status: **locally tested on native MySQL 8.4.9**: final full suite **339 passed, 3,575 assertions, no skips** (623.39 seconds), after correcting a too-long synthetic migration-test ticket. Local MariaDB results are not used for this gate. Use a trusted isolated environment for production-release evidence; this workstation still has an unresolved incident.
 
 ## Local native binary alternative

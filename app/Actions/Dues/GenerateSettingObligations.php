@@ -18,7 +18,10 @@ final class GenerateSettingObligations
 
     public function handle(DuesSetting $setting, CarbonImmutable $period): int
     {
-        if (! $setting->is_active || ! $this->appliesToPeriod($setting, $period)) {
+        // Avoid walking every property for an inactive/non-applicable schedule.
+        // This fresh read is only an optimization; each write rechecks under lock.
+        $setting = DuesSetting::query()->find($setting->id);
+        if ($setting === null || ! $setting->is_active || ! $this->appliesToPeriod($setting, $period)) {
             return 0;
         }
 
@@ -36,6 +39,11 @@ final class GenerateSettingObligations
             }
             $validCandidate = false;
             $created += DB::transaction(function () use ($homeowner, $setting, $period, $propertyKey, &$validCandidate): int {
+                // Schedule first, then property/resident: never assess a stale financial snapshot.
+                $setting = DuesSetting::query()->lockForUpdate()->find($setting->id);
+                if ($setting === null || ! $setting->is_active || ! $this->appliesToPeriod($setting, $period)) {
+                    return 0;
+                }
                 app(PropertyAddressAvailability::class)->lockProperty($homeowner->getAttributes());
                 // The initial candidate list may predate an address move or deactivation.
                 $current = $this->accounts->activeOwners()->whereKey($homeowner->id)->lockForUpdate()->first();

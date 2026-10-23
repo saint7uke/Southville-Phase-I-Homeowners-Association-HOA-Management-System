@@ -1,5 +1,17 @@
 # Localization coverage and review boundary
 
+## Scoped export guidance — 2026-10-23
+
+The admin-only letterhead export adds five English/Filipino UI keys (Excel action, image description and safe unavailable/return guidance). Including the earlier SC-07 message, dictionaries now have **1,198 matching keys**, zero parity errors and 41 existing inventory candidates. Original association artwork, certificate/receipt wording and user-entered export values are not translated. [Scope and checks](export-only-cohabitation-letterhead.md); these engineering translations are not Filipino editorial sign-off.
+
+## Audit remediation — 2026-10-22
+
+SC-09 literal missing-key defects are repaired for `Close`, `Download`, `Certificate`, document integrity/setup failures, and the new complaint/schedule errors. Both dictionaries contain **1,192 matching keys**, with zero parity differences. Rendered Filipino control text, shared validation messages, placeholder parity and unchanged resident content have regression coverage. Values remain engineering translations awaiting Filipino editorial sign-off.
+
+The source scanner now reports **41 candidates**, not 41 confirmed UI defects: two language autonyms, nine association/property branding or fixed-prefix occurrences, eight unused Laravel welcome-example strings, and 22 fixed English PDF wording/metadata occurrences (three certificate, 16 detailed-receipt, three report). Original certificate/receipt designs and stored documents are deliberately unchanged. Report and detailed-receipt presentation wording needs contextual review before a broader print-language change; it is not silently rewritten by this audit. Arbitrary report cells, resident names/remarks, stored statuses and original-document text must not be bulk-translated.
+
+Use `npm.cmd run test:browser:static` for the navigation/request-guidance acceptance fixtures: it rebuilds before exporting, then rejects missing/stale asset references before Playwright starts. This closes TEST-01's stale-hash workflow defect without weakening browser assertions. Final combined run: **15 passed** across Chromium/Firefox/WebKit, no retries. The initial WebKit timeout and separate recheck are retained in [the remediation evidence](sc-remediation-20261022.md); these are not editorial or full authenticated-form acceptance.
+
 ## Compact global language control — 2026-10-22
 
 The user selected a **compact dropdown** with visible **English / Filipino** options.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Support\AuthenticatedActor;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -63,6 +64,20 @@ final class Complaint extends Model
         } finally {
             $this->isReopening = false;
         }
+    }
+
+    protected function performUpdate(Builder $query): bool
+    {
+        // Protect non-Filament Eloquent callers too: checking a loaded original
+        // status alone cannot prevent another writer from finalizing the record.
+        return $this->getConnection()->transaction(function () use ($query): bool {
+            $current = self::withTrashed()->whereKey($this->getKey())->lockForUpdate()->firstOrFail();
+            if ($current->status !== $this->getRawOriginal('status')) {
+                throw ValidationException::withMessages(['status' => __('This complaint changed while you were editing. Reload it before making changes.')]);
+            }
+
+            return parent::performUpdate($query);
+        });
     }
 
     protected static function booted(): void

@@ -1,6 +1,7 @@
 <!doctype html><html lang="{{ app()->getLocale() }}"><head><meta charset="utf-8"><style>
 @page { margin: 20mm; } body { font: 11px DejaVu Sans; } table { width: 100%; border-collapse: collapse; } td, th { border: 1px solid #ccc; padding: 6px; text-align: left; } thead { display: table-header-group; }
 </style></head><body>
+@if(!empty($letterhead)) @include('pdf.partials.export-letterhead') @endif
 <h1>{{ __('Household summary') }}</h1><p><strong>{{ __('PROVISIONAL RBI — subject to HOA confirmation') }}</strong></p>
 <p>{{ $household->identifier }} — {{ $household->full_address }}</p>
 <p>{{ __('Current members') }}: {{ $members->count() }}</p>

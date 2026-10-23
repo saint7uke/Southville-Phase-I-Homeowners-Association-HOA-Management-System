@@ -8,6 +8,7 @@ use App\Exports\HoaReportExport;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Services\Exports\AdminExportLetterhead;
 use App\Services\Reporting\HoaReportCatalog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +30,8 @@ final class HoaReportController extends Controller
         $isPreview = $format === null && str_ends_with((string) $request->route()?->getName(), '.preview');
         $catalog->authorize($user, $panel, $report, $isPreview ? null : $format, (string) $request->query('scope', 'current'));
         $filters = $catalog->validateFilters($report, $request->query(), $panel === 'admin');
-        $export = new HoaReportExport($report, filters: $filters, generatedBy: $user->full_name);
+        $withLetterhead = $request->routeIs('admin.reports.download') && in_array($format, ['pdf', 'xlsx'], true);
+        $export = new HoaReportExport($report, filters: $filters, generatedBy: $user->full_name, withAdminLetterhead: $withLetterhead);
 
         if ($isPreview) {
             $records = $export->query()->limit(11)->get();
@@ -56,6 +58,7 @@ final class HoaReportController extends Controller
         abort_if($records->count() > 2000, 422, 'This PDF exceeds 2,000 rows. Narrow the filters or use a queued CSV/XLSX export.');
 
         $response = Pdf::loadView('pdf.report', [
+            'letterhead' => $withLetterhead ? app(AdminExportLetterhead::class)->dataUri() : null,
             'title' => $export->title(),
             'headings' => $export->headings(),
             'rows' => $records->map(fn ($record): array => $export->map($record))->all(),
