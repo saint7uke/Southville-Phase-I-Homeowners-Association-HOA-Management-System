@@ -94,6 +94,23 @@ final class ReportAndAuditTest extends TestCase
         $this->actingAs($admin, 'admin')->get(route('admin.reports.download', ['report' => 'homeowners', 'format' => 'pdf']))->assertNotFound();
     }
 
+    public function test_report_centers_use_one_visible_heading_and_an_accessible_catalog_label(): void
+    {
+        foreach ([['hoa_admin', 'admin'], ['hoa_staff', 'staff']] as [$role, $panel]) {
+            $this->actingAs($this->userWithRole($role), $panel)
+                ->get("/{$panel}/reports")
+                ->assertOk()
+                ->assertSeeText('Reports')
+                ->assertDontSeeText('Reports and exports')
+                ->assertSee('aria-label="Reports"', false)
+                ->assertDontSee('reports-catalog-title', false)
+                ->assertSeeText('Preview live database records or export the same filtered dataset. Financial reports use the current property ledger.')
+                ->assertSee('reports-search', false)
+                ->assertSee('reports-category', false)
+                ->assertSee('reports-per-page', false);
+        }
+    }
+
     public function test_queued_csv_is_generated_privately_and_only_its_owner_can_download_it(): void
     {
         Storage::fake('local');

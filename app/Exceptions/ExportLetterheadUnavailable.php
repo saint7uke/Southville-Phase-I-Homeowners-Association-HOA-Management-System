@@ -16,8 +16,14 @@ final class ExportLetterheadUnavailable extends HttpException
 
     public function render(Request $request)
     {
+        $returnUrl = match (true) {
+            $request->is('admin/households/*') => '/admin/households',
+            $request->user()?->hasRole('homeowner') => '/homeowner/my-household',
+            default => '/admin/reports',
+        };
+
         return response()->view('errors.export-letterhead', [
-            'returnUrl' => $request->is('admin/households/*') ? '/admin/households' : '/admin/reports',
+            'returnUrl' => $returnUrl,
         ], 503)->header('Cache-Control', 'private, no-store');
     }
 }

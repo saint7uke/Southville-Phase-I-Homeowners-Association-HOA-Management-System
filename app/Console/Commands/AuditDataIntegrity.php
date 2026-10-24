@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Support\PropertyIdentity;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 final class AuditDataIntegrity extends Command
 {
@@ -68,6 +69,11 @@ final class AuditDataIntegrity extends Command
             'invalid_current_landlord_links' => $invalidLinks,
         ];
 
+        if (Schema::hasColumn('dues_obligations', 'property_snapshot')) {
+            $checks['obligations_missing_property_snapshot_state'] = DB::table('dues_obligations')
+                ->whereNull('property_snapshot')->where('property_snapshot_needs_review', false)->count();
+        }
+
         $observations = [
             'legacy_payments_without_obligations' => DB::table('payments')->whereNull('dues_obligation_id')->count(),
             'unlinked_current_tenants' => DB::table('homeowners')->whereNull('deleted_at')->where('ownership_type', 'Tenant')->whereNull('landlord_homeowner_id')->count(),
@@ -83,6 +89,11 @@ final class AuditDataIntegrity extends Command
                 $join->on('a.normalized_name', '=', 'b.normalized_name')->on('a.id', '<', 'b.id');
             })->whereRaw('(a.ends_on IS NULL OR SUBSTR(a.ends_on, 1, 7) >= SUBSTR(b.starts_on, 1, 7)) AND (b.ends_on IS NULL OR SUBSTR(b.ends_on, 1, 7) >= SUBSTR(a.starts_on, 1, 7))')->count(),
         ];
+
+        if (Schema::hasColumn('dues_obligations', 'property_snapshot')) {
+            $observations['obligations_requiring_property_snapshot_review'] = DB::table('dues_obligations')
+                ->where('property_snapshot_needs_review', true)->count();
+        }
 
         $result = ['generated_at' => now()->toIso8601String(), 'connection' => DB::connection()->getDriverName(), 'checks' => $checks, 'review_observations' => $observations];
         if ($this->option('json')) {

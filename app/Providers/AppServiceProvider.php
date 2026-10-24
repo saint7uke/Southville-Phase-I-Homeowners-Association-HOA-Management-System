@@ -11,6 +11,7 @@ use App\Models\Certificate;
 use App\Models\CertificateTemplate;
 use App\Models\Complaint;
 use App\Models\ContactMessage;
+use App\Models\ContactMessageActivity;
 use App\Models\DuesObligation;
 use App\Models\DuesSetting;
 use App\Models\Homeowner;
@@ -97,7 +98,7 @@ class AppServiceProvider extends ServiceProvider
             DB::select('select 1');
         });
 
-        foreach ([User::class, Homeowner::class, Payment::class, DuesSetting::class, DuesObligation::class, Complaint::class, ServiceRequest::class, Announcement::class, Certificate::class, ContactMessage::class, SystemSetting::class, CertificateTemplate::class, Household::class, HouseholdMember::class, PaymentDocument::class, PaymentDocumentSource::class] as $model) {
+        foreach ([User::class, Homeowner::class, Payment::class, DuesSetting::class, DuesObligation::class, Complaint::class, ServiceRequest::class, Announcement::class, Certificate::class, ContactMessage::class, ContactMessageActivity::class, SystemSetting::class, CertificateTemplate::class, Household::class, HouseholdMember::class, PaymentDocument::class, PaymentDocumentSource::class] as $model) {
             $model::observe(AuditObserver::class);
         }
 

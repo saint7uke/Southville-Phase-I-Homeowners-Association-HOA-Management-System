@@ -3,10 +3,10 @@ import React, { useState } from 'react';
 import Swal from 'sweetalert2';
 import { useLocale } from '../LocaleContext';
 
-export default function ContactSection({ branding = {}, success = null }) {
+export default function ContactSection({ branding = {}, success = null, reference = null }) {
     const { t } = useLocale();
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    const [status, setStatus] = useState(success);
+    const [status, setStatus] = useState(success ? { message: success, reference } : null);
     const [error, setError] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
@@ -20,7 +20,7 @@ export default function ContactSection({ branding = {}, success = null }) {
             const response = await axios.post(form.action, new FormData(form), {
                 headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf },
             });
-            setStatus(response.data.data.message);
+            setStatus(response.data.data);
             await Swal.fire({
                 toast: true,
                 position: 'top-end',
@@ -45,7 +45,7 @@ export default function ContactSection({ branding = {}, success = null }) {
                 <p className="hoa-eyebrow"><span /> {t('Contact and office')}</p>
                 <h2 id="contact-title">{t('We are here for the community.')}</h2>
                 <p>{t('For account concerns or in-person assistance, visit the HOA office during posted service hours.')}</p>
-                {status && <p className="hoa-contact-success" role="status" aria-live="polite">{t(status)}</p>}
+                {status && <p className="hoa-contact-success" role="status" aria-live="polite">{t(status.message)} {status.reference && <strong>{t('Inquiry reference')}: {status.reference}</strong>}</p>}
                 {error && <p className="hoa-contact-error" role="alert">{t(error)}</p>}
                 <form className="hoa-contact-form" method="post" action="/contact" onSubmit={submitContact}>
                     <input type="hidden" name="_token" value={csrf} />

@@ -198,16 +198,18 @@ final class ExportLetterheadTest extends TestCase
         $this->actingAs($admin->fresh(), 'admin')->get($this->householdUrl($household, 'pdf'))->assertForbidden();
     }
 
-    public function test_shared_household_pdf_remains_unbranded_for_managers_and_homeowners(): void
+    public function test_shared_household_pdf_is_branded_for_homeowners_only(): void
     {
         $resident = $this->actor('homeowner');
         $resident->homeowner()->create(['house_number' => '7', 'street' => 'Sample Street', 'block' => '1', 'lot' => '2', 'phase' => 'Southville Phase I', 'phase_suffix' => 'A', 'ownership_type' => 'Owner', 'residency_date' => '2020-01-01', 'status' => 'Active']);
         $household = Household::firstOrFail();
-        foreach ([[$this->actor('hoa_admin'), 'admin'], [$this->actor('hoa_staff'), 'staff'], [$resident, 'homeowner']] as [$actor, $guard]) {
+        foreach ([[$this->actor('hoa_admin'), 'admin'], [$this->actor('hoa_staff'), 'staff']] as [$actor, $guard]) {
             $response = $this->actingAs($actor, $guard)->get(route('households.pdf', $household))->assertOk();
             $this->assertStringNotContainsString('/Width 4500', $response->getContent());
             auth($guard)->logout();
         }
+        $response = $this->actingAs($resident, 'homeowner')->get(route('households.pdf', $household))->assertOk();
+        $this->assertStringContainsString('/Width 4500', $response->getContent());
     }
 
     public function test_admin_household_actions_use_scoped_routes_and_staff_actions_do_not(): void

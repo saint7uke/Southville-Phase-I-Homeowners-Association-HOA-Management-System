@@ -90,7 +90,7 @@
         <section class="hoa-auth-card hoa-portal-auth-form" id="auth-card" aria-labelledby="register-title">
             <x-locale-toolbar appearance="light" />
             <a href="{{ route('home') }}" class="hoa-auth-brand" aria-label="Go to homepage">
-                <span class="hoa-brand-mark" aria-hidden="true">S1</span>
+                <span class="hoa-brand-mark" aria-hidden="true"><img src="{{ asset('images/HOA.png') }}" width="48" height="48" alt=""></span>
                 <h1 id="register-title" data-i18n="Create your homeowner account">{{ __('Create your homeowner account') }}</h1>
                 <p><span data-i18n="Tell us how you use your home so we can verify your application.">{{ __('Tell us how you use your home so we can verify your application.') }}</span></p>
             </a>

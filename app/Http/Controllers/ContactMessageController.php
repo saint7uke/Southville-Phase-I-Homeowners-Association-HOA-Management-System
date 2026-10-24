@@ -13,7 +13,7 @@ final class ContactMessageController extends Controller
 {
     public function __invoke(StoreContactMessageRequest $request): RedirectResponse|JsonResponse
     {
-        ContactMessage::query()->create([
+        $contact = ContactMessage::query()->create([
             ...$request->safe()->except('website'),
             'ip_address' => $request->ip(),
             'status' => 'New',
@@ -22,7 +22,7 @@ final class ContactMessageController extends Controller
         $message = __('Thank you. The HOA office has received your message.');
 
         return $request->expectsJson()
-            ? response()->json(['data' => ['message' => $message]], 201, ['Location' => url('/#contact')])
-            : redirect('/#contact')->with('contact_success', $message);
+            ? response()->json(['data' => ['message' => $message, 'reference' => $contact->reference]], 201, ['Location' => url('/#contact')])
+            : redirect('/#contact')->with(['contact_success' => $message, 'contact_reference' => $contact->reference]);
     }
 }

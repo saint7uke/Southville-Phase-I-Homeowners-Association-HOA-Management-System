@@ -74,8 +74,6 @@
                 <a href="{{ route('homeowner.register') }}" data-i18n="Register">{{ __('Register') }}</a>
                 <span aria-hidden="true">·</span>
                 <a href="{{ route('home') }}">{{ __('Home') }}</a>
-                <span aria-hidden="true">·</span>
-                <span>{{ __('For homeowners, staff, and administrators') }}</span>
             </nav>
         </section>
     </main>

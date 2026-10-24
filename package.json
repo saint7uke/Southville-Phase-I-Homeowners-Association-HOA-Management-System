@@ -9,7 +9,8 @@
         "test:browser:chromium": "playwright test --project=chromium",
         "test:browser:edge": "playwright test --project=edge",
         "test:browser:static": "node scripts/run-static-browser-checks.mjs",
-        "test:tooling": "node --test tests/Tooling/*.test.mjs"
+        "test:tooling": "node --test tests/Tooling/*.test.mjs",
+        "audit:security-source": "node scripts/security-source-audit.mjs"
     },
     "devDependencies": {
         "@axe-core/playwright": "^4.13.0",

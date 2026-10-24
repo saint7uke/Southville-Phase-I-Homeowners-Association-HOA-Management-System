@@ -1,5 +1,19 @@
 # SHOAI phased revision — 2026-10-20
 
+## My Household UI — 2026-10-24
+
+Implemented the read-only household overview, distinct provisional/review notices, responsive Filament member rows, English/Filipino feedback and complete-summary download. Current members are queried in pages of **10**, with controls hidden at 10 or fewer; stale/out-of-range pages recover and each request resolves current authorized membership. Private member fields and management controls remain excluded. No migration, financial/permission change, live record repair, commit or push; existing uncommitted UI work is preserved. [Changed modules, evidence and coverage limits](my-household-ui.md).
+
+Verification: **125 related SQLite passes / three native-MySQL-only skips / 3,655 assertions**, **16 new household checks / 260 assertions** included, five Node tooling passes, scoped Pint/syntax/diff checks and production build. Nine serial Chromium/Firefox/WebKit acceptance scenarios passed, including light/dark, 320/768/1440px, keyboard, scoped Axe, privacy, pagination, locale persistence and PDF download. After a visible-pager-label refinement, **three overlapping final-bundle paging/language/PDF checks passed** across all three engines with no skips/retries. The linked audit separates both runs and initial failures; these are scoped checks, not full-system/native/physical-print certification. Owned test servers are stopped.
+
+## Resident services/authentication UI — 2026-10-24
+
+Balanced the six Resident services cards, replaced abbreviations with matching outlined SVG icons, removed the requested login footer phrase/separator and replaced registration's S1 form badge with the official HOA logo. Other pages, service wording and backend rules remain unchanged. A services-only contrast correction addresses the eyebrow issue found by Axe. [Scope, isolated browser runner and actual evidence](resident-services-auth-ui.md). No migration, live-data change, dependency, commit or push.
+
+Final checks: **23 backend tests / 175 assertions**, **4 Node tooling tests**, and **21 Chromium/Firefox/WebKit passes**, with no final browser skips/retries. Both languages, 320/768/1440 widths, theme surroundings, scoped Axe, keyboard operation and unsaved fields/uploads were checked using guest sessions on an isolated SQLite server. Build/Pint/syntax/diff checks pass. Initial failures remain disclosed; the owned server is stopped and no user/financial record was created. This does not replace full-system or security release acceptance.
+
+Subsequent normal-site regression: the test runner had baked its disposable `ASSET_URL` into shared bundles, making the landing page blank after test-server shutdown. Corrected to portable `/build/` imports and added a compiled-origin guard. **5 tooling tests**, one isolated Chromium recheck and a post-shutdown read-only visit to **127.0.0.1:8000** passed (heading/six service cards, no JS/network failures). The linked audit distinguishes this follow-up from the earlier 21 checks; no live database/configuration edits were needed.
+
 ## Export-only association letterhead — 2026-10-23
 
 Implemented the original Cohabitation document's logo/three-line letterhead only for admin Reports PDF/XLSX (including new queued admin XLSX) and dedicated admin Household PDF/new XLSX downloads. Staff/homeowner/shared downloads, CSV, previews, legacy payment/audit exports, certificates, receipts and saved exports remain unchanged. The original DOCX is unchanged; native Word extraction and pixel comparison are documented. [Affected modules, evidence and coverage limits](export-only-cohabitation-letterhead.md). No migration, live-record change or source approval.

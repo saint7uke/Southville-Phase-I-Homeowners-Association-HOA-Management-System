@@ -10,6 +10,6 @@
     @vite(['resources/css/app.css', 'resources/js/react/main.jsx'])
 </head>
 <body>
-    <div id="landing-root" data-projects='@json($projects)' data-announcements='@json($announcements)' data-branding='@json($branding)' data-contact-success='@json(session('contact_success'))'></div>
+    <div id="landing-root" data-projects='@json($projects)' data-announcements='@json($announcements)' data-branding='@json($branding)' data-contact-success='@json(session('contact_success'))' data-contact-reference='@json(session('contact_reference'))'></div>
 </body>
 </html>

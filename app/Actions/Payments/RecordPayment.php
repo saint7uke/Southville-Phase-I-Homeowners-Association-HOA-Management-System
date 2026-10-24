@@ -14,6 +14,7 @@ use App\Services\PropertyAddressAvailability;
 use App\Services\PropertyDuesAccounts;
 use App\Support\Money;
 use App\Support\PropertyIdentity;
+use App\Support\PropertySnapshot;
 use App\Validation\PaymentValidator;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
@@ -81,6 +82,8 @@ final class RecordPayment
                     'penalty_amount' => '0.00',
                     'amount_paid' => '0.00',
                     'status' => 'Pending',
+                    'property_snapshot' => PropertySnapshot::from($liable),
+                    'property_snapshot_needs_review' => false,
                 ]);
                 $data['dues_obligation_id'] = $obligation->id;
             }

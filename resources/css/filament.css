@@ -3,6 +3,166 @@
 @source '../../app/Filament/**/*.php';
 @source '../../resources/views/filament/**/*.blade.php';
 
+/* Homeowner-only household summary. Do not restyle management/export pages. */
+.hoa-household {
+    display: grid;
+    gap: 1.5rem;
+    min-width: 0;
+}
+
+.hoa-household__notice {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    padding: 1rem;
+    border: 1px solid var(--hoa-line);
+    border-radius: .75rem;
+    background: var(--hoa-surface-muted);
+    color: var(--hoa-ink);
+    font-size: .875rem;
+    line-height: 1.6;
+}
+
+.hoa-household__notice > svg {
+    margin-top: .2rem;
+}
+
+.hoa-household__notice h2 {
+    font-weight: 700;
+    margin-bottom: .25rem;
+}
+
+.hoa-household__notice--review {
+    border-inline-start: 4px solid var(--hoa-focus);
+}
+
+.hoa-household__overview {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.hoa-household__details {
+    display: grid;
+    gap: 1.25rem;
+    min-width: 0;
+}
+
+.hoa-household__details dt {
+    font-size: .875rem;
+    color: var(--hoa-muted);
+}
+
+.hoa-household__details dd {
+    margin-top: .25rem;
+    font-size: .875rem;
+    overflow-wrap: anywhere;
+}
+
+.hoa-household__details .hoa-household__address {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.hoa-household__count {
+    display: grid;
+    justify-items: start;
+    align-content: center;
+    gap: .25rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--hoa-line);
+    border-radius: .75rem;
+    background: var(--hoa-surface-soft);
+}
+
+.hoa-household__count strong {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.hoa-household__count span {
+    font-size: .875rem;
+    color: var(--hoa-muted);
+}
+
+.hoa-household__download {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .75rem 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--hoa-line);
+}
+
+.hoa-household__download > a {
+    white-space: normal;
+    max-width: 100%;
+    text-align: start;
+}
+
+.hoa-household__download > p,
+.hoa-household__read-only,
+.hoa-household__empty p {
+    color: var(--hoa-muted);
+    font-size: .875rem;
+    line-height: 1.6;
+}
+
+.hoa-household__members-heading {
+    margin-bottom: .75rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.hoa-household__loading {
+    color: var(--hoa-muted);
+    font-size: .875rem;
+    padding-bottom: .75rem;
+}
+
+.hoa-household [data-household-members] .fi-ta-text {
+    overflow-wrap: anywhere;
+}
+
+.hoa-household [data-household-members] .fi-ta-split > * {
+    min-width: 0;
+}
+
+.hoa-household__empty {
+    display: grid;
+    justify-items: center;
+    gap: .75rem;
+    padding: 1.5rem 0;
+    text-align: center;
+}
+
+.hoa-household__empty > svg {
+    color: var(--hoa-muted);
+}
+
+.hoa-household__empty h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.hoa-household__read-only {
+    display: flex;
+    align-items: flex-start;
+    gap: .5rem;
+}
+
+.hoa-household__read-only > svg {
+    margin-top: .2rem;
+}
+
+@media (min-width: 640px) {
+    .hoa-household__overview {
+        grid-template-columns: minmax(0, 1fr) minmax(10rem, auto);
+    }
+}
+
 :root {
     --hoa-navy: #082c42;
     --hoa-blue: #66c7f4;

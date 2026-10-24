@@ -15,12 +15,12 @@ export const statistics = [
 ];
 
 export const services = [
-    { mark: '₱', title: 'HOA dues and payments', description: 'Review recorded dues, balances, and official receipt details from your resident account.' },
-    { mark: 'AN', title: 'Verified announcements', description: 'Receive official community advisories, event notices, and maintenance updates in one place.' },
-    { mark: 'RQ', title: 'Service requests', description: 'Submit document and HOA service requests, then follow their progress through completion.' },
-    { mark: 'CC', title: 'Complaints and concerns', description: 'Raise community concerns securely with supporting details and transparent status updates.' },
-    { mark: 'RR', title: 'Resident records', description: 'Maintain accurate household information through a protected, administrator-verified profile.' },
-    { mark: 'CS', title: 'Community support', description: 'Connect with the HOA office through clear channels and dependable service workflows.' },
+    { icon: 'banknotes', title: 'HOA dues and payments', description: 'Review recorded dues, balances, and official receipt details from your resident account.' },
+    { icon: 'megaphone', title: 'Verified announcements', description: 'Receive official community advisories, event notices, and maintenance updates in one place.' },
+    { icon: 'clipboard-document-list', title: 'Service requests', description: 'Submit document and HOA service requests, then follow their progress through completion.' },
+    { icon: 'exclamation-triangle', title: 'Complaints and concerns', description: 'Raise community concerns securely with supporting details and transparent status updates.' },
+    { icon: 'identification', title: 'Resident records', description: 'Maintain accurate household information through a protected, administrator-verified profile.' },
+    { icon: 'chat-bubble-left-right', title: 'Community support', description: 'Connect with the HOA office through clear channels and dependable service workflows.' },
 ];
 
 export const benefits = [

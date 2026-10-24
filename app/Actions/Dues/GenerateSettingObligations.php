@@ -9,6 +9,7 @@ use App\Models\DuesSetting;
 use App\Services\PropertyAddressAvailability;
 use App\Services\PropertyDuesAccounts;
 use App\Support\PropertyIdentity;
+use App\Support\PropertySnapshot;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -72,6 +73,8 @@ final class GenerateSettingObligations
                     'penalty_amount' => '0.00',
                     'amount_paid' => '0.00',
                     'status' => 'Pending',
+                    'property_snapshot' => json_encode(PropertySnapshot::from($current), JSON_THROW_ON_ERROR),
+                    'property_snapshot_needs_review' => false,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

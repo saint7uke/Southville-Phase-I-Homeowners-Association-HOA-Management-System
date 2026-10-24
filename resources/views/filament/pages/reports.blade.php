@@ -15,7 +15,6 @@
     <div class="hoa-reports">
         <header class="hoa-reports__toolbar">
             <div class="hoa-reports__intro">
-                <h2 id="reports-catalog-title" data-i18n="Reports and exports">{{ __('Reports and exports') }}</h2>
                 <p data-i18n="Preview live database records or export the same filtered dataset. Financial reports use the current property ledger.">{{ __('Preview live database records or export the same filtered dataset. Financial reports use the current property ledger.') }}</p>
             </div>
 
@@ -43,7 +42,7 @@
             </div>
         @endif
 
-        <section class="hoa-reports__card" aria-labelledby="reports-catalog-title">
+        <section class="hoa-reports__card" aria-label="{{ __('Reports') }}">
             <div class="hoa-reports__scroll" role="region" aria-label="Available HOA reports" tabindex="0">
                 <table class="hoa-reports__table">
                     <caption class="sr-only"><span data-i18n="Available HOA reports, filters, and export actions">{{ __('Available HOA reports, filters, and export actions') }}</span></caption>

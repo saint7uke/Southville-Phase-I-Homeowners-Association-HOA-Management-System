@@ -61,6 +61,37 @@ function applyLocale(locale) {
     });
     document.querySelectorAll('[data-i18n-placeholder]').forEach(node => { node.placeholder = translate(node.dataset.i18nPlaceholder, locale); });
     document.querySelectorAll('[data-i18n-aria-label]').forEach(node => { node.setAttribute('aria-label', translate(node.dataset.i18nAriaLabel, locale)); });
+    // This read-only table opts in explicitly; never translate arbitrary member names.
+    document.querySelectorAll('[data-household-members]').forEach(section => {
+        const pagination = section.querySelector('.fi-pagination');
+        if (!pagination) return;
+        pagination.setAttribute('aria-label', translate('Household member pages', locale));
+        const overview = pagination.querySelector('.fi-pagination-overview');
+        const message = translate('Showing :first to :last of :total members', locale, {
+            first: section.dataset.membersFirst, last: section.dataset.membersLast, total: section.dataset.membersTotal,
+        });
+        if (overview && overview.textContent !== message) overview.textContent = message;
+        pagination.querySelectorAll('[rel="next"], [rel="prev"]').forEach(button => {
+            const key = button.getAttribute('rel') === 'next' ? 'Next' : 'Previous';
+            const control = button.matches('button') ? button : button.querySelector('button');
+            control?.setAttribute('aria-label', translate(key, locale));
+            const label = button.querySelector('.fi-btn-label');
+            if (label && label.textContent !== translate(key, locale)) label.textContent = translate(key, locale);
+            // Filament 4 can render the label as a direct text node beside its spinner.
+            if (!label && control?.matches('.fi-pagination-next-btn, .fi-pagination-previous-btn')) {
+                control.childNodes.forEach(node => {
+                    if (node.nodeType !== Node.TEXT_NODE) return;
+                    const value = node.textContent.trim();
+                    if (value && value !== translate(key, locale)) node.textContent = node.textContent.replace(value, translate(key, locale));
+                });
+            }
+        });
+        pagination.querySelectorAll('[wire\\:click]').forEach(button => {
+            const page = button.getAttribute('wire:click')?.match(/^(?:gotoPage|setPage)\((\d+)/)?.[1];
+            const control = button.matches('button') ? button : button.querySelector('button');
+            if (page) control?.setAttribute('aria-label', translate('Go to member page :page', locale, { page }));
+        });
+    });
     syncSwitchers(locale);
 }
 

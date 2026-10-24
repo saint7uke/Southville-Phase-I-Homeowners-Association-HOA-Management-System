@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Support\AuthenticatedActor;
 use App\Support\Money;
+use App\Support\PropertySnapshot;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +24,11 @@ final class Payment extends Model
     protected function casts(): array
     {
         return ['property_snapshot' => 'array', 'payment_date' => 'date', 'amount_paid' => 'decimal:2', 'balance' => 'decimal:2', 'penalty' => 'decimal:2', 'proof_size' => 'integer', 'reviewed_at' => 'datetime'];
+    }
+
+    public function getPropertyAddressAttribute(): string
+    {
+        return PropertySnapshot::display($this->property_snapshot, $this->homeowner);
     }
 
     public function homeowner(): BelongsTo

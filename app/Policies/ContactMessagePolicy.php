@@ -33,4 +33,19 @@ final class ContactMessagePolicy
     {
         return $user->hasRole('hoa_admin');
     }
+
+    public function restore(User $user, ContactMessage $message): bool
+    {
+        return $user->hasRole('hoa_admin');
+    }
+
+    public function forceDelete(User $user, ContactMessage $message): bool
+    {
+        return false;
+    }
+
+    public function reopen(User $user, ContactMessage $message): bool
+    {
+        return $user->hasRole('hoa_admin') && $user->can('manage_contact_messages');
+    }
 }

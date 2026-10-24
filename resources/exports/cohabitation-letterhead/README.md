@@ -24,6 +24,7 @@ refuses to overwrite existing assets; new Word PDF metadata may change its check
 Any replacement requires deliberate source/provenance review rather than blind regeneration.
 
 The PNG is explicitly enabled only for admin Reports PDF/XLSX (including newly queued
-admin XLSX) and dedicated admin Household PDF/XLSX. Shared exporters default to no
-letterhead; CSV, staff/homeowner summaries, legacy payment/audit exports, certificate
+admin XLSX), dedicated admin Household PDF/XLSX, and authorized homeowner Household
+summary PDFs. Shared exporters default to no letterhead; CSV, staff spreadsheet summaries,
+legacy payment/audit exports, certificate
 issuance, receipts and existing saved documents are outside this branding change.

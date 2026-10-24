@@ -30,6 +30,6 @@ final class PaymentsExport implements FromQuery, WithHeadings, WithMapping
 
     public function map($payment): array
     {
-        return [$payment->or_number, $payment->homeowner->user->full_name, $payment->payer?->user?->full_name ?? $payment->homeowner->user->full_name, $payment->homeowner->full_address, $payment->duesSetting->name, $payment->amount_paid, $payment->balance, $payment->penalty, $payment->covered_period, $payment->payment_method, $payment->transaction_reference, $payment->status, $payment->review_status, $payment->payment_date->toDateString(), $payment->recorder->full_name];
+        return [$payment->or_number, $payment->homeowner->user->full_name, $payment->payer?->user?->full_name ?? $payment->homeowner->user->full_name, $payment->property_address, $payment->duesSetting->name, $payment->amount_paid, $payment->balance, $payment->penalty, $payment->covered_period, $payment->payment_method, $payment->transaction_reference, $payment->status, $payment->review_status, $payment->payment_date->toDateString(), $payment->recorder->full_name];
     }
 }

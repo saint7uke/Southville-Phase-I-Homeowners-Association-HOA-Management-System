@@ -87,12 +87,16 @@
 .hoa-stats dd { margin-top: .55rem; color: var(--hoa-muted); font-size: .75rem; }
 
 .hoa-services { background: color-mix(in srgb, var(--hoa-silver) 22%, white); }
+.hoa-services .hoa-eyebrow { color: var(--hoa-navy); }
 .hoa-section-heading { display: grid; gap: .7rem; max-width: 48rem; margin-bottom: 3rem; }
 .hoa-section-heading > p:last-child { max-width: 40rem; color: var(--hoa-muted); }
-.hoa-service-grid { display: grid; gap: 1rem; }
-.hoa-service-card { position: relative; display: grid; min-height: 250px; align-content: space-between; overflow: hidden; padding: 1.6rem; border: 1px solid #dce7eb; border-radius: 18px; background: #fff; box-shadow: 0 16px 40px rgb(22 76 103 / .05); }
+.hoa-service-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; gap: 1.25rem; }
+.hoa-service-card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 1.4rem; min-width: 0; min-height: 250px; padding: 1.6rem; border: 1px solid #dce7eb; border-radius: 18px; background: #fff; box-shadow: 0 16px 40px rgb(22 76 103 / .05); }
 .hoa-service-card.is-featured { background: var(--hoa-navy); color: #fff; }
-.hoa-service-mark { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%; background: #e3f5fc; color: var(--hoa-blue-dark); font-size: .68rem; font-weight: 800; letter-spacing: .05em; }
+.hoa-service-mark { display: grid; flex: 0 0 48px; width: 48px; height: 48px; place-items: center; border-radius: 50%; background: #e3f5fc; color: var(--hoa-blue-dark); }
+.hoa-service-mark svg { display: block; width: 28px; height: 28px; }
+.hoa-service-content { min-width: 0; overflow-wrap: anywhere; }
+.hoa-service-card h3 { font-size: 1.05rem; line-height: 1.4; }
 .is-featured .hoa-service-mark { background: var(--hoa-blue); color: var(--hoa-navy); }
 .hoa-service-card p { margin-top: .6rem; color: var(--hoa-muted); font-size: .85rem; }
 .hoa-service-card.is-featured p { color: #c7dce6; }
@@ -172,7 +176,8 @@
 @media (min-width: 640px) {
     .hoa-container { width: min(100% - 3rem, 78rem); }
     .hoa-stats { grid-template-columns: repeat(4, 1fr); }
-    .hoa-service-grid, .hoa-announcement-grid { grid-template-columns: repeat(2, 1fr); }
+    .hoa-service-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hoa-announcement-grid { grid-template-columns: repeat(2, 1fr); }
     .hoa-heading-row { grid-template-columns: 1fr auto; align-items: end; }
     .hoa-footer-main { grid-template-columns: 1fr auto; }
     .hoa-footer-main nav { grid-column: 1 / -1; }
@@ -180,8 +185,7 @@
 
 @media (min-width: 900px) {
     .hoa-about-copy { grid-template-columns: minmax(0, 1fr) minmax(0, .8fr); align-items: end; }
-    .hoa-service-grid { grid-template-columns: repeat(3, 1fr); }
-    .hoa-service-card.is-featured { grid-column: span 2; }
+    .hoa-service-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .hoa-process-list { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 4rem; }
     .hoa-process-list li, .hoa-process-list li:last-child { display: block; padding: 2.25rem 1.5rem 0 0; border-top: 2px solid var(--hoa-line); border-left: 0; }
     .hoa-process-number { position: absolute; top: -23px; left: 0; }

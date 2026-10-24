@@ -14,7 +14,7 @@ import useLandingAnimations from './landing/useLandingAnimations';
 import ProjectsSection from './landing/ProjectsSection';
 import { useLocale } from './LocaleContext';
 
-export default function LandingPage({ announcements = [], projects = [], branding = {}, contactSuccess = null }) {
+export default function LandingPage({ announcements = [], projects = [], branding = {}, contactSuccess = null, contactReference = null }) {
     const pageRef = useRef(null);
     const { t } = useLocale();
 
@@ -34,7 +34,7 @@ export default function LandingPage({ announcements = [], projects = [], brandin
                 <ProjectsSection projects={projects} />
                 <BenefitsSection />
                 <CtaSection />
-                <ContactSection branding={branding} success={contactSuccess} />
+                <ContactSection branding={branding} success={contactSuccess} reference={contactReference} />
             </main>
             <Footer branding={branding} />
         </div>
