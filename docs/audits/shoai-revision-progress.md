@@ -472,3 +472,20 @@ Final full native MySQL **8.4.9** verification passed **339 tests, 3,575 asserti
   list. No browser save/refresh, responsive or Axe pass is claimed. Firefox/WebKit
   were not run. The local list-loading timeout remains an investigation risk.
   Both owned test servers on 8031 were stopped; normal services are untouched.
+
+### Cohabitation guidance continuation (2026-10-27)
+
+- Rechecked the existing fix against the current worktree without changing newer
+  registration/profile/property work: **11 SQLite tests / 313 assertions passed**;
+  **six rendered-page checks passed** across Chromium, Firefox and WebKit, without
+  retries/skips, including responsive layouts, keyboard focus, locale switching
+  and bounded light/dark Axe checks.
+- Scoped Pint, PHP/JavaScript syntax, dictionary parity (**1,249 keys**) and
+  production build passed. The existing missing hero-image warning remains.
+- The initial broader filtered test run was interrupted and has no final result;
+  it is not counted as a pass. No fresh full-suite/native-MySQL/live-browser
+  issuance acceptance is claimed. Evidence and the synthetic browser boundary
+  are recorded in [the focused audit](cohabitation-request-guidance.md).
+- No new application-code defect was confirmed. No `.env`, live database,
+  source approval, historical PDF, financial record, permission, account,
+  production service, notification, deployment or push was changed/performed.

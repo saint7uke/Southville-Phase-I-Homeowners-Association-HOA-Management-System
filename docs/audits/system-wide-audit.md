@@ -233,3 +233,15 @@ had two timeout errors at request-list loading before editing. Browser acceptanc
 remains blocked, with root cause unconfirmed; no responsive/Axe/save-browser pass
 or native concurrency rerun is claimed. Owned test servers were stopped and
 synthetic diagnostics retained. See the focused audit for exact evidence.
+
+### Cohabitation guidance recheck (2026-10-27)
+
+Current-worktree focused acceptance: **11 SQLite tests / 313 assertions passed**,
+plus **six synthetic rendered-page browser checks** across Chromium, Firefox and
+WebKit. Scoped formatting/syntax, English/Filipino parity and Vite build passed.
+No new application defect was confirmed. The initial broader filtered run was
+interrupted before a summary and is not a new full-suite pass. These checks do
+not establish native-MySQL, live issuance, host-security or human document approval.
+See [the focused audit](cohabitation-request-guidance.md) for logs and limitations.
+Existing uncommitted registration/profile/property work and all live records,
+approvals, permissions and historical PDFs were preserved.

@@ -110,3 +110,42 @@ Processing stage and certificate preparation workflow. See
 [service-request editing](service-request-editing.md) for shared transitions,
 visible validation, same-page next-step updates and issuance-only certificate
 completion. Neither fix requires repeating an existing source confirmation.
+
+## Continuation verification (2026-10-27)
+
+The existing implementation was retained; it was not replaced or re-approved.
+Newer uncommitted registration/profile/property changes were left intact.
+
+- Scoped Pint, PHP syntax for the controller, both request resources/tables and
+  guidance test, browser JavaScript syntax and whitespace checks passed.
+- English/Filipino dictionary-key and placeholder parity passed for **1,249 keys**.
+- Production Vite build passed with exit 0 in **33.81 s**. The existing missing
+  `/images/southville-community-hero.webp` warning remains unrelated and unresolved.
+  Evidence: `storage/logs/cohabitation-continuation-build-20261027.txt`.
+- The first broad filtered SQLite invocation was interrupted before its summary.
+  Its buffered output subsequently showed 24 progress marks; it is not counted as
+  a passing regression run or an application failure. Only the audit-owned PHP
+  process was stopped. The log and incomplete JUnit file are retained under
+  `storage/logs/cohabitation-continuation-focused-20261027.*`.
+- Direct SQLite guidance-suite retry: **11 passed / 313 assertions / no skips**,
+  443.087 s; zero failures/errors. This rechecks role/status guidance, panel-safe
+  redirects, action visibility, authorization, existing downloads, escaped copy,
+  Filipino output and private Residency draft PDFs on the current worktree.
+  Debug/JUnit evidence:
+  `storage/logs/cohabitation-continuation-guidance-direct-20261027.*`.
+- Refreshed rendered-page browser checks: **6 passed / no retries or skips**,
+  Chromium, Firefox and WebKit serially; JUnit time **81.229 s**. English/Filipino
+  status copy, 320/768/1440 layouts, keyboard focus, marked locale switching,
+  unchanged ticket content and actual light/dark presentation passed. Axe found
+  no serious/critical violations on the exercised pages. Dark desktop and
+  keyboard-focused mobile screenshots were visually inspected.
+  Text/JUnit: `storage/logs/cohabitation-continuation-browser-20261027.*`;
+  screenshots: `storage/framework/testing/cohabitation-continuation-browser-20261027/`.
+  These are intercepted, synthetic rendered-page checks with mocked locale
+  responses, not live sign-in, issuance or persistence acceptance.
+- No new application-code defect was confirmed or source approval repeated.
+  Earlier 2026-10-22 full-suite results above remain historical evidence, not new
+  full-suite results for the current worktree. No new native MySQL run is claimed.
+
+No live database, `.env`, source confirmation, historical PDF, financial record,
+account, permission, production service or external notification was changed.
