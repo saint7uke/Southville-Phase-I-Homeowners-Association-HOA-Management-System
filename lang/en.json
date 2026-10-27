@@ -1238,5 +1238,17 @@
     "Sender name": "Sender name",
     "Not provided": "Not provided",
     "Public inquiry details and sender contact information.": "Public inquiry details and sender contact information.",
-    "Record actions": "Record actions"
+    "Record actions": "Record actions",
+    "Complete the property address to find registered landlords.": "Complete the property address to find registered landlords.",
+    "Loading registered landlords…": "Loading registered landlords…",
+    "Registered landlords are temporarily unavailable.": "Registered landlords are temporarily unavailable.",
+    "Registered landlords are temporarily unavailable. Please try again.": "Registered landlords are temporarily unavailable. Please try again.",
+    "No registered landlord found.": "No registered landlord found.",
+    "No registered landlord was found for this property. Check the address or contact the HOA.": "No registered landlord was found for this property. Check the address or contact the HOA.",
+    "Select your registered landlord.": "Select your registered landlord.",
+    "Registered landlord selected.": "Registered landlord selected.",
+    "Select a registered landlord for the entered property.": "Select a registered landlord for the entered property.",
+    "Your homeowner record is not linked yet.": "Your homeowner record is not linked yet.",
+    "Only HOA staff can change the registered property address.": "Only HOA staff can change the registered property address.",
+    "Contact the HOA to change the registered property address.": "Contact the HOA to change the registered property address."
 }

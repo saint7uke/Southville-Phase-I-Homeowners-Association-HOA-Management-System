@@ -23,12 +23,12 @@ final class ProfileAvailabilityController extends Controller
         abort_unless($homeowner instanceof Homeowner, 404);
 
         $validator = Validator::make($request->all(), [
-            'field' => ['required', 'in:email,address'],
+            'field' => ['required', 'in:email'],
             'email' => ['required_if:field,email', 'nullable', 'string', 'max:255'],
-            'house_number' => ['nullable', 'string', 'max:50'],
-            'street' => ['required_if:field,address', 'nullable', 'string', 'max:100'],
-            'block' => ['required_if:field,address', 'nullable', 'string', 'max:20'],
-            'lot' => ['required_if:field,address', 'nullable', 'string', 'max:20'],
+            'house_number' => ['prohibited'],
+            'street' => ['prohibited'],
+            'block' => ['prohibited'],
+            'lot' => ['prohibited'],
         ], [], $profileValidator->attributes());
 
         if ($validator->fails()) {
@@ -39,9 +39,7 @@ final class ProfileAvailabilityController extends Controller
         }
 
         $data = $validator->validated();
-        $result = $data['field'] === 'email'
-            ? $profileValidator->emailAvailability($user, $homeowner, $data['email'])
-            : $profileValidator->addressAvailability($homeowner, $data);
+        $result = $profileValidator->emailAvailability($user, $homeowner, $data['email']);
 
         return response()->json($result);
     }

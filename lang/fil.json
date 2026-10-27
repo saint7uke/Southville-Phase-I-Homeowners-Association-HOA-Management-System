@@ -1238,5 +1238,17 @@
     "Sender name": "Pangalan ng nagpadala",
     "Not provided": "Hindi ibinigay",
     "Public inquiry details and sender contact information.": "Mga detalye ng pampublikong pagtatanong at impormasyon sa pakikipag-ugnayan ng nagpadala.",
-    "Record actions": "Mga aksyon sa rekord"
+    "Record actions": "Mga aksyon sa rekord",
+    "Complete the property address to find registered landlords.": "Kumpletuhin ang address ng ari-arian upang makita ang mga rehistradong nagpapaupa.",
+    "Loading registered landlords…": "Kinukuha ang mga rehistradong nagpapaupa…",
+    "Registered landlords are temporarily unavailable.": "Pansamantalang hindi makuha ang mga rehistradong nagpapaupa.",
+    "Registered landlords are temporarily unavailable. Please try again.": "Pansamantalang hindi makuha ang mga rehistradong nagpapaupa. Pakisubukan muli.",
+    "No registered landlord found.": "Walang nakitang rehistradong nagpapaupa.",
+    "No registered landlord was found for this property. Check the address or contact the HOA.": "Walang nakitang rehistradong nagpapaupa para sa ari-ariang ito. Suriin ang address o makipag-ugnayan sa HOA.",
+    "Select your registered landlord.": "Piliin ang iyong rehistradong nagpapaupa.",
+    "Registered landlord selected.": "Napili na ang rehistradong nagpapaupa.",
+    "Select a registered landlord for the entered property.": "Pumili ng rehistradong nagpapaupa para sa inilagay na ari-arian.",
+    "Your homeowner record is not linked yet.": "Hindi pa naka-link ang iyong rekord ng homeowner.",
+    "Only HOA staff can change the registered property address.": "Tanging kawani ng HOA ang maaaring magbago ng rehistradong address ng ari-arian.",
+    "Contact the HOA to change the registered property address.": "Makipag-ugnayan sa HOA upang baguhin ang rehistradong address ng ari-arian."
 }

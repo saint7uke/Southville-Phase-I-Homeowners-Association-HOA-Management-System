@@ -10,6 +10,14 @@ use PHPUnit\Framework\TestCase;
 
 final class PropertyAddressTest extends TestCase
 {
+    public function test_street_comparison_is_case_punctuation_unicode_and_suffix_insensitive(): void
+    {
+        $this->assertTrue(PropertyAddress::sameStreet('  Mahogany St. ', 'mahogany street'));
+        $this->assertTrue(PropertyAddress::sameStreet('Acacia Rd.', 'ACACIA ROAD'));
+        $this->assertFalse(PropertyAddress::sameStreet('Mahogany Street', 'Narra Street'));
+        $this->assertFalse(PropertyAddress::sameStreet('', 'Narra Street'));
+    }
+
     /** @return iterable<string, array{array<string, string>, array<string, string>}> */
     public static function equivalentAddresses(): iterable
     {

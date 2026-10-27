@@ -14,6 +14,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 final class HomeownerProfileValidator
 {
@@ -120,7 +121,41 @@ final class HomeownerProfileValidator
     /** @param array<string, mixed> $input @return array<string, mixed> */
     public function validate(User $user, Homeowner $homeowner, array $input): array
     {
-        $normalized = $this->normalize(['phase_suffix' => $homeowner->phase_suffix, ...$input]);
+        $protected = [];
+        if (array_key_exists('house_number', $input)
+            && PropertyAddress::normalizeForStorage(['house_number' => $input['house_number']])['house_number']
+                !== PropertyAddress::normalizeForStorage(['house_number' => $homeowner->house_number])['house_number']) {
+            $protected['house_number'] = [__('Only HOA staff can change the stored house number.')];
+        }
+        foreach (['street', 'block', 'lot'] as $field) {
+            if (array_key_exists($field, $input)
+                && PropertyAddress::normalizeForStorage([$field => $input[$field]])[$field]
+                    !== PropertyAddress::normalizeForStorage([$field => $homeowner->{$field}])[$field]) {
+                $protected[$field] = [__('Only HOA staff can change the registered property address.')];
+            }
+        }
+        if (array_key_exists('phase', $input)
+            && PropertyAddress::normalizeForStorage(['phase' => $input['phase']])['phase']
+                !== PropertyAddress::normalizeForStorage(['phase' => $homeowner->phase])['phase']) {
+            $protected['phase'] = [__('Only HOA staff can change the registered phase.')];
+        }
+        if (array_key_exists('phase_suffix', $input)
+            && PropertyIdentity::suffix($input['phase_suffix']) !== PropertyIdentity::suffix($homeowner->phase_suffix)) {
+            $protected['phase_suffix'] = [__('Only HOA staff can change the registered phase.')];
+        }
+        if ($protected !== []) {
+            throw ValidationException::withMessages($protected);
+        }
+
+        $normalized = $this->normalize([
+            ...$input,
+            'house_number' => $homeowner->house_number,
+            'street' => $homeowner->street,
+            'block' => $homeowner->block,
+            'lot' => $homeowner->lot,
+            'phase' => $homeowner->phase,
+            'phase_suffix' => $homeowner->phase_suffix,
+        ]);
 
         $validator = Validator::make(
             $normalized,
@@ -129,13 +164,13 @@ final class HomeownerProfileValidator
             $this->attributes(),
         );
         $validator->after(function ($validator) use ($normalized, $homeowner): void {
-            if ($validator->errors()->hasAny(['house_number', 'street', 'block', 'lot', 'phase', 'ownership_type'])) {
+            if ($validator->errors()->hasAny(['street', 'block', 'lot', 'phase', 'ownership_type'])) {
                 return;
             }
 
             $message = $this->addressConflictMessage($homeowner, $normalized);
             if ($message !== null) {
-                $validator->errors()->add('house_number', __($message));
+                $validator->errors()->add('street', __($message));
             }
         });
 
@@ -206,11 +241,11 @@ final class HomeownerProfileValidator
     {
         $normalized = PropertyAddress::normalizeForStorage([
             ...$address,
+            'house_number' => $homeowner->house_number,
             'phase' => $homeowner->phase,
             'phase_suffix' => $homeowner->phase_suffix,
         ]);
         $validator = Validator::make($normalized, [
-            'house_number' => ['nullable', 'string', 'max:50'],
             'street' => ['required', 'string', 'max:100'],
             'block' => ['required', 'string', 'max:20'],
             'lot' => ['required', 'string', 'max:20'],

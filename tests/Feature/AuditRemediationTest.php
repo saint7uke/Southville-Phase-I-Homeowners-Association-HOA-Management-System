@@ -314,7 +314,8 @@ final class AuditRemediationTest extends TestCase
     public function test_integrity_audit_resolves_confirmed_properties_independently_of_street_text(): void
     {
         $owner = $this->resident(['block' => '1', 'lot' => '2', 'street' => 'Registered Street']);
-        $tenant = $this->resident(['block' => '1', 'lot' => '2', 'street' => 'Different address spelling', 'ownership_type' => 'Tenant', 'landlord_homeowner_id' => $owner->id]);
+        $tenant = $this->resident(['block' => '1', 'lot' => '2', 'street' => 'Different address spelling', 'ownership_type' => 'Tenant']);
+        DB::table('homeowners')->where('id', $tenant->id)->update(['landlord_homeowner_id' => $owner->id]);
         $coowner = $this->resident(['block' => '1', 'lot' => '2', 'street' => 'Another spelling', 'ownership_type' => 'Co-owner']);
         $distinct = $this->resident(['block' => '1', 'lot' => '2', 'phase_suffix' => 'B']);
         $setting = $this->setting();
@@ -326,6 +327,7 @@ final class AuditRemediationTest extends TestCase
         $this->assertSame(0, $report['checks']['invalid_current_landlord_links']);
         $this->assertSame(1, $report['review_observations']['duplicate_property_billing_groups']);
         $this->assertSame(0, $report['review_observations']['unresolved_current_landlord_links']);
+        $this->assertSame(1, $report['review_observations']['confirmed_properties_with_conflicting_streets']);
         $this->assertSame($counts, [DB::table('audit_logs')->count(), DB::table('homeowners')->count(), DB::table('dues_obligations')->count()]);
         DB::table('homeowners')->where('id', $tenant->id)->update(['phase_suffix' => 'B', 'property_key' => $distinct->property_key]);
         $this->assertSame(1, $this->diagnostic()['checks']['invalid_current_landlord_links']);

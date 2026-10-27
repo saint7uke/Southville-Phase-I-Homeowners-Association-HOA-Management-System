@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Support\PropertyAddress;
 use App\Support\PropertyIdentity;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -88,6 +89,11 @@ final class AuditDataIntegrity extends Command
             'overlapping_equivalent_dues_schedules' => DB::table('dues_settings as a')->join('dues_settings as b', function ($join): void {
                 $join->on('a.normalized_name', '=', 'b.normalized_name')->on('a.id', '<', 'b.id');
             })->whereRaw('(a.ends_on IS NULL OR SUBSTR(a.ends_on, 1, 7) >= SUBSTR(b.starts_on, 1, 7)) AND (b.ends_on IS NULL OR SUBSTR(b.ends_on, 1, 7) >= SUBSTR(a.starts_on, 1, 7))')->count(),
+            'confirmed_properties_with_conflicting_streets' => DB::table('homeowners')
+                ->whereNull('deleted_at')->whereNotNull('property_key')
+                ->get(['property_key', 'street'])->groupBy('property_key')
+                ->filter(fn ($residents): bool => $residents->map(fn ($resident): string => PropertyAddress::streetKey($resident->street))->unique()->count() > 1)
+                ->count(),
         ];
 
         if (Schema::hasColumn('dues_obligations', 'property_snapshot')) {

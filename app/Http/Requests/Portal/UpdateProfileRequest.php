@@ -45,9 +45,20 @@ final class UpdateProfileRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $input = $this->all();
+        $normalized = app(HomeownerProfileValidator::class)->normalize($input);
+
+        if ($this->user()?->homeowner instanceof Homeowner) {
+            foreach (['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix'] as $field) {
+                if (! array_key_exists($field, $input)) {
+                    $normalized[$field] = $this->user()->homeowner->{$field};
+                }
+            }
+        }
+
         $this->replace([
-            ...$this->all(),
-            ...app(HomeownerProfileValidator::class)->normalize($this->all()),
+            ...$input,
+            ...$normalized,
         ]);
     }
 }

@@ -2,12 +2,11 @@ import { translate, translationKey } from './translations';
 
 const PROFILE_FIELDS = [
     'first_name', 'middle_name', 'last_name', 'suffix', 'sex', 'date_of_birth',
-    'contact_number', 'email', 'house_number', 'street', 'block', 'lot',
+    'contact_number', 'email',
     'residency_date', 'emergency_contact_name', 'emergency_contact_number',
     'profile_photo_upload',
 ];
-const ADDRESS_FIELDS = ['house_number', 'street', 'block', 'lot'];
-const REQUIRED_PROFILE_FIELDS = PROFILE_FIELDS.filter((field) => !['middle_name', 'suffix', 'house_number', 'profile_photo_upload'].includes(field));
+const REQUIRED_PROFILE_FIELDS = PROFILE_FIELDS.filter((field) => !['middle_name', 'suffix', 'profile_photo_upload'].includes(field));
 const NAME_FIELDS = ['first_name', 'middle_name', 'last_name', 'emergency_contact_name'];
 const PHONE_FIELDS = ['contact_number', 'emergency_contact_number'];
 const NAME_PATTERN = /^[\p{L}\s'.-]+$/u;
@@ -21,29 +20,6 @@ const today = () => new Date().toISOString().slice(0, 10);
 const canonicalText = (value) => value.normalize('NFKC').trim().replace(/\s+/gu, ' ');
 const canonicalPhone = (value) => value.replace(/[\s().-]+/gu, '').trim();
 const canonicalEmail = (value) => value.normalize('NFKC').trim().toLowerCase();
-const canonicalAddressPart = (value, prefixes = []) => {
-    let part = canonicalText(value).toUpperCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/gu, ' ').trim();
-    const first = part.split(' ')[0];
-    if (prefixes.includes(first)) {
-        part = part.slice(first.length).trim();
-    }
-    return part;
-};
-const canonicalAddress = (fields) => {
-    const suffixes = { ST: 'STREET', RD: 'ROAD', AVE: 'AVENUE', AV: 'AVENUE', DR: 'DRIVE', LN: 'LANE', CT: 'COURT', BLVD: 'BOULEVARD', HWY: 'HIGHWAY' };
-    let street = canonicalAddressPart(fields.street?.value || '');
-    const streetWords = street.split(' ');
-    if (suffixes[streetWords.at(-1)]) {
-        streetWords[streetWords.length - 1] = suffixes[streetWords.at(-1)];
-        street = streetWords.join(' ');
-    }
-    return JSON.stringify([
-        canonicalAddressPart(fields.house_number?.value || '', ['HOUSE', 'UNIT', 'NUMBER', 'NO']),
-        street,
-        canonicalAddressPart(fields.block?.value || '', ['BLOCK', 'BLK', 'B']),
-        canonicalAddressPart(fields.lot?.value || '', ['LOT', 'L']),
-    ]);
-};
 
 const inputFor = (wrapper) => wrapper?.querySelector('input:not([type="hidden"]), select, textarea') || null;
 
@@ -136,14 +112,8 @@ const validateProfileField = (fields, field) => {
     if (NAME_FIELDS.includes(field) && !NAME_PATTERN.test(value)) {
         return 'Use letters, spaces, apostrophes, periods, or hyphens only.';
     }
-    if (['first_name', 'middle_name', 'last_name', 'emergency_contact_name', 'street'].includes(field) && value.length > 100) {
+    if (['first_name', 'middle_name', 'last_name', 'emergency_contact_name'].includes(field) && value.length > 100) {
         return 'Use no more than 100 characters.';
-    }
-    if (field === 'house_number' && value.length > 50) {
-        return 'Use no more than 50 characters.';
-    }
-    if (['block', 'lot'].includes(field) && value.length > 20) {
-        return 'Use no more than 20 characters.';
     }
     if (PHONE_FIELDS.includes(field) && !PHONE_PATTERN.test(canonicalPhone(value))) {
         return 'Enter an 11-digit Philippine mobile number beginning with 09.';
@@ -209,7 +179,7 @@ const normalizeOnBlur = (field, input) => {
     }
 
     const original = input.value;
-    if (NAME_FIELDS.includes(field) || ADDRESS_FIELDS.includes(field)) {
+    if (NAME_FIELDS.includes(field)) {
         input.value = canonicalText(original);
     } else if (PHONE_FIELDS.includes(field)) {
         input.value = canonicalPhone(original);
@@ -235,20 +205,18 @@ const initializeProfileForm = (form) => {
     const fields = Object.fromEntries(Object.entries(wrappers).map(([field, wrapper]) => [field, inputFor(wrapper)]));
     const submit = form.querySelector('[data-profile-submit]');
     const initialEmail = canonicalEmail(valueFor(fields, 'email'));
-    const initialAddress = canonicalAddress(fields);
-    const remoteState = { email: 'unchanged', address: 'unchanged' };
-    const cache = { email: new Map(), address: new Map() };
-    const timers = { email: null, address: null };
-    const controllers = { email: null, address: null };
-    const sequence = { email: 0, address: 0 };
+    const remoteState = { email: 'unchanged' };
+    const cache = { email: new Map() };
+    const timers = { email: null };
+    const controllers = { email: null };
+    const sequence = { email: 0 };
 
     const locallyValid = () => PROFILE_FIELDS.every((field) => validateProfileField(fields, field) === '');
-    const remotelyValid = () => ['unchanged', 'valid', 'unknown'].includes(remoteState.email)
-        && ['unchanged', 'valid', 'unknown'].includes(remoteState.address);
+    const remotelyValid = () => ['unchanged', 'valid', 'unknown'].includes(remoteState.email);
     const updateSubmit = () => {
         if (submit) {
             submit.disabled = !locallyValid() || !remotelyValid()
-                || remoteState.email === 'pending' || remoteState.address === 'pending';
+                || remoteState.email === 'pending';
         }
     };
 
@@ -265,20 +233,19 @@ const initializeProfileForm = (form) => {
         return error === '';
     };
 
-    const requestAvailability = async (kind) => {
-        const isEmail = kind === 'email';
-        const signature = isEmail ? canonicalEmail(valueFor(fields, 'email')) : canonicalAddress(fields);
-        const unchanged = isEmail ? signature === initialEmail : signature === initialAddress;
-        const targetFields = isEmail ? ['email'] : ADDRESS_FIELDS;
-        const targetWrapper = wrappers[targetFields[0]];
+    const requestAvailability = async () => {
+        const kind = 'email';
+        const signature = canonicalEmail(valueFor(fields, 'email'));
+        const unchanged = signature === initialEmail;
+        const targetWrapper = wrappers.email;
 
         if (unchanged) {
             remoteState[kind] = 'unchanged';
-            setStatus(targetWrapper, targetFields[0], isEmail ? 'Current email address.' : 'Current registered address.', 'success');
+            setStatus(targetWrapper, 'email', 'Current email address.', 'success');
             updateSubmit();
             return true;
         }
-        if (!targetFields.every((field) => validateProfileField(fields, field) === '')) {
+        if (validateProfileField(fields, 'email') !== '') {
             remoteState[kind] = 'invalid';
             updateSubmit();
             return false;
@@ -286,7 +253,7 @@ const initializeProfileForm = (form) => {
         if (cache[kind].has(signature)) {
             const result = cache[kind].get(signature);
             remoteState[kind] = result.valid ? 'valid' : 'invalid';
-            setStatus(targetWrapper, targetFields[0], result.message, result.valid ? 'success' : 'error');
+            setStatus(targetWrapper, 'email', result.message, result.valid ? 'success' : 'error');
             updateSubmit();
             return result.valid;
         }
@@ -295,12 +262,10 @@ const initializeProfileForm = (form) => {
         controllers[kind] = new AbortController();
         const requestSequence = ++sequence[kind];
         remoteState[kind] = 'pending';
-        setStatus(targetWrapper, targetFields[0], isEmail ? 'Checking email availability.' : 'Checking address availability.', 'neutral');
+        setStatus(targetWrapper, 'email', 'Checking email availability.', 'neutral');
         updateSubmit();
 
-        const payload = isEmail
-            ? { field: 'email', email: valueFor(fields, 'email') }
-            : { field: 'address', ...Object.fromEntries(ADDRESS_FIELDS.map((field) => [field, valueFor(fields, field)])) };
+        const payload = { field: 'email', email: valueFor(fields, 'email') };
 
         try {
             const response = await fetch(form.dataset.availabilityUrl, {
@@ -325,7 +290,7 @@ const initializeProfileForm = (form) => {
             const outcome = { valid: result.valid === true, message: String(result.message || 'This value could not be validated.') };
             cache[kind].set(signature, outcome);
             remoteState[kind] = outcome.valid ? 'valid' : 'invalid';
-            setStatus(targetWrapper, targetFields[0], outcome.message, outcome.valid ? 'success' : 'error');
+            setStatus(targetWrapper, 'email', outcome.message, outcome.valid ? 'success' : 'error');
             updateSubmit();
             return outcome.valid;
         } catch (error) {
@@ -334,14 +299,15 @@ const initializeProfileForm = (form) => {
             }
             if (requestSequence === sequence[kind]) {
                 remoteState[kind] = 'unknown';
-                setStatus(targetWrapper, targetFields[0], 'The conflict check is temporarily unavailable. Final validation will run when you save.', 'neutral');
+                setStatus(targetWrapper, 'email', 'The conflict check is temporarily unavailable. Final validation will run when you save.', 'neutral');
                 updateSubmit();
             }
             return true;
         }
     };
 
-    const scheduleRemote = (kind) => {
+    const scheduleRemote = () => {
+        const kind = 'email';
         window.clearTimeout(timers[kind]);
         controllers[kind]?.abort();
         sequence[kind] += 1;
@@ -360,10 +326,7 @@ const initializeProfileForm = (form) => {
             window.clearTimeout(localTimer);
             localTimer = window.setTimeout(() => showLocalResult(field), 250);
             if (field === 'email') {
-                scheduleRemote('email');
-            }
-            if (ADDRESS_FIELDS.includes(field)) {
-                scheduleRemote('address');
+                scheduleRemote();
             }
         });
         input.addEventListener('change', async () => {
@@ -377,11 +340,7 @@ const initializeProfileForm = (form) => {
             showLocalResult(field);
             if (field === 'email') {
                 window.clearTimeout(timers.email);
-                requestAvailability('email');
-            }
-            if (ADDRESS_FIELDS.includes(field)) {
-                window.clearTimeout(timers.address);
-                requestAvailability('address');
+                requestAvailability();
             }
         });
     });
@@ -389,7 +348,7 @@ const initializeProfileForm = (form) => {
     form.addEventListener('submit', (event) => {
         const invalidFields = PROFILE_FIELDS.filter((field) => !showLocalResult(field));
         const invalidField = invalidFields[0];
-        const remotePending = remoteState.email === 'pending' || remoteState.address === 'pending';
+        const remotePending = remoteState.email === 'pending';
         const remoteInvalid = !remotelyValid();
         if (!invalidField && !remotePending && !remoteInvalid) {
             showClientSummary(form, [], 'profile');
@@ -402,15 +361,12 @@ const initializeProfileForm = (form) => {
         if (remoteState.email === 'invalid') {
             messages.push('Resolve the email address conflict before saving.');
         }
-        if (remoteState.address === 'invalid') {
-            messages.push('Resolve the property address conflict before saving.');
-        }
         if (remotePending) {
             messages.push('Wait for the availability checks to finish.');
         }
         showClientSummary(form, [...new Set(messages)], 'profile');
         const focusField = invalidField
-            || (remoteState.email === 'invalid' ? 'email' : ADDRESS_FIELDS[0]);
+            || 'email';
         fields[focusField]?.focus();
     }, true);
 

@@ -97,7 +97,7 @@ final class ConfirmedPropertyIdentityTest extends TestCase
     public function test_landlord_and_payer_matching_do_not_cross_confirmed_phases(): void
     {
         $owner = $this->resident();
-        $coowner = $this->resident(['ownership_type' => 'Co-owner', 'street' => 'Different Street']);
+        $coowner = $this->resident(['ownership_type' => 'Co-owner', 'street' => 'Narra St.']);
         $other = $this->resident(['phase_suffix' => 'B', 'ownership_type' => 'Co-owner']);
         $accounts = app(PropertyDuesAccounts::class);
         $this->assertTrue($accounts->payerIsEligible($coowner, $owner));

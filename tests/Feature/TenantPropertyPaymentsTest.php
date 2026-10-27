@@ -62,7 +62,9 @@ final class TenantPropertyPaymentsTest extends TestCase
         Storage::set('local', Storage::fake('sc07-payments-'.getmypid()));
         $this->owner = $this->resident('Owner');
         $this->landlord = $this->resident('Co-owner', ['street' => 'Alternative street spelling']);
-        $this->tenant = $this->resident('Tenant', ['street' => 'Tenant street text', 'landlord_homeowner_id' => $this->landlord->id]);
+        $this->tenant = $this->resident('Tenant', ['street' => 'Tenant street text']);
+        DB::table('homeowners')->where('id', $this->tenant->id)->update(['landlord_homeowner_id' => $this->landlord->id]);
+        $this->tenant->refresh();
         $this->staff = User::factory()->create(['account_status' => 'Active']);
         $this->staff->assignRole('hoa_staff');
     }
@@ -236,7 +238,7 @@ final class TenantPropertyPaymentsTest extends TestCase
     {
         $due = $this->obligation($this->owner);
         $payment = app(RecordPayment::class)->handle($this->payload($due), $this->staff);
-        $otherTenant = $this->resident('Tenant', ['landlord_homeowner_id' => $this->landlord->id]);
+        $otherTenant = $this->resident('Tenant', ['street' => $this->landlord->street, 'landlord_homeowner_id' => $this->landlord->id]);
         $document = $this->document($payment);
         foreach ([$this->tenant->user, $this->owner->user, $this->staff] as $allowed) {
             $this->login($allowed);

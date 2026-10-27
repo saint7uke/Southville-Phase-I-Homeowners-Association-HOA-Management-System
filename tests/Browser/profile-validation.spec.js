@@ -45,25 +45,16 @@ test('homeowner profile validates fields and conflicts responsively', async ({ p
     test.skip(!email || !password, 'Requires designated Homeowner browser-test credentials.');
 
     let emailRequests = 0;
-    let addressRequests = 0;
     await page.route('**/homeowner/my-profile/availability', async (route) => {
         const body = route.request().postDataJSON();
-        if (body.field === 'email') {
-            emailRequests += 1;
-        } else {
-            addressRequests += 1;
-        }
+        emailRequests += 1;
         await new Promise((resolve) => setTimeout(resolve, 800));
-        const valid = body.field === 'email'
-            ? !body.email.includes('reserved')
-            : !body.street.toLowerCase().includes('reserved');
+        const valid = !body.email.includes('reserved');
         await route.fulfill({
             contentType: 'application/json',
             body: JSON.stringify({
                 valid,
-                message: valid
-                    ? body.field === 'email' ? 'This email address is available.' : 'This address is available for your profile.'
-                    : body.field === 'email' ? 'This email address is already registered or reserved.' : 'This address is already registered. Please use a different address.',
+                message: valid ? 'This email address is available.' : 'This email address is already registered or reserved.',
             }),
         });
     });
@@ -77,7 +68,10 @@ test('homeowner profile validates fields and conflicts responsively', async ({ p
 
     const profileForm = page.locator('[data-profile-validation-form]');
     await expect(profileForm).toBeVisible();
-    await expect(profileForm.getByLabel('Phase')).toBeDisabled();
+    await expect(profileForm.getByText('Registered phase', { exact: true })).toBeVisible();
+    await expect(profileForm.locator('[data-profile-field-wrapper="street"] input')).toHaveCount(0);
+    await expect(profileForm.locator('[data-profile-field-wrapper="block"] input')).toHaveCount(0);
+    await expect(profileForm.locator('[data-profile-field-wrapper="lot"] input')).toHaveCount(0);
     await expect(profileForm.getByLabel('Occupancy type')).toBeDisabled();
 
     const firstName = profileForm.locator('[data-profile-field-wrapper="first_name"] input');
@@ -104,16 +98,6 @@ test('homeowner profile validates fields and conflicts responsively', async ({ p
     await expect(profileForm.locator('[data-realtime-status="email"]')).toContainText('This email address is available.');
     expect(emailRequests).toBe(2);
 
-    const street = profileForm.locator('[data-profile-field-wrapper="street"] input');
-    await street.fill('Reserved');
-    await street.fill('Reserved Road');
-    await street.fill('Reserved Street');
-    await expect(profileForm.locator('[data-realtime-status="house_number"]')).toContainText('already registered');
-    expect(addressRequests).toBe(1);
-    await expect(profileForm.locator('[data-profile-submit]')).toBeDisabled();
-
-    await street.fill('Available Street');
-    await expect(profileForm.locator('[data-realtime-status="house_number"]')).toContainText('available for your profile');
     await profileForm.locator('[data-profile-field-wrapper="emergency_contact_name"] input').fill('Emergency Contact');
     await profileForm.locator('[data-profile-field-wrapper="emergency_contact_number"] input').fill('09190000000');
     await expect(profileForm.locator('[data-profile-submit]')).toBeEnabled();

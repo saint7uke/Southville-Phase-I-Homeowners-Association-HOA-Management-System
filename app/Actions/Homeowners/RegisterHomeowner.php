@@ -7,6 +7,7 @@ namespace App\Actions\Homeowners;
 use App\Models\User;
 use App\Notifications\NewHomeownerRegistration;
 use App\Services\LandlordMatcher;
+use App\Services\LandlordSelectionTokens;
 use App\Services\PropertyAddressAvailability;
 use App\Support\PropertyAddress;
 use App\Support\PropertyIdentity;
@@ -20,6 +21,7 @@ final class RegisterHomeowner
     public function __construct(
         private readonly PropertyAddressAvailability $addressAvailability,
         private readonly LandlordMatcher $landlordMatcher,
+        private readonly LandlordSelectionTokens $landlordSelectionTokens,
     ) {}
 
     /** @param array<string, mixed> $data */
@@ -36,7 +38,9 @@ final class RegisterHomeowner
         try {
             $user = $this->addressAvailability->withRegistrationLock($data, function () use ($data, &$documentPath): User {
                 $landlord = $data['ownership_type'] === 'Tenant'
-                    ? $this->landlordMatcher->resolveForRegistration($data)
+                    ? (filled($data['landlord_token'] ?? null)
+                        ? $this->landlordSelectionTokens->consume($data['landlord_token'], $data)
+                        : $this->landlordMatcher->resolveForRegistration($data))
                     : null;
 
                 $user = User::query()->create([

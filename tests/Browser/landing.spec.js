@@ -120,7 +120,7 @@ for (const viewport of [
     { width: 320, height: 700 },
     { width: 1440, height: 900 },
 ]) {
-    test(`tenant landlord validation is debounced, cached, and accessible at ${viewport.width}px`, async ({ page }) => {
+    test(`tenant landlord selection is address scoped and accessible at ${viewport.width}px`, async ({ page }) => {
         test.setTimeout(45_000);
         let landlordRequestCount = 0;
         await page.setViewportSize(viewport);
@@ -135,15 +135,16 @@ for (const viewport of [
         await page.route('**/homeowner/register/landlord-availability', async (route) => {
             landlordRequestCount += 1;
             const body = route.request().postDataJSON();
-            const valid = body.landlord_name.trim().toLowerCase() === 'registered owner';
             await new Promise((resolve) => setTimeout(resolve, 800));
             await route.fulfill({
                 contentType: 'application/json',
                 body: JSON.stringify({
-                    valid,
-                    message: valid
-                        ? 'Registered homeowner found for this address.'
-                        : 'No active homeowner with this name was found at the entered address. Please check the name or contact the HOA.',
+                    options: body.lot === '8'
+                        ? [{ label: 'Registered Owner', token: 'opaque-landlord-token' }]
+                        : [],
+                    message: body.lot === '8'
+                        ? 'Select your registered landlord.'
+                        : 'No registered landlord was found for this property. Check the address or contact the HOA.',
                 }),
             });
         });
@@ -156,25 +157,24 @@ for (const viewport of [
         await page.locator('#lot').fill('8');
         await expect(page.locator('#address-availability-message')).toHaveAttribute('data-state', 'success');
 
-        const landlord = page.locator('#landlord_name');
+        const landlord = page.locator('#landlord_selector');
         const status = page.locator('#landlord-availability-message');
-        await landlord.fill('Registered');
-        await landlord.fill('Registered Owner');
-        await expect(status).toHaveText('Checking registered homeowner…');
-        await expect(status).toHaveText('Registered homeowner found for this address.');
+        await expect(status).toHaveText('Loading registered landlords…');
+        await expect(landlord).toContainText('Registered Owner');
+        await expect(status).toHaveText('Select your registered landlord.');
+        await landlord.selectOption('opaque-landlord-token');
+        await expect(status).toHaveText('Registered landlord selected.');
         await expect(status).toHaveAttribute('data-state', 'success');
+        await expect(page.locator('#landlord_name')).toHaveValue('Registered Owner');
+        await expect(page.locator('#landlord_token')).toHaveValue('opaque-landlord-token');
         expect(landlordRequestCount).toBe(1);
 
-        await landlord.fill('Registered Owner ');
-        await expect(status).toHaveText('Registered homeowner found for this address.');
-        await page.waitForTimeout(600);
-        expect(landlordRequestCount).toBe(1);
-
-        await landlord.fill('Unknown');
-        await landlord.fill('Unknown Person');
-        await expect(status).toHaveText('No active homeowner with this name was found at the entered address. Please check the name or contact the HOA.');
+        await page.locator('#lot').fill('9');
+        await expect(status).toHaveText('No registered landlord was found for this property. Check the address or contact the HOA.');
         await expect(status).toHaveAttribute('data-state', 'error');
         await expect(landlord).toHaveAttribute('aria-invalid', 'true');
+        await expect(page.locator('#landlord_name')).toHaveValue('');
+        await expect(page.locator('#landlord_token')).toHaveValue('');
         expect(landlordRequestCount).toBe(2);
 
         await page.locator('#first_name').fill('Test');

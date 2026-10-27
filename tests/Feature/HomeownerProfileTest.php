@@ -9,7 +9,6 @@ use App\Filament\Homeowner\Pages\MyProfile;
 use App\Models\Homeowner;
 use App\Models\User;
 use App\Models\UserEmailReservation;
-use App\Services\PropertyAddressAvailability;
 use App\Validation\HomeownerProfileValidator;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Facades\Filament;
@@ -42,7 +41,7 @@ final class HomeownerProfileTest extends TestCase
         $homeowner->update(['house_number' => null, 'phase_suffix' => 'A']);
         Filament::setCurrentPanel(Filament::getPanel('homeowner'));
         Livewire::actingAs($resident->fresh(), 'homeowner')->test(MyProfile::class)
-            ->fillForm($this->profilePayload(['email' => $resident->email, 'house_number' => null]), 'profileForm')
+            ->fillForm($this->profilePayload(['email' => $resident->email]), 'profileForm')
             ->call('saveProfile')->assertHasNoFormErrors()->assertNotified('Profile updated successfully!');
         $this->assertSame('A', $homeowner->fresh()->phase_suffix);
         $this->assertEmpty($homeowner->fresh()->house_number);
@@ -90,7 +89,6 @@ final class HomeownerProfileTest extends TestCase
         [$resident, $homeowner] = $this->homeowner([], ['phase' => null]);
         Filament::setCurrentPanel(Filament::getPanel('homeowner'));
         Livewire::actingAs($resident, 'homeowner')->test(MyProfile::class)
-            ->assertFormSet(['phase' => 'Southville Phase I'], 'profileForm')
             ->fillForm(['contact_number' => '09171234567'], 'profileForm')
             ->call('saveProfile')
             ->assertHasNoFormErrors()
@@ -108,8 +106,6 @@ final class HomeownerProfileTest extends TestCase
             ->patch('/portal/profile', $this->profilePayload([
                 'first_name' => '  maría   de la cruz ',
                 'email' => ' NEW.EMAIL@EXAMPLE.TEST ',
-                'block' => ' b  12 ',
-                'lot' => ' l  4 ',
             ]))
             ->assertRedirect('/portal/status');
 
@@ -118,8 +114,8 @@ final class HomeownerProfileTest extends TestCase
         $this->assertSame('María De La Cruz', $resident->first_name);
         $this->assertSame('new.email@example.test', $resident->email);
         $this->assertNull($resident->email_verified_at);
-        $this->assertSame('B 12', $homeowner->block);
-        $this->assertSame('L 4', $homeowner->lot);
+        $this->assertSame('B 1', $homeowner->block);
+        $this->assertSame('L 1', $homeowner->lot);
         $this->assertSame('Southville Phase I', $homeowner->phase);
         $this->assertSame(36, $resident->age);
         Notification::assertSentTo($resident, VerifyEmail::class);
@@ -184,45 +180,22 @@ final class HomeownerProfileTest extends TestCase
         $this->assertStringNotContainsString($other->full_name, $response->getContent());
     }
 
-    public function test_profile_availability_validates_address_conflicts_and_relationships(): void
+    public function test_profile_availability_rejects_address_checks_because_the_address_is_hoa_controlled(): void
     {
-        [$existing, $existingHomeowner] = $this->homeowner([], ['block' => 'B 20', 'lot' => 'L 20']);
-        [$resident] = $this->homeowner([], ['block' => 'B 21', 'lot' => 'L 21']);
+        [$existing, $existingHomeowner] = $this->homeowner([], ['block' => 'B 20', 'lot' => 'L 20', 'phase_suffix' => 'A']);
+        [$resident] = $this->homeowner([], ['block' => 'B 21', 'lot' => 'L 21', 'phase_suffix' => 'A']);
 
         $this->actingAs($resident, 'homeowner')->postJson(route('homeowner.profile.availability'), [
             'field' => 'address',
-            'house_number' => $existingHomeowner->house_number,
             'street' => $existingHomeowner->street,
             'block' => $existingHomeowner->block,
             'lot' => $existingHomeowner->lot,
-        ])->assertExactJson([
+        ])->assertUnprocessable()->assertExactJson([
             'valid' => false,
-            'message' => PropertyAddressAvailability::UNAVAILABLE_MESSAGE,
-        ]);
-
-        [, $landlord] = $this->homeowner(['email' => 'landlord-profile@example.test'], ['block' => 'B 30', 'lot' => 'L 30']);
-        [$tenant, $tenantRecord] = $this->homeowner(['email' => 'tenant-profile@example.test'], [
-            'house_number' => $landlord->house_number,
-            'street' => $landlord->street,
-            'block' => 'B 30',
-            'lot' => 'L 30',
-            'ownership_type' => 'Tenant',
-            'landlord_homeowner_id' => $landlord->id,
-        ]);
-
-        $this->actingAs($tenant, 'homeowner')->postJson(route('homeowner.profile.availability'), [
-            'field' => 'address',
-            'house_number' => '99',
-            'street' => 'New Street',
-            'block' => 'B 99',
-            'lot' => 'L 99',
-        ])->assertExactJson([
-            'valid' => false,
-            'message' => HomeownerProfileValidator::LINKED_ADDRESS_MESSAGE,
+            'message' => 'The selected field is invalid.',
         ]);
 
         $this->assertSame($existing->id, $existingHomeowner->user_id);
-        $this->assertSame($landlord->id, $tenantRecord->landlord_homeowner_id);
     }
 
     public function test_profile_availability_requires_homeowner_authentication_and_is_throttled(): void
@@ -260,6 +233,9 @@ final class HomeownerProfileTest extends TestCase
         foreach ([
             ['phase' => 'Another Phase'],
             ['ownership_type' => 'Tenant'],
+            ['street' => 'Another Street'],
+            ['block' => '99'],
+            ['lot' => '99'],
         ] as $override) {
             try {
                 app(UpdateOwnProfile::class)->handle($resident, $this->profilePayload($override));
@@ -268,6 +244,23 @@ final class HomeownerProfileTest extends TestCase
                 $this->assertArrayHasKey(array_key_first($override), $exception->errors());
             }
         }
+    }
+
+    public function test_homeowner_cannot_change_the_stored_house_number_through_a_crafted_request(): void
+    {
+        [$resident, $homeowner] = $this->homeowner();
+
+        try {
+            app(UpdateOwnProfile::class)->handle($resident, [
+                ...$this->profilePayload(),
+                'house_number' => '99',
+            ]);
+            $this->fail('The removed house-number field must not remain writable.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('house_number', $exception->errors());
+        }
+
+        $this->assertNotSame('99', $homeowner->fresh()->house_number);
     }
 
     public function test_move_in_date_cannot_precede_birth_date(): void
@@ -298,10 +291,6 @@ final class HomeownerProfileTest extends TestCase
             'date_of_birth' => today()->toDateString(),
             'contact_number' => '08123456789',
             'email' => 'not-an-email',
-            'house_number' => str_repeat('1', 51),
-            'street' => '   ',
-            'block' => '   ',
-            'lot' => '   ',
             'residency_date' => today()->addDay()->toDateString(),
             'emergency_contact_name' => '987',
             'emergency_contact_number' => '09123',
@@ -343,15 +332,16 @@ final class HomeownerProfileTest extends TestCase
         [, $existing] = $this->homeowner([], [
             'block' => 'B 1',
             'lot' => 'L 2',
+            'phase_suffix' => 'A',
         ]);
         [$resident] = $this->homeowner([], [
             'block' => 'B 9',
             'lot' => 'L 9',
+            'phase_suffix' => 'A',
         ]);
 
         try {
             app(UpdateOwnProfile::class)->handle($resident, $this->profilePayload([
-                'house_number' => $existing->house_number,
                 'street' => ' mahogany st. ',
                 'block' => ' b   1 ',
                 'lot' => ' l 2 ',
@@ -359,7 +349,7 @@ final class HomeownerProfileTest extends TestCase
             ]));
             $this->fail('A duplicate normalized property address should be rejected.');
         } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('house_number', $exception->errors());
+            $this->assertArrayHasKey('street', $exception->errors());
         }
     }
 
@@ -491,6 +481,11 @@ final class HomeownerProfileTest extends TestCase
     {
         [$resident] = $this->homeowner();
         $this->actingAs($resident, 'homeowner')->get('/homeowner/my-profile')->assertOk();
+        $this->actingAs($resident, 'web')->get('/portal/profile')->assertOk()
+            ->assertDontSee('name="street"', false)
+            ->assertDontSee('name="block"', false)
+            ->assertDontSee('name="lot"', false)
+            ->assertDontSee('name="house_number"', false);
 
         Livewire::actingAs($resident, 'homeowner')
             ->test(MyProfile::class)
@@ -498,7 +493,11 @@ final class HomeownerProfileTest extends TestCase
                 'first_name' => $resident->first_name,
                 'email' => $resident->email,
             ], 'profileForm')
-            ->assertFormFieldDisabled('phase', 'profileForm')
+            ->assertSchemaComponentDoesNotExist('house_number', 'profileForm')
+            ->assertSchemaComponentDoesNotExist('phase', 'profileForm')
+            ->assertSchemaComponentDoesNotExist('street', 'profileForm')
+            ->assertSchemaComponentDoesNotExist('block', 'profileForm')
+            ->assertSchemaComponentDoesNotExist('lot', 'profileForm')
             ->assertFormFieldDisabled('ownership_type', 'profileForm');
 
         $orphan = $this->roleUser('homeowner');
@@ -530,11 +529,6 @@ final class HomeownerProfileTest extends TestCase
             'date_of_birth' => '1990-08-28',
             'contact_number' => '09123456789',
             'email' => 'resident@example.test',
-            'house_number' => '10',
-            'street' => 'Mahogany Street',
-            'block' => 'B 10',
-            'lot' => 'L 10',
-            'phase' => 'Southville Phase I',
             'residency_date' => '2021-01-01',
             'ownership_type' => 'Owner',
             'emergency_contact_name' => 'Maria Dela Cruz',

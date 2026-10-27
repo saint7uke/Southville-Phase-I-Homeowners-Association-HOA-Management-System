@@ -251,8 +251,12 @@
 
                         <div class="hoa-form-grid-2 tenant-field" style="display:none;">
                             <div class="hoa-field">
-                                <label for="landlord_name"><span data-i18n="Landlord name">{{ __('Landlord name') }}</span> <span aria-hidden="true">*</span></label>
-                                <input id="landlord_name" name="landlord_name" type="text" maxlength="100" value="{{ old('landlord_name') }}" aria-describedby="landlord-availability-message{{ $errors->has('landlord_name') ? ' landlord_name-error' : '' }}" @error('landlord_name') aria-invalid="true" class="is-invalid" @enderror>
+                                <label for="landlord_selector"><span data-i18n="Registered landlord">{{ __('Registered landlord') }}</span> <span aria-hidden="true">*</span></label>
+                                <select id="landlord_selector" aria-describedby="landlord-availability-message{{ $errors->has('landlord_name') ? ' landlord_name-error' : '' }}" data-previous-landlord="{{ old('landlord_name') }}" @error('landlord_name') aria-invalid="true" class="is-invalid" @enderror>
+                                    <option value="">{{ __('Complete the property address to find registered landlords.') }}</option>
+                                </select>
+                                <input id="landlord_name" name="landlord_name" type="hidden" value="{{ old('landlord_name') }}">
+                                <input id="landlord_token" name="landlord_token" type="hidden" value="">
                                 <p id="landlord-availability-message" class="hoa-field-status" data-state="{{ $errors->has('landlord_name') ? 'error' : 'neutral' }}" role="status" aria-live="polite" aria-atomic="true" @if(! $errors->has('landlord_name')) hidden @endif>{{ $errors->first('landlord_name') }}</p>
                                 @error('landlord_name')<p id="landlord_name-error" class="hoa-error-text">{{ $message }}</p>@enderror
                             </div>

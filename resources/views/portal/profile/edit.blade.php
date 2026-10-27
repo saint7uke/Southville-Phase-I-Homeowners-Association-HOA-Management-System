@@ -96,19 +96,17 @@
             <legend><span data-i18n="Property and emergency contact">{{ __('Property and emergency contact') }}</span></legend>
             <div class="form-grid two">
                 @foreach ([
-                    'house_number' => ['House number', $user->homeowner->house_number, 'address-line1', 50],
-                    'street' => ['Street', $user->homeowner->street, 'address-line2', 100],
-                    'block' => ['Block', $user->homeowner->block, 'off', 20],
-                    'lot' => ['Lot', $user->homeowner->lot, 'off', 20],
-                    'phase' => ['Phase', $user->homeowner->phase, 'off', 50],
-                ] as $field => [$label, $value, $autocomplete, $max])
+                    'street' => ['Street', $user->homeowner->street],
+                    'block' => ['Block', $user->homeowner->block],
+                    'lot' => ['Lot', $user->homeowner->lot],
+                    'phase' => ['Registered phase', \App\Support\PropertyIdentity::phase($user->homeowner)],
+                ] as $field => [$label, $value])
                     <div class="field">
-                        <label for="{{ $field }}" data-i18n="{{ $label }}">{{ __($label) }}</label>
-                        <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $value) }}" maxlength="{{ $max }}" @if($field !== 'house_number') required @endif autocomplete="{{ $autocomplete }}" @if($field === 'phase') readonly aria-readonly="true" @endif @error($field) aria-invalid="true" aria-describedby="{{ $field }}-error" @enderror>
-                        @if ($field === 'phase')<p class="hint" data-i18n="Contact the HOA to change the registered phase.">{{ __('Contact the HOA to change the registered phase.') }}</p>@endif
-                        @error($field)<p id="{{ $field }}-error" class="error">{{ $message }}</p>@enderror
+                        <span data-i18n="{{ $label }}">{{ __($label) }}</span>
+                        <p id="registered-{{ $field }}">{{ $value }}</p>
                     </div>
                 @endforeach
+                <p class="hint" data-i18n="Contact the HOA to change the registered property address.">{{ __('Contact the HOA to change the registered property address.') }}</p>
                 <div class="field">
                     <label for="residency_date" data-i18n="Move-in date">{{ __('Move-in date') }}</label>
                     <input id="residency_date" name="residency_date" type="date" value="{{ old('residency_date', $user->homeowner->residency_date?->toDateString()) }}" max="{{ today()->toDateString() }}" required @error('residency_date') aria-invalid="true" aria-describedby="residency_date-error" @enderror>

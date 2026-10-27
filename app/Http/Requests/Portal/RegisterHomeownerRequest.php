@@ -53,6 +53,7 @@ final class RegisterHomeownerRequest extends FormRequest
             'residency_date' => ['required_if:ownership_type,Owner,Co-owner', 'nullable', 'date', 'before_or_equal:today'],
             'ownership_type' => ['required', 'in:Owner,Tenant,Co-owner'],
             'landlord_name' => ['required_if:ownership_type,Tenant', 'nullable', 'string', 'max:100'],
+            'landlord_token' => ['nullable', 'string', 'max:2048'],
             'landlord_contact' => ['required_if:ownership_type,Tenant', 'nullable', 'regex:/^09\d{9}$/'],
             'lease_start_date' => ['required_if:ownership_type,Tenant', 'nullable', 'date'],
             'lease_end_date' => ['required_if:ownership_type,Tenant', 'nullable', 'date', 'after:lease_start_date'],

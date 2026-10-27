@@ -64,7 +64,9 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
     const emailMessage = form.querySelector('#email-availability-message');
     const ownershipType = form.querySelector('#ownership_type');
     const addressMessage = form.querySelector('#address-availability-message');
+    const landlordSelector = form.querySelector('#landlord_selector');
     const landlordName = form.querySelector('#landlord_name');
+    const landlordToken = form.querySelector('#landlord_token');
     const landlordMessage = form.querySelector('#landlord-availability-message');
     const addressFields = ['phase_suffix', 'street', 'block', 'lot']
         .map((id) => form.querySelector(`#${id}`))
@@ -95,7 +97,6 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
     let landlordCheckController = null;
     let landlordCheckTimer = null;
     let landlordRequestSequence = 0;
-    const landlordCache = new Map();
     let registrationSubmissionPending = false;
 
     const updateEmailMessage = (message, state = 'neutral') => {
@@ -323,46 +324,48 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
     };
 
     const updateLandlordMessage = (message, state = 'neutral') => {
-        if (!landlordMessage || !landlordName) {
+        if (!landlordMessage || !landlordSelector) {
             return;
         }
 
         localizedText(landlordMessage, message);
         landlordMessage.hidden = message === '';
         landlordMessage.dataset.state = state;
-        landlordName.classList.toggle('is-invalid', state === 'error');
-        landlordName.classList.toggle('is-valid', state === 'success');
-        landlordName.setAttribute('aria-invalid', state === 'error' ? 'true' : 'false');
+        landlordSelector.classList.toggle('is-invalid', state === 'error');
+        landlordSelector.classList.toggle('is-valid', state === 'success');
+        landlordSelector.setAttribute('aria-invalid', state === 'error' ? 'true' : 'false');
     };
 
-    const landlordCheckIsComplete = () => ownershipType?.value === 'Tenant'
-        && addressIsComplete()
-        && landlordName?.value.trim() !== ''
-        && landlordName.checkValidity();
+    const landlordCheckIsComplete = () => ownershipType?.value === 'Tenant' && addressIsComplete();
 
-    const landlordSignature = () => JSON.stringify([
-        addressSignature(),
-        landlordName?.value.normalize('NFKC').trim().toUpperCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ') || '',
-    ]);
+    const resetLandlordSelection = (message = 'Complete the property address to find registered landlords.') => {
+        if (!landlordSelector || !landlordName || !landlordToken) {
+            return;
+        }
 
-    const checkLandlordAvailability = async (force = false) => {
+        landlordSelector.replaceChildren(new Option(t(message), ''));
+        landlordSelector.disabled = ownershipType?.value !== 'Tenant';
+        landlordName.value = '';
+        landlordToken.value = '';
+        landlordValid = ownershipType?.value !== 'Tenant' ? true : null;
+    };
+
+    const checkLandlordAvailability = async () => {
         if (ownershipType?.value !== 'Tenant') {
+            resetLandlordSelection();
             landlordValid = true;
             updateLandlordMessage('');
             return true;
         }
-        if (!landlordMessage || !form.dataset.landlordAvailabilityUrl || !landlordCheckIsComplete()) {
+        if (!landlordMessage || !landlordSelector || !form.dataset.landlordAvailabilityUrl || !landlordCheckIsComplete()) {
+            resetLandlordSelection();
             landlordValid = null;
-            updateLandlordMessage('');
+            updateLandlordMessage('Complete the property address to find registered landlords.');
             return false;
         }
-
-        const signature = landlordSignature();
-        if (!force && landlordCache.has(signature)) {
-            const cached = landlordCache.get(signature);
-            landlordValid = cached.valid;
-            updateLandlordMessage(cached.message, cached.valid ? 'success' : 'error');
-            return cached.valid;
+        if (landlordToken?.value && landlordSelector.value === landlordToken.value) {
+            landlordValid = true;
+            return true;
         }
 
         landlordCheckController?.abort();
@@ -370,10 +373,11 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         const sequence = ++landlordRequestSequence;
         landlordCheckPending = true;
         landlordValid = null;
-        updateLandlordMessage('Checking registered homeowner…');
+        resetLandlordSelection('Loading registered landlords…');
+        landlordSelector.disabled = true;
+        updateLandlordMessage('Loading registered landlords…');
 
         const payload = Object.fromEntries(addressFields.map((field) => [field.name, field.value]));
-        payload.landlord_name = landlordName.value;
 
         try {
             const response = await fetch(form.dataset.landlordAvailabilityUrl, {
@@ -391,27 +395,41 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
             }
             if (!response.ok) {
                 landlordValid = null;
-                updateLandlordMessage('Landlord validation could not be completed. You can still submit for server validation.');
-                return true;
+                resetLandlordSelection('Registered landlords are temporarily unavailable.');
+                updateLandlordMessage('Registered landlords are temporarily unavailable. Please try again.', 'error');
+                return false;
             }
 
             const result = await response.json();
-            landlordValid = result.valid === true;
-            const outcome = {
-                valid: landlordValid,
-                message: result.message || (landlordValid
-                    ? 'Registered homeowner found for this address.'
-                    : 'No active homeowner with this name was found at the entered address. Please check the name or contact the HOA.'),
-            };
-            landlordCache.set(signature, outcome);
-            updateLandlordMessage(outcome.message, outcome.valid ? 'success' : 'error');
-            return outcome.valid;
+            const options = Array.isArray(result.options) ? result.options : [];
+            resetLandlordSelection(options.length > 0 ? 'Select your registered landlord.' : 'No registered landlord found.');
+            landlordSelector.disabled = options.length === 0;
+            options.forEach((option) => landlordSelector.add(new Option(option.label, option.token)));
+
+            const previousName = landlordSelector.dataset.previousLandlord;
+            const previousOption = Array.from(landlordSelector.options).find((option) => option.text === previousName);
+            if (previousOption) {
+                landlordSelector.value = previousOption.value;
+                landlordName.value = previousOption.text;
+                landlordToken.value = previousOption.value;
+                landlordValid = true;
+                landlordSelector.dataset.previousLandlord = '';
+                updateLandlordMessage('Registered landlord selected.', 'success');
+                return true;
+            }
+
+            landlordValid = false;
+            updateLandlordMessage(result.message || (options.length > 0
+                ? 'Select your registered landlord.'
+                : 'No registered landlord was found for this property. Check the address or contact the HOA.'), options.length > 0 ? 'neutral' : 'error');
+            return false;
         } catch (error) {
             if (error.name !== 'AbortError' && sequence === landlordRequestSequence) {
                 landlordValid = null;
-                updateLandlordMessage('Landlord validation could not be completed. You can still submit for server validation.');
+                resetLandlordSelection('Registered landlords are temporarily unavailable.');
+                updateLandlordMessage('Registered landlords are temporarily unavailable. Please try again.', 'error');
             }
-            return true;
+            return false;
         } finally {
             if (sequence === landlordRequestSequence) {
                 landlordCheckPending = false;
@@ -424,8 +442,10 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         landlordCheckController?.abort();
         landlordRequestSequence += 1;
         landlordCheckPending = false;
-        landlordValid = ownershipType?.value === 'Tenant' ? null : true;
-        updateLandlordMessage('');
+        resetLandlordSelection();
+        updateLandlordMessage(ownershipType?.value === 'Tenant'
+            ? 'Complete the property address to find registered landlords.'
+            : '');
         if (landlordCheckIsComplete()) {
             landlordCheckTimer = window.setTimeout(() => checkLandlordAvailability(), 500);
         }
@@ -446,10 +466,12 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
             checkLandlordAvailability();
         });
     });
-    landlordName?.addEventListener('input', scheduleLandlordCheck);
-    landlordName?.addEventListener('blur', () => {
-        window.clearTimeout(landlordCheckTimer);
-        checkLandlordAvailability();
+    landlordSelector?.addEventListener('change', () => {
+        const selected = landlordSelector.selectedOptions[0];
+        landlordName.value = selected?.value ? selected.text : '';
+        landlordToken.value = selected?.value || '';
+        landlordValid = Boolean(selected?.value);
+        updateLandlordMessage(landlordValid ? 'Registered landlord selected.' : 'Select your registered landlord.', landlordValid ? 'success' : 'error');
     });
     ownershipType?.addEventListener('change', () => {
         scheduleAddressCheck();
@@ -580,7 +602,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         }
 
         const requiredTenantFields = [
-            [form.querySelector('#landlord_name'), 'Enter the landlord name.'],
+            [form.querySelector('#landlord_selector'), 'Select your registered landlord.'],
             [form.querySelector('#lease_start_date'), 'Enter the lease start date.'],
             [form.querySelector('#lease_end_date'), 'Enter the lease end date.'],
         ];
@@ -649,7 +671,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
             if (!updateLeaseDateState()) {
                 leaseEnd?.focus();
             } else if (!landlordIsValid) {
-                landlordName?.focus();
+                landlordSelector?.focus();
             } else if (!propertyAddressIsAvailable) {
                 addressFields[0]?.focus();
             } else if (!emailIsAvailable) {

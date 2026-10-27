@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Services\LandlordMatcher;
+use App\Services\LandlordSelectionTokens;
 use App\Support\PersonName;
 use App\Support\PropertyAddress;
 use App\Support\PropertyIdentity;
@@ -14,11 +15,12 @@ use Illuminate\Http\Request;
 
 final class LandlordAvailabilityController extends Controller
 {
-    public function __invoke(Request $request, LandlordMatcher $matcher): JsonResponse
+    public function __invoke(Request $request, LandlordMatcher $matcher, LandlordSelectionTokens $tokens): JsonResponse
     {
         $request->merge(['phase_suffix' => PropertyIdentity::suffix($request->input('phase_suffix'))]);
         $validated = $request->validate([
-            'landlord_name' => ['required', 'string', 'max:100', "regex:/^[\pL\s'.-]+$/u"],
+            'landlord_name' => ['nullable', 'string', 'max:100', "regex:/^[\pL\s'.-]+$/u"],
+            'search' => ['nullable', 'string', 'max:100', "regex:/^[\pL\s'.-]+$/u"],
             'house_number' => ['prohibited'],
             'phase_suffix' => ['required', 'string', 'regex:/^[A-Z0-9]{1,10}$/D'],
             'street' => ['required', 'string', 'max:100'],
@@ -28,13 +30,29 @@ final class LandlordAvailabilityController extends Controller
 
         $data = [
             ...PropertyAddress::normalizeForStorage($validated),
-            'landlord_name' => PersonName::normalize($validated['landlord_name']),
+            'landlord_name' => PersonName::normalize($validated['landlord_name'] ?? null),
         ];
-        $match = $matcher->match($data);
+
+        if (filled($validated['landlord_name'] ?? null)) {
+            $match = $matcher->match($data);
+
+            return response()->json([
+                'valid' => $match['valid'],
+                'message' => __($match['message']),
+            ]);
+        }
+
+        $options = $matcher->candidates($data, $validated['search'] ?? null)
+            ->map(fn ($homeowner): array => [
+                'label' => $homeowner->user->full_name,
+                'token' => $tokens->issue($homeowner, $data),
+            ])->all();
 
         return response()->json([
-            'valid' => $match['valid'],
-            'message' => __($match['message']),
+            'options' => $options,
+            'message' => __($options === []
+                ? 'No registered landlord was found for this property. Check the address or contact the HOA.'
+                : 'Select your registered landlord.'),
         ]);
     }
 }

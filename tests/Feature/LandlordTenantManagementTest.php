@@ -11,6 +11,7 @@ use App\Models\AuditLog;
 use App\Models\Homeowner;
 use App\Models\User;
 use App\Services\LandlordMatcher;
+use App\Services\LandlordSelectionTokens;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -92,7 +93,7 @@ final class LandlordTenantManagementTest extends TestCase
     {
         $this->postJson(route('homeowner.register.landlord-availability'), [])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['landlord_name', 'phase_suffix', 'street', 'block', 'lot']);
+            ->assertJsonValidationErrors(['phase_suffix', 'street', 'block', 'lot']);
 
         $middleware = Route::getRoutes()->getByName('homeowner.register.landlord-availability')->gatherMiddleware();
         $this->assertContains('throttle:30,1', $middleware);
@@ -121,6 +122,136 @@ final class LandlordTenantManagementTest extends TestCase
         $tenant = Homeowner::query()->where('ownership_type', 'Tenant')->firstOrFail();
         $this->assertSame($landlordRecord->id, $tenant->landlord_homeowner_id);
         $this->assertSame($landlord->full_name, $tenant->landlord_name);
+    }
+
+    public function test_address_scoped_options_expose_only_eligible_names_and_opaque_tokens(): void
+    {
+        [$owner] = $this->resident('Owner', [], ['first_name' => 'Valid', 'middle_name' => null, 'last_name' => 'Owner']);
+        [$coOwner] = $this->resident('Co-owner', [], ['first_name' => 'Valid', 'middle_name' => null, 'last_name' => 'Coowner']);
+        $this->resident('Tenant', [], ['first_name' => 'Hidden', 'middle_name' => null, 'last_name' => 'Tenant']);
+        $this->resident('Owner', ['lot' => '99'], ['first_name' => 'Other', 'middle_name' => null, 'last_name' => 'Address']);
+        $this->resident('Owner', ['status' => 'Inactive'], ['first_name' => 'Inactive', 'middle_name' => null, 'last_name' => 'Owner']);
+        [, $deleted] = $this->resident('Owner', [], ['first_name' => 'Deleted', 'middle_name' => null, 'last_name' => 'Owner']);
+        $deleted->delete();
+
+        $response = $this->postJson(route('homeowner.register.landlord-availability'), $this->address())
+            ->assertOk()
+            ->assertJsonCount(2, 'options')
+            ->assertJsonPath('options.0.label', $owner->full_name)
+            ->assertJsonPath('options.1.label', $coOwner->full_name);
+
+        foreach ($response->json('options') as $option) {
+            $this->assertSame(['label', 'token'], array_keys($option));
+            $this->assertIsString($option['token']);
+            $this->assertNotSame((string) $owner->homeowner->id, $option['token']);
+        }
+
+        $json = $response->getContent();
+        $this->assertStringNotContainsString($owner->email, $json);
+        $this->assertStringNotContainsString($owner->contact_number, $json);
+        $this->assertStringNotContainsString('Hidden Tenant', $json);
+        $this->assertStringNotContainsString('Other Address', $json);
+        $this->assertStringNotContainsString('Inactive Owner', $json);
+        $this->assertStringNotContainsString('Deleted Owner', $json);
+    }
+
+    public function test_landlord_lookup_requires_an_equivalent_street_without_revealing_the_registered_value(): void
+    {
+        [$owner] = $this->resident('Owner', [], ['first_name' => 'Street', 'middle_name' => null, 'last_name' => 'Owner']);
+
+        $this->postJson(route('homeowner.register.landlord-availability'), $this->address(['street' => ' narra st. ']))
+            ->assertOk()->assertJsonPath('options.0.label', $owner->full_name);
+
+        $response = $this->postJson(route('homeowner.register.landlord-availability'), $this->address(['street' => 'Mahogany Street']))
+            ->assertOk()->assertJsonCount(0, 'options')->assertJsonPath('message', 'No registered landlord was found for this property. Check the address or contact the HOA.');
+        $this->assertStringNotContainsString('Narra', $response->getContent());
+    }
+
+    public function test_conflicting_owner_streets_at_one_property_fail_closed(): void
+    {
+        $this->resident('Owner', ['street' => 'Narra Street'], ['first_name' => 'First', 'middle_name' => null, 'last_name' => 'Owner']);
+        $this->resident('Co-owner', ['street' => 'Mahogany Street'], ['first_name' => 'Second', 'middle_name' => null, 'last_name' => 'Owner']);
+
+        $this->postJson(route('homeowner.register.landlord-availability'), $this->address())
+            ->assertOk()->assertJsonCount(0, 'options');
+        $this->postJson(route('homeowner.register.landlord-availability'), [...$this->address(), 'landlord_name' => 'First Owner'])
+            ->assertExactJson(['valid' => false, 'message' => LandlordMatcher::NOT_FOUND_MESSAGE]);
+    }
+
+    public function test_selection_token_links_the_landlord_and_uses_authoritative_snapshots(): void
+    {
+        [$landlord, $landlordRecord] = $this->resident('Owner', [], [
+            'first_name' => 'Token', 'middle_name' => null, 'last_name' => 'Owner',
+            'contact_number' => '09195551234',
+        ]);
+        $token = $this->postJson(route('homeowner.register.landlord-availability'), $this->address())
+            ->assertOk()->json('options.0.token');
+
+        $payload = $this->registrationPayload($landlord->full_name);
+        $payload['landlord_token'] = $token;
+        $payload['landlord_contact'] = '09999999999';
+        $this->post(route('homeowner.register.store'), $payload)->assertRedirect();
+
+        $tenant = Homeowner::query()->where('ownership_type', 'Tenant')->firstOrFail();
+        $this->assertSame($landlordRecord->id, $tenant->landlord_homeowner_id);
+        $this->assertSame($landlord->full_name, $tenant->landlord_name);
+        $this->assertSame($landlord->contact_number, $tenant->landlord_contact);
+    }
+
+    public function test_selection_tokens_reject_tampering_and_address_changes(): void
+    {
+        [$landlord] = $this->resident('Owner', [], ['first_name' => 'Secure', 'middle_name' => null, 'last_name' => 'Owner']);
+        $token = fn (): string => $this->postJson(route('homeowner.register.landlord-availability'), $this->address())
+            ->assertOk()->json('options.0.token');
+
+        $tampered = $this->registrationPayload($landlord->full_name);
+        $tampered['landlord_token'] = $token().'tampered';
+        $this->post(route('homeowner.register.store'), $tampered)->assertSessionHasErrors('landlord_name');
+
+        $wrongAddress = $this->registrationPayload($landlord->full_name);
+        $wrongAddress['email'] = 'wrong-address@example.test';
+        $wrongAddress['lot'] = '99';
+        $wrongAddress['landlord_token'] = $token();
+        $this->post(route('homeowner.register.store'), $wrongAddress)->assertSessionHasErrors('landlord_name');
+
+        $this->assertDatabaseMissing('users', ['email' => 'wrong-address@example.test']);
+
+        $streetToken = app(LandlordSelectionTokens::class)->issue($landlord->homeowner, $this->address());
+        $landlord->homeowner->update(['street' => 'Mahogany Street']);
+        try {
+            app(LandlordSelectionTokens::class)->consume($streetToken, $this->address());
+            $this->fail('A token must fail after the registered landlord street changes.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('landlord_name', $exception->errors());
+        }
+    }
+
+    public function test_selection_tokens_are_single_use(): void
+    {
+        [$landlord] = $this->resident('Owner', [], ['first_name' => 'Secure', 'middle_name' => null, 'last_name' => 'Owner']);
+        $replayToken = $this->postJson(route('homeowner.register.landlord-availability'), $this->address())
+            ->assertOk()->json('options.0.token');
+        $valid = $this->registrationPayload($landlord->full_name);
+        $valid['email'] = 'first-token@example.test';
+        $valid['landlord_token'] = $replayToken;
+        $this->post(route('homeowner.register.store'), $valid)->assertRedirect();
+        $valid['email'] = 'replayed-token@example.test';
+        $this->post(route('homeowner.register.store'), $valid)->assertSessionHasErrors('landlord_name');
+
+        $this->assertDatabaseMissing('users', ['email' => 'replayed-token@example.test']);
+    }
+
+    public function test_selection_tokens_expire(): void
+    {
+        [$landlord] = $this->resident('Owner', [], ['first_name' => 'Secure', 'middle_name' => null, 'last_name' => 'Owner']);
+        $expired = $this->registrationPayload($landlord->full_name);
+        $expired['email'] = 'expired-token@example.test';
+        $expired['landlord_token'] = $this->postJson(route('homeowner.register.landlord-availability'), $this->address())
+            ->assertOk()->json('options.0.token');
+        $this->travel(11)->minutes();
+        $this->post(route('homeowner.register.store'), $expired)->assertSessionHasErrors('landlord_name');
+
+        $this->assertDatabaseMissing('users', ['email' => 'expired-token@example.test']);
     }
 
     public function test_registration_rejects_an_unmatched_landlord_without_partial_records(): void

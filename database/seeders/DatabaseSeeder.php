@@ -41,7 +41,7 @@ final class DatabaseSeeder extends Seeder
         ]);
         $resident->forceFill(['account_status' => 'Active', 'email_verified_at' => now(), 'approved_at' => now(), 'approved_by' => $admin->id])->saveQuietly();
         $resident->syncRoles(['homeowner']);
-        $resident->homeowner()->firstOrCreate([], ['house_number' => '18', 'street' => 'Mahogany Street', 'block' => '4', 'lot' => '12', 'residency_date' => '2020-06-01', 'ownership_type' => 'Owner', 'status' => 'Active']);
+        $resident->homeowner()->firstOrCreate([], ['house_number' => '18', 'street' => 'Mahogany Street', 'block' => '4', 'lot' => '12', 'phase' => 'Southville Phase I', 'residency_date' => '2020-06-01', 'ownership_type' => 'Owner', 'status' => 'Active']);
 
         DuesSetting::query()->firstOrCreate(['name' => 'Monthly Association Dues'], [
             'amount' => 500,

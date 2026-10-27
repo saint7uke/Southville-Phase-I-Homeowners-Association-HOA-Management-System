@@ -76,10 +76,6 @@ final class UpdateOwnProfile
 
                 $lockedHomeowner->update([
                     ...Arr::only($finalValidated, [
-                        'house_number',
-                        'street',
-                        'block',
-                        'lot',
                         'residency_date',
                         'emergency_contact_name',
                         'emergency_contact_number',

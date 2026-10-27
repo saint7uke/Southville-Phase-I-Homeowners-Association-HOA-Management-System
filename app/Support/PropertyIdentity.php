@@ -44,10 +44,13 @@ final class PropertyIdentity
     public static function baseKey(array|Model $address): string
     {
         $data = self::data($address);
+        $phase = self::suffix($data['phase_suffix'] ?? null) !== null
+            ? PropertyAddress::DEFAULT_PHASE
+            : ($data['phase'] ?? PropertyAddress::DEFAULT_PHASE);
 
         // Reuse the established block/lot prefix and Unicode normalization.
         return PropertyAddress::key([
-            'phase' => $data['phase'] ?? PropertyAddress::DEFAULT_PHASE,
+            'phase' => $phase,
             'block' => $data['block'] ?? '', 'lot' => $data['lot'] ?? '',
         ]);
     }

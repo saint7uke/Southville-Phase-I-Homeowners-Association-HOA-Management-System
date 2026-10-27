@@ -9,6 +9,7 @@ use App\Actions\Users\CreatePendingUser;
 use App\Enums\UserAccountStatus;
 use App\Events\UserAccountStatusChanged;
 use App\Filament\Auth\Pages\RequestPasswordReset;
+use App\Filament\Homeowner\Widgets\HomeownerWelcome;
 use App\Listeners\SendAccountStatusChangedNotification;
 use App\Models\Homeowner;
 use App\Models\User;
@@ -302,6 +303,40 @@ final class AccountLifecycleTest extends TestCase
         $this->get('/homeowner')
             ->assertOk()
             ->assertDontSee('/homeowner/email-verification/prompt');
+    }
+
+    public function test_homeowner_dashboard_shows_the_linked_property_without_leaking_blade_syntax(): void
+    {
+        [$resident, $homeowner] = $this->homeowner(UserAccountStatus::Active);
+        $homeowner->update([
+            'block' => '4',
+            'lot' => '12',
+            'street' => 'Mahogany Street',
+        ]);
+
+        $this->actingAs($resident, 'homeowner');
+        $this->get('/homeowner')->assertOk();
+        Filament::setCurrentPanel(Filament::getPanel('homeowner'));
+
+        Livewire::test(HomeownerWelcome::class)
+            ->assertSee('Block 4, Lot 12')
+            ->assertSee('Mahogany Street')
+            ->assertDontSeeText('Your homeowner record is not linked yet.')
+            ->assertDontSee('@else', false);
+    }
+
+    public function test_homeowner_dashboard_shows_the_localized_notice_when_the_record_is_not_linked(): void
+    {
+        $resident = $this->userWithRole('homeowner');
+
+        $this->actingAs($resident, 'homeowner');
+        $this->get('/homeowner')->assertOk();
+        Filament::setCurrentPanel(Filament::getPanel('homeowner'));
+
+        Livewire::test(HomeownerWelcome::class)
+            ->assertSeeText('Your homeowner record is not linked yet.')
+            ->assertDontSeeText('Block , Lot')
+            ->assertDontSee('@else', false);
     }
 
     public function test_reactivating_an_unverified_homeowner_does_not_verify_their_email(): void

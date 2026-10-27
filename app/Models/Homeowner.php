@@ -85,7 +85,9 @@ final class Homeowner extends Model
                 if ($homeowner->ownership_type !== 'Tenant'
                     || $landlord === null
                     || ! in_array($landlord->ownership_type, ['Owner', 'Co-owner'], true)
-                    || ! PropertyIdentity::same($landlord, $homeowner)) {
+                    || ! PropertyIdentity::same($landlord, $homeowner)
+                    || (($homeowner->isDirty('landlord_homeowner_id') || ! $homeowner->exists)
+                        && ! PropertyAddress::sameStreet($landlord->street, $homeowner->street))) {
                     throw ValidationException::withMessages([
                         'landlord_homeowner_id' => __('The landlord must be an Owner or Co-owner registered at the same address.'),
                     ]);

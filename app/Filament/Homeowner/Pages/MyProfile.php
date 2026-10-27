@@ -7,7 +7,6 @@ namespace App\Filament\Homeowner\Pages;
 use App\Actions\Homeowners\UpdateOwnProfile;
 use App\Actions\Users\ChangeOwnPassword;
 use App\Models\User;
-use App\Support\PropertyAddress;
 use App\Support\PropertyIdentity;
 use App\Validation\HomeownerProfileValidator;
 use BackedEnum;
@@ -97,12 +96,11 @@ final class MyProfile extends Page
                         TextInput::make('email')->label(__('Email address'))->email()->required()->maxLength(255)->autocomplete('email')->helperText(__('A verification link is sent if this changes.'))->extraFieldWrapperAttributes(self::validationAttributes('email')),
                     ])->columns(2),
                 Section::make(__('Property and emergency contact'))->extraAttributes(['data-i18n-section' => 'Property and emergency contact'])
+                    ->description(__('Contact the HOA to change the registered property address.'))
                     ->schema([
-                        TextInput::make('house_number')->label(__('House number'))->maxLength(50)->autocomplete('address-line1')->extraFieldWrapperAttributes(self::validationAttributes('house_number')),
-                        TextInput::make('street')->required()->maxLength(100)->autocomplete('address-line2')->extraFieldWrapperAttributes(self::validationAttributes('street')),
-                        TextInput::make('block')->required()->maxLength(20)->extraFieldWrapperAttributes(self::validationAttributes('block')),
-                        TextInput::make('lot')->required()->maxLength(20)->extraFieldWrapperAttributes(self::validationAttributes('lot')),
-                        TextInput::make('phase')->required()->maxLength(50)->disabled()->dehydrated()->helperText(__('Contact the HOA to change the registered phase.')),
+                        Placeholder::make('registered_street')->label(__('Street'))->content(fn (): string => (string) Filament::auth()->user()->homeowner->street),
+                        Placeholder::make('registered_block')->label(__('Block'))->content(fn (): string => (string) Filament::auth()->user()->homeowner->block),
+                        Placeholder::make('registered_lot')->label(__('Lot'))->content(fn (): string => (string) Filament::auth()->user()->homeowner->lot),
                         Placeholder::make('registered_phase')->label(__('Registered phase'))->content(fn (): string => PropertyIdentity::phase(Filament::auth()->user()->homeowner)),
                         DatePicker::make('residency_date')->label(__('Move-in date'))->required()->maxDate(today())->afterOrEqual('date_of_birth')->extraFieldWrapperAttributes(self::validationAttributes('residency_date')),
                         Select::make('ownership_type')->label(__('Occupancy type'))->options(['Owner' => __('Owner'), 'Tenant' => __('Tenant'), 'Co-owner' => __('Co-owner')])->required()->disabled()->dehydrated()->helperText(__('Contact the HOA to change the occupancy type.')),
@@ -196,11 +194,6 @@ final class MyProfile extends Page
             'date_of_birth' => $user->date_of_birth?->toDateString(),
             'contact_number' => $user->contact_number,
             'email' => $user->email,
-            'house_number' => $homeowner->house_number,
-            'street' => $homeowner->street,
-            'block' => $homeowner->block,
-            'lot' => $homeowner->lot,
-            'phase' => PropertyAddress::normalizeForStorage(['phase' => $homeowner->phase])['phase'],
             'residency_date' => $homeowner->residency_date?->toDateString(),
             'ownership_type' => $homeowner->ownership_type,
             'emergency_contact_name' => $homeowner->emergency_contact_name,

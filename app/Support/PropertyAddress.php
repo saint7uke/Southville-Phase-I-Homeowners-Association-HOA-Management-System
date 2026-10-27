@@ -31,7 +31,7 @@ final class PropertyAddress
             self::identifier($address['block'], ['BLOCK', 'BLK', 'B']),
             self::identifier($address['lot'], ['LOT', 'L']),
             self::identifier($address['house_number'], ['HOUSE', 'UNIT', 'NUMBER', 'NO']),
-            self::street($address['street']),
+            self::streetKey($address['street']),
         ];
 
         return hash('sha256', implode('|', $parts));
@@ -65,9 +65,9 @@ final class PropertyAddress
         return $value;
     }
 
-    private static function street(string $value): string
+    public static function streetKey(mixed $value): string
     {
-        $value = self::identifier($value);
+        $value = self::identifier(self::collapse($value));
         $suffixes = [
             'ST' => 'STREET',
             'RD' => 'ROAD',
@@ -85,5 +85,13 @@ final class PropertyAddress
             static fn (array $matches): string => $suffixes[$matches[1]],
             $value,
         );
+    }
+
+    public static function sameStreet(mixed $left, mixed $right): bool
+    {
+        $left = self::streetKey($left);
+        $right = self::streetKey($right);
+
+        return $left !== '' && hash_equals($left, $right);
     }
 }
