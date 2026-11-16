@@ -26,7 +26,7 @@
                 <h2 id="reset-title" data-i18n="Create a new password">{{ __('Create a new password') }}</h2>
                 <p><span data-i18n="Set a new password for your homeowner account.">{{ __('Set a new password for your homeowner account.') }}</span></p>
             </div>
-            @if($errors->any())<div class="hoa-contact-error" role="alert">{{ $errors->first() }}</div>@endif
+            <x-alert-feedback />
             <form method="POST" action="{{ route('homeowner.password.update') }}" class="hoa-portal-auth-fields">
                 @csrf
                 <input type="hidden" name="token" value="{{ $token }}">
@@ -47,7 +47,7 @@
                         <input id="password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password">
                     </x-auth.password-toggle>
                 </div>
-                <button class="hoa-button hoa-button-primary hoa-portal-auth-submit" type="submit" data-i18n="Reset password">{{ __('Reset password') }}</button>
+                <button class="hoa-button hoa-button-primary hoa-portal-auth-submit" type="submit">@svg('heroicon-o-key', 'hoa-action-icon', ['aria-hidden' => 'true'])<span data-i18n="Reset password">{{ __('Reset password') }}</span></button>
             </form>
             <nav class="hoa-portal-auth-links" aria-label="Account recovery navigation"><a href="{{ route('homeowner.login') }}">← Back to login</a></nav>
         </section>

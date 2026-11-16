@@ -21,6 +21,7 @@ use App\Http\Controllers\Portal\AnnouncementController;
 use App\Http\Controllers\Portal\AuthController;
 use App\Http\Controllers\Portal\ComplaintAttachmentController;
 use App\Http\Controllers\Portal\ComplaintController;
+use App\Http\Controllers\Portal\ConcernController;
 use App\Http\Controllers\Portal\DashboardController;
 use App\Http\Controllers\Portal\EmailAvailabilityController;
 use App\Http\Controllers\Portal\EmailVerificationController;
@@ -33,6 +34,7 @@ use App\Http\Controllers\Portal\RegisterController;
 use App\Http\Controllers\Portal\RegistrationStatusController;
 use App\Http\Controllers\Portal\ServiceRequestController;
 use App\Http\Controllers\ProjectImageController;
+use App\Http\Controllers\SmsVerificationController;
 use App\Http\Controllers\UnifiedLoginController;
 use App\Http\Controllers\VerificationDocumentController;
 use Illuminate\Support\Facades\Route;
@@ -45,7 +47,10 @@ Route::post('/login', [UnifiedLoginController::class, 'store'])->middleware('thr
 Route::post('/admin/login', [UnifiedLoginController::class, 'store'])->middleware('throttle:login');
 Route::post('/staff/login', [UnifiedLoginController::class, 'store'])->middleware('throttle:login');
 Route::get('/branding/logo', BrandingLogoController::class)->middleware('throttle:120,1')->name('branding.logo');
-Route::post('/contact', ContactMessageController::class)->middleware('throttle:5,1')->name('contact.store');
+Route::post('/contact', ContactMessageController::class)->middleware(['auth:homeowner,web', 'account.active', 'throttle:5,1'])->name('contact.store');
+Route::post('/sms/verification/request', [SmsVerificationController::class, 'request'])->middleware('throttle:20,1')->name('sms.verification.request');
+Route::post('/sms/verification/confirm', [SmsVerificationController::class, 'confirm'])->middleware('throttle:30,1')->name('sms.verification.confirm');
+Route::post('/sms/preferences', [SmsVerificationController::class, 'preferences'])->middleware('throttle:10,1')->name('sms.preferences');
 Route::get('/certificates/sources/{template}/preview', [CertificateDraftController::class, 'template'])->middleware(['profile-photo.auth', 'throttle:20,1'])->name('certificates.source.preview');
 Route::get('/certificates/sources/residency-reference', [CertificateDraftController::class, 'reference'])->middleware(['profile-photo.auth', 'throttle:20,1'])->name('certificates.residency-reference');
 Route::get('/certificates/cohabitation-source/review', [CertificateDraftController::class, 'cohabitationReference'])->middleware(['profile-photo.auth', 'throttle:20,1'])->name('certificates.cohabitation-reference');
@@ -108,6 +113,8 @@ Route::middleware(['auth', 'portal.auth.session'])->prefix('portal')->name('port
 
     Route::middleware('homeowner.approved')->group(function (): void {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
+        Route::get('/concerns', [ConcernController::class, 'index'])->name('concerns.index');
+        Route::post('/concerns', [ConcernController::class, 'store'])->middleware('throttle:5,1')->name('concerns.store');
         Route::resource('complaints', ComplaintController::class)->only(['index', 'create', 'store', 'show']);
         Route::get('/complaints/{complaint}/attachment', ComplaintAttachmentController::class)->name('complaints.attachment');
         Route::resource('requests', ServiceRequestController::class)->parameters(['requests' => 'serviceRequest'])->only(['index', 'create', 'store', 'show']);
@@ -149,6 +156,9 @@ Route::get('/certificates/{certificate}/download', CertificateDownloadController
 Route::get('/case-attachments/{caseAttachment}', CaseAttachmentController::class)
     ->middleware(['profile-photo.auth', 'throttle:60,1'])
     ->name('case-attachments.download');
+Route::get('/case-attachments/{caseAttachment}/preview', [CaseAttachmentController::class, 'preview'])
+    ->middleware(['profile-photo.auth', 'throttle:60,1'])
+    ->name('case-attachments.preview');
 
 Route::middleware('account.active')->group(function (): void {
     Route::get('/admin/households/{household}/summary.{format}', HouseholdExportController::class)

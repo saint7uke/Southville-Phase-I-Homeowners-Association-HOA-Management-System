@@ -51,14 +51,14 @@ test('Payments and Certificates print and download the same saved original month
         && response.request().postData()?.includes('generateReceipt'), { timeout: 60_000 });
     await page.getByRole('button', { name: 'Generate monthly dues receipt', exact: true }).click();
     expect((await confirmationResponse).ok()).toBeTruthy();
-    const dialog = page.getByRole('alertdialog');
-    // Filament's role wrapper is zero-height; its fixed-position window is visible.
-    await expect(dialog.locator('.fi-modal-window')).toBeVisible({ timeout: 30_000 });
+    const dialog = page.locator('.swal2-popup');
+    await expect(dialog).toBeVisible({ timeout: 30_000 });
     await expect.poll(() => dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
     const modal = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
     expect(modal.violations.filter(v => ['serious', 'critical'].includes(v.impact))).toEqual([]);
     await dialog.getByRole('button', { name: 'Confirm', exact: true }).click();
-    await expect(page.getByText('Monthly dues receipt is ready.', { exact: true })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText('Monthly Dues Receipt Generated Successfully!', { exact: true })).toBeVisible({ timeout: 60_000 });
+    await page.locator('.swal2-popup').getByRole('button', { name: 'OK', exact: true }).click();
     const documentUrl = await page.getByRole('link', { name: 'Download', exact: true }).getAttribute('href');
     const issued = await page.request.get(documentUrl);
     expect(issued.ok()).toBeTruthy();

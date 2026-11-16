@@ -27,6 +27,7 @@ final class PortalWorkflowTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+        Storage::fake('local');
     }
 
     public function test_homeowner_can_submit_registration_for_review(): void
@@ -36,6 +37,7 @@ final class PortalWorkflowTest extends TestCase
         $admin->assignRole('hoa_admin');
 
         $response = $this->post(route('portal.register.store'), [
+            'verification_document' => UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'),
             'first_name' => 'juan', 'middle_name' => 'santos', 'last_name' => 'dela cruz', 'sex' => 'Male',
             'date_of_birth' => '1990-05-10', 'contact_number' => '09171234567', 'email' => 'JUAN@EXAMPLE.COM',
             'password' => 'ResidentPass!2026', 'password_confirmation' => 'ResidentPass!2026',
@@ -112,6 +114,7 @@ final class PortalWorkflowTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)->post(route('homeowner.register.store'), [
+            'verification_document' => UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'),
             'first_name' => 'New',
             'last_name' => 'Applicant',
             'sex' => 'Female',
@@ -154,6 +157,7 @@ final class PortalWorkflowTest extends TestCase
         $admin->assignRole('hoa_admin');
 
         $response = $this->post(route('homeowner.register.store'), [
+            'verification_document' => UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'),
             'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'sex' => 'Male',
             'date_of_birth' => '1990-05-10', 'contact_number' => '09171234567', 'email' => 'juan@example.com',
             'password' => 'ResidentPass!2026', 'password_confirmation' => 'ResidentPass!2026',
@@ -195,7 +199,12 @@ final class PortalWorkflowTest extends TestCase
         $this->get($url)
             ->assertOk()
             ->assertSee('Your application is under review')
-            ->assertSee('reopen@example.test');
+            ->assertSee('reopen@example.test')
+            ->assertSee('hoa-submitted-shell')
+            ->assertSee('images/HOA.png')
+            ->assertSee('hoa-submitted-actions');
+        $this->withSession(['locale' => 'fil'])->get($url)->assertOk()
+            ->assertSee('Sinusuri ang iyong aplikasyon')->assertSee('Naghihintay ng beripikasyon');
     }
 
     public function test_registration_status_rejects_tampered_and_expired_signed_urls(): void
@@ -314,6 +323,7 @@ final class PortalWorkflowTest extends TestCase
         ]);
 
         $this->post(route('homeowner.register.store'), [
+            'verification_document' => UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'),
             'first_name' => 'Luke', 'last_name' => 'Tenant', 'sex' => 'Male',
             'date_of_birth' => '1992-04-10', 'contact_number' => '09181234567', 'email' => 'tenant@example.test',
             'password' => 'ResidentPass!2026', 'password_confirmation' => 'ResidentPass!2026',
@@ -334,6 +344,10 @@ final class PortalWorkflowTest extends TestCase
         Storage::fake('local');
 
         $document = UploadedFile::fake()->create('proof-of-residency.pdf', 100, 'application/pdf');
+
+        Homeowner::creating(function (): void {
+            throw new QueryException('sqlite', 'synthetic persistence failure', [], new \PDOException('synthetic persistence failure'));
+        });
 
         $this->expectException(QueryException::class);
 

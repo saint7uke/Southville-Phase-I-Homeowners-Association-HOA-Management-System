@@ -7,6 +7,7 @@ namespace App\Actions\Users;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -27,7 +28,13 @@ final class InviteManagedUser
 
         return DB::transaction(function () use ($data, $actor): User {
             $user = app(CreatePendingUser::class)->handle($data, $actor);
-            DB::afterCommit(fn () => Password::broker()->sendResetLink(['email' => $user->email]));
+            DB::afterCommit(function () use ($user): void {
+                try {
+                    Password::broker()->sendResetLink(['email' => $user->email]);
+                } catch (\Throwable) {
+                    Log::warning('Managed account invitation failed.', ['user_id' => $user->id, 'failure_code' => 'invitation_transport_failure']);
+                }
+            });
 
             return $user;
         });

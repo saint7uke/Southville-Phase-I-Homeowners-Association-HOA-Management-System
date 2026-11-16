@@ -7,10 +7,13 @@ namespace App\Filament\Resources\Homeowners\Schemas;
 use App\Models\Homeowner;
 use App\Models\User;
 use App\Support\PersonName;
+use App\Support\PropertyAddress;
 use App\Support\PropertyIdentity;
+use App\Support\PropertyPhase;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
@@ -70,28 +73,26 @@ final class HomeownerForm
                 ->regex('/^09\d{9}$/')
                 ->visible(fn (string $operation): bool => $operation === 'edit')
                 ->required(fn (string $operation): bool => $operation === 'edit'),
-            TextInput::make('house_number')->maxLength(50)->disabled($lockedForStaff)->dehydrateStateUsing(fn (?string $state): ?string => self::collapseWhitespace($state)),
-            TextInput::make('street')->maxLength(100)->required()->disabled($lockedForStaff)->dehydrateStateUsing(fn (?string $state): ?string => self::collapseWhitespace($state)),
             TextInput::make('block')->maxLength(20)->required()->disabled($lockedForStaff)->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? mb_strtoupper(trim(preg_replace('/\s+/u', ' ', $state)), 'UTF-8') : null),
             TextInput::make('lot')
                 ->maxLength(20)
                 ->required()
                 ->disabled($lockedForStaff)
                 ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? mb_strtoupper(trim(preg_replace('/\s+/u', ' ', $state)), 'UTF-8') : null),
-            TextInput::make('phase')->maxLength(50)->required()->default('Southville Phase I')->disabled($lockedForStaff),
-            TextInput::make('phase_suffix')->label(__('Phase suffix'))->prefix('Phase 1 -')->readOnly()->dehydrated(false)->helperText(__('Use Confirm property phase to review and change this value.')),
+            Hidden::make('phase')->default(PropertyAddress::DEFAULT_PHASE),
+            Select::make('phase_suffix')->label(__('Phase'))->options(fn ($record): array => PropertyPhase::options() + ($record && filled($record->phase_suffix) ? [$record->phase_suffix => $record->phase_suffix] : []))->live()->required(fn (string $operation): bool => $operation === 'create')->disabled(fn (string $operation): bool => $operation !== 'create')->dehydrated(fn (string $operation): bool => $operation === 'create')->helperText(__('Use Confirm property phase to review and change this value.')),
             Select::make('ownership_type')->options(['Owner' => __('Owner'), 'Tenant' => __('Tenant'), 'Co-owner' => __('Co-owner')])->required()->disabled($lockedForStaff)->reactive(),
             DatePicker::make('residency_date')->maxDate(today())->disabled($lockedForStaff)->visible(fn (Get $get) => in_array($get('ownership_type'), ['Owner', 'Co-owner'])),
             Select::make('landlord_homeowner_id')
                 ->label(__('Registered landlord'))
                 ->options(function (Get $get, ?Homeowner $record): array {
                     $address = [
-                        'house_number' => $get('house_number'),
-                        'street' => $get('street'),
+                        'house_number' => $record?->house_number,
+                        'street' => $record?->street,
                         'block' => $get('block'),
                         'lot' => $get('lot'),
                         'phase' => $get('phase'),
-                        'phase_suffix' => $record?->phase_suffix,
+                        'phase_suffix' => $record !== null ? $record->phase_suffix : $get('phase_suffix'),
                     ];
 
                     return PropertyIdentity::scope(Homeowner::query(), $address)

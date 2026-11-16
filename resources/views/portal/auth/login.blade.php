@@ -30,20 +30,7 @@
                 <p>{{ __('Sign in to your HOA account. Your role determines your dashboard.') }}</p>
             </div>
 
-            @if(session('success'))
-                <div class="hoa-contact-success hoa-portal-auth-alert" role="status">{{ session('success') }}</div>
-            @endif
-
-            @if($errors->any())
-                <div class="hoa-contact-error hoa-portal-auth-alert" role="alert">
-                    <strong data-i18n="Please correct the following:">{{ __('Please correct the following:') }}</strong>
-                    <ul>
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
+            <x-alert-feedback />
 
             <form class="hoa-portal-auth-fields" method="POST" action="{{ route('login.store') }}" data-auth-submit>
                 @csrf
@@ -66,7 +53,7 @@
                     <a href="{{ route('homeowner.password.request') }}" data-i18n="Forgot password?">{{ __('Forgot password?') }}</a>
                 </div>
 
-                <button class="hoa-button hoa-button-primary hoa-portal-auth-submit" type="submit" data-i18n="Sign in">{{ __('Sign in') }}</button>
+                <button class="hoa-button hoa-button-primary hoa-portal-auth-submit" type="submit">@svg('heroicon-o-arrow-right-end-on-rectangle', 'hoa-action-icon', ['aria-hidden' => 'true'])<span data-i18n="Sign in">{{ __('Sign in') }}</span></button>
             </form>
 
             <nav class="hoa-portal-auth-links" aria-label="Login navigation">

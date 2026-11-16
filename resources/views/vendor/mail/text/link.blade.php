@@ -1,0 +1,2 @@
+@props(['url', 'label'])
+{{ $url }}

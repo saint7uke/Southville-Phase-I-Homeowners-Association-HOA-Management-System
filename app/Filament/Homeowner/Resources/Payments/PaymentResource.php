@@ -33,8 +33,9 @@ final class PaymentResource extends Resource
             TextColumn::make('duesSetting.name')->label(__('Dues type')),
             TextColumn::make('covered_period')->label(__('Period')),
             TextColumn::make('amount_paid')->money('PHP')->sortable(),
-            TextColumn::make('balance')->money('PHP')->sortable(),
-            TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
+            TextColumn::make('balance')->label(__('Balance after installment'))->money('PHP')->sortable(),
+            TextColumn::make('status')->label(__('Installment status'))->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
+            TextColumn::make('duesObligation.status')->label(__('Current obligation status'))->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
             TextColumn::make('payment_date')->date()->sortable(),
         ])->defaultSort('payment_date', 'desc')->recordActions(ReceiptActions::make());
     }

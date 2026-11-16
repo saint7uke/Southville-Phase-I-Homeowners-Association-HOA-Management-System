@@ -15,6 +15,8 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -33,7 +35,11 @@ final class ComplaintForm
                 ->disabled(fn (string $operation): bool => $operation === 'edit' && self::isStaff())
                 ->required(),
             TextInput::make('subject')->maxLength(160)->disabled(fn (string $operation): bool => $operation === 'edit' && self::isStaff())->required(),
-            Select::make('category')->options(array_combine(ComplaintSubmissionValidator::CATEGORIES, ComplaintSubmissionValidator::CATEGORIES))->disabled(fn (string $operation): bool => $operation === 'edit' && self::isStaff())->required(),
+            Select::make('category')->options(array_combine(ComplaintSubmissionValidator::CATEGORIES, ComplaintSubmissionValidator::CATEGORIES))->disabled(fn (string $operation): bool => $operation === 'edit' && self::isStaff())->required()->live()->afterStateUpdated(fn (Set $set) => $set('category_other', null)),
+            TextInput::make('category_other')->label(__('Please Specify'))->maxLength(160)
+                ->visible(fn (Get $get): bool => $get('category') === 'Others')
+                ->required(fn (Get $get, string $operation): bool => $get('category') === 'Others' && $operation !== 'view' && ! ($operation === 'edit' && self::isStaff()))
+                ->disabled(fn (string $operation): bool => $operation === 'edit' && self::isStaff())->dehydrateStateUsing(fn ($state) => is_string($state) ? trim($state) : $state),
             Select::make('priority')->options(array_combine(ComplaintSubmissionValidator::PRIORITIES, ComplaintSubmissionValidator::PRIORITIES))->default('Medium')->required(),
             Textarea::make('description')->rows(6)->minLength(20)->maxLength(5000)->disabled(fn (string $operation): bool => $operation === 'edit' && self::isStaff())->required()->columnSpanFull(),
             FileUpload::make('attachments')

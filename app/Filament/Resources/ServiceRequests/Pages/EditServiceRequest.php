@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\ServiceRequests\Pages;
 
 use App\Actions\ServiceRequests\UpdateServiceRequest;
+use App\Filament\Concerns\HasIconOnlyRecordActions;
+use App\Filament\Concerns\HasSpecificFeedback;
 use App\Filament\Concerns\MapsDomainValidation;
 use App\Filament\Resources\ServiceRequests\ServiceRequestResource;
 use App\Support\AuthenticatedActor;
@@ -14,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditServiceRequest extends EditRecord
 {
+    use HasIconOnlyRecordActions;
+    use HasSpecificFeedback;
     use MapsDomainValidation;
 
     protected static string $resource = ServiceRequestResource::class;

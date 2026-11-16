@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-test('homeowner saves formatted contact details and sees persisted values after refresh', async ({ page }) => {
+test('homeowner saves local contact details and sees persisted values after refresh', async ({ page }) => {
     test.setTimeout(180_000);
     const email = process.env.HOA_BROWSER_HOMEOWNER_EMAIL;
     const password = process.env.HOA_BROWSER_HOMEOWNER_PASSWORD;
@@ -16,7 +16,7 @@ test('homeowner saves formatted contact details and sees persisted values after 
     const phone = form.locator('[data-profile-field-wrapper="contact_number"] input');
     const emergencyName = form.locator('[data-profile-field-wrapper="emergency_contact_name"] input');
     const emergencyPhone = form.locator('[data-profile-field-wrapper="emergency_contact_number"] input');
-    await phone.fill('0917-123-4567');
+    await phone.fill('09171234567');
     await emergencyName.fill('Maria Dela Cruz');
     await emergencyPhone.fill('0998 765 4321');
     // Submit while the final field still has focus: server validation must not depend on blur.
@@ -29,7 +29,7 @@ test('homeowner saves formatted contact details and sees persisted values after 
     for (const component of result.components || []) {
         expect(JSON.parse(component.snapshot).memo.errors || []).toEqual([]);
     }
-    await expect(page.getByText('Profile updated successfully!', { exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Homeowner Profile Updated Successfully!', { exact: true })).toBeVisible({ timeout: 30_000 });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(phone).toHaveValue('09171234567');
     await expect(emergencyName).toHaveValue('Maria Dela Cruz');

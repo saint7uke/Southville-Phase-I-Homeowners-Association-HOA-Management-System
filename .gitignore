@@ -24,6 +24,7 @@
 /storage/*.key
 /storage/pail
 /vendor
+/Times New Roman Bold/
 Homestead.json
 Homestead.yaml
 Thumbs.db

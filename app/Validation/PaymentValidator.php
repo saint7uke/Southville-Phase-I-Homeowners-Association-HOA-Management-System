@@ -19,7 +19,7 @@ final class PaymentValidator
         $electronic = in_array($data['payment_method'] ?? null, ['Bank Transfer', 'GCash', 'Maya'], true);
 
         $validated = Validator::make($data, [
-            'dues_obligation_id' => ['required', 'integer', 'exists:dues_obligations,id'],
+            'dues_obligation_id' => ['required', 'integer', Rule::exists('dues_obligations', 'id')->where(fn ($query) => $query->where('billing_year', '<=', now('Asia/Manila')->year))],
             'payer_homeowner_id' => ['nullable', 'integer', 'exists:homeowners,id'],
             'amount_paid' => ['required', 'regex:/^\d{1,8}(?:\.\d{1,2})?$/', 'decimal:0,2', 'gt:0'],
             'penalty' => [$proofSubmission ? 'prohibited' : 'nullable', 'regex:/^\d{1,8}(?:\.\d{1,2})?$/', 'decimal:0,2', 'gte:0'],

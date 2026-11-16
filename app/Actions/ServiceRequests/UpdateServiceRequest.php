@@ -6,6 +6,7 @@ namespace App\Actions\ServiceRequests;
 
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Services\CertificateDuesEligibility;
 use App\Services\ServiceRequestWorkflow;
 use App\Support\OperationalAccess;
 use Illuminate\Support\Arr;
@@ -22,6 +23,10 @@ final class UpdateServiceRequest
         OperationalAccess::authorize($actor, 'manage_requests');
 
         return DB::transaction(function () use ($request, $data, $actor): ServiceRequest {
+            $approval = ($data['status'] ?? null) === 'Approved';
+            if ($approval) {
+                app(CertificateDuesEligibility::class)->lockForResident($request->homeowner_id);
+            }
             $locked = ServiceRequest::query()->lockForUpdate()->findOrFail($request->id);
             Gate::forUser($actor)->authorize('update', $locked);
             foreach (['subject', 'details', 'admin_remarks'] as $field) {
@@ -40,6 +45,10 @@ final class UpdateServiceRequest
                 'cohabitant_one' => ['prohibited'], 'cohabitant_two' => ['prohibited'], 'address_snapshot' => ['prohibited'],
             ])->validate();
             app(ServiceRequestWorkflow::class)->assertEditableStatus($locked, $validated['status']);
+            if ($locked->status !== 'Approved' && $validated['status'] === 'Approved'
+                && app(ServiceRequestWorkflow::class)->isCertificateRequest($locked)) {
+                app(CertificateDuesEligibility::class)->assertEligible($locked->homeowner, 'status', true);
+            }
             if (filled($validated['handled_by'] ?? null) && ! User::query()->role('hoa_staff')->where('account_status', 'Active')->whereKey($validated['handled_by'])->exists()) {
                 throw ValidationException::withMessages(['handled_by' => __('Select an active HOA staff member.')]);
             }

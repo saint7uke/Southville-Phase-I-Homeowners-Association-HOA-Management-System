@@ -6,7 +6,9 @@ namespace App\Actions\Users;
 
 use App\Enums\UserAccountStatus;
 use App\Events\UserAccountStatusChanged;
+use App\Listeners\SendAccountStatusChangedNotification;
 use App\Models\User;
+use App\Services\Sms\SmsEvents;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -22,6 +24,16 @@ final class ChangeAccountStatus
         'Suspended' => [UserAccountStatus::Active],
         'Rejected' => [],
     ];
+
+    public static function optionsFor(User $user): array
+    {
+        $values = [$user->account_status => __($user->account_status)];
+        foreach (self::ALLOWED_TRANSITIONS[$user->account_status] ?? [] as $status) {
+            $values[$status->value] = __($status->value);
+        }
+
+        return $values;
+    }
 
     public function handle(User $user, UserAccountStatus $to, User $actor, ?string $reason = null): User
     {
@@ -105,7 +117,12 @@ final class ChangeAccountStatus
                     ->delete();
             }
 
-            UserAccountStatusChanged::dispatch($lockedUser, $from, $to, $reason);
+            $event = new UserAccountStatusChanged($lockedUser, $from, $to, $reason);
+            if ($from === UserAccountStatus::Pending && $to === UserAccountStatus::Active && $lockedUser->hasRole('homeowner')) {
+                app(SmsEvents::class)->approval($lockedUser->refresh());
+            }
+            app(SendAccountStatusChangedNotification::class)->handle($event);
+            event($event);
 
             return $lockedUser->refresh();
         });

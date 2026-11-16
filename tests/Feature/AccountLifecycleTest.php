@@ -10,6 +10,7 @@ use App\Enums\UserAccountStatus;
 use App\Events\UserAccountStatusChanged;
 use App\Filament\Auth\Pages\RequestPasswordReset;
 use App\Filament\Homeowner\Widgets\HomeownerWelcome;
+use App\Jobs\DeliverWorkflowMail;
 use App\Listeners\SendAccountStatusChangedNotification;
 use App\Models\Homeowner;
 use App\Models\User;
@@ -21,7 +22,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Database\Eloquent\MassAssignmentException;
-use Illuminate\Events\CallQueuedListener;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -61,7 +61,7 @@ final class AccountLifecycleTest extends TestCase
         $this->assertNotNull($resident->approved_at);
         $this->assertTrue($resident->email_verified_at?->equalTo($resident->approved_at));
         $this->assertSame('Active', $homeowner->refresh()->status);
-        Queue::assertPushed(CallQueuedListener::class);
+        Queue::assertPushed(DeliverWorkflowMail::class);
         Notification::assertNothingSent();
     }
 
@@ -320,7 +320,7 @@ final class AccountLifecycleTest extends TestCase
 
         Livewire::test(HomeownerWelcome::class)
             ->assertSee('Block 4, Lot 12')
-            ->assertSee('Mahogany Street')
+            ->assertDontSee('Mahogany Street')
             ->assertDontSeeText('Your homeowner record is not linked yet.')
             ->assertDontSee('@else', false);
     }
@@ -361,7 +361,7 @@ final class AccountLifecycleTest extends TestCase
 
         $this->get('/homeowner')->assertOk();
         $this->post('/homeowner/logout')
-            ->assertRedirect('/homeowner/login/filament');
+            ->assertRedirect('/login')->assertSessionHas('action_feedback.title', 'Logged Out Successfully!');
 
         $this->assertGuest('homeowner');
         $this->get('/homeowner')
@@ -498,14 +498,14 @@ final class AccountLifecycleTest extends TestCase
         Livewire::test(RequestPasswordReset::class)
             ->fillForm(['email' => 'missing@example.test'])
             ->call('request')
-            ->assertNotified('Check your email')
+            ->assertNotified('Password Reset Requested')
             ->assertSet('data.email', null);
 
         $wrongPanel = $this->userWithRole('hoa_admin');
         Livewire::test(RequestPasswordReset::class)
             ->fillForm(['email' => $wrongPanel->email])
             ->call('request')
-            ->assertNotified('Check your email')
+            ->assertNotified('Password Reset Requested')
             ->assertSet('data.email', null);
 
         [$resident] = $this->homeowner(UserAccountStatus::Active);
@@ -513,7 +513,7 @@ final class AccountLifecycleTest extends TestCase
         Livewire::test(RequestPasswordReset::class)
             ->fillForm(['email' => $resident->email])
             ->call('request')
-            ->assertNotified('Check your email')
+            ->assertNotified('Password Reset Requested')
             ->assertSet('data.email', null);
 
         Notification::assertSentTo($resident, ResetPassword::class);
@@ -529,7 +529,7 @@ final class AccountLifecycleTest extends TestCase
         Livewire::test(RequestPasswordReset::class)
             ->fillForm(['email' => 'missing@example.test'])
             ->call('request')
-            ->assertNotified('Check your email');
+            ->assertNotified('Password Reset Requested');
     }
 
     public function test_password_reset_revokes_existing_database_session_end_to_end(): void

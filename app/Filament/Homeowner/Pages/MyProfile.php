@@ -7,6 +7,8 @@ namespace App\Filament\Homeowner\Pages;
 use App\Actions\Homeowners\UpdateOwnProfile;
 use App\Actions\Users\ChangeOwnPassword;
 use App\Models\User;
+use App\Support\ActionFeedback;
+use App\Support\PhilippineMobile;
 use App\Support\PropertyIdentity;
 use App\Validation\HomeownerProfileValidator;
 use BackedEnum;
@@ -88,17 +90,16 @@ final class MyProfile extends Page
                         TextInput::make('first_name')->label(__('First name'))->required()->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('given-name')->extraFieldWrapperAttributes(self::validationAttributes('first_name')),
                         TextInput::make('middle_name')->label(__('Middle name'))->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('additional-name')->extraFieldWrapperAttributes(self::validationAttributes('middle_name')),
                         TextInput::make('last_name')->label(__('Last name'))->required()->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->autocomplete('family-name')->extraFieldWrapperAttributes(self::validationAttributes('last_name')),
-                        Select::make('suffix')->options(['Jr.' => 'Jr.', 'Sr.' => 'Sr.', 'II' => 'II', 'III' => 'III', 'IV' => 'IV', 'N/A' => 'N/A'])->placeholder(__('Select an option'))->extraFieldWrapperAttributes(self::validationAttributes('suffix')),
+                        Select::make('suffix')->options(['Jr.' => 'Jr.', 'Sr.' => 'Sr.', 'II' => 'II', 'III' => 'III', 'IV' => 'IV', 'N/A' => __('None')])->placeholder(__('None'))->extraFieldWrapperAttributes(self::validationAttributes('suffix')),
                         Select::make('sex')->options(['Male' => __('Male'), 'Female' => __('Female'), 'Prefer not to say' => __('Prefer not to say')])->required()->placeholder(__('Select an option'))->extraFieldWrapperAttributes(self::validationAttributes('sex')),
                         DatePicker::make('date_of_birth')->label(__('Date of birth'))->required()->maxDate(today()->subDay())->live()->extraFieldWrapperAttributes(self::validationAttributes('date_of_birth')),
                         Placeholder::make('age')->content(fn (Get $get): string => filled($get('date_of_birth')) ? Carbon::parse($get('date_of_birth'))->age.' years old' : 'Calculated from date of birth'),
-                        TextInput::make('contact_number')->label(__('Contact number'))->tel()->required()->maxLength(20)->regex('/^09\d{9}$/')->mutateStateForValidationUsing(self::normalizePhone(...))->dehydrateStateUsing(self::normalizePhone(...))->autocomplete('tel')->helperText(__('Use an 11-digit Philippine mobile number beginning with 09. Spaces, periods, and hyphens are accepted.'))->extraFieldWrapperAttributes(self::validationAttributes('contact_number')),
+                        TextInput::make('contact_number')->label(__('Contact number'))->tel()->required()->maxLength(11)->regex(PhilippineMobile::INPUT_REGEX)->extraInputAttributes(['inputmode' => 'numeric', 'data-local-mobile' => '', 'pattern' => '09[0-9]{9}'])->autocomplete('tel')->helperText(__('Enter an 11-digit Philippine mobile number beginning with 09.'))->extraFieldWrapperAttributes(self::validationAttributes('contact_number')),
                         TextInput::make('email')->label(__('Email address'))->email()->required()->maxLength(255)->autocomplete('email')->helperText(__('A verification link is sent if this changes.'))->extraFieldWrapperAttributes(self::validationAttributes('email')),
                     ])->columns(2),
                 Section::make(__('Property and emergency contact'))->extraAttributes(['data-i18n-section' => 'Property and emergency contact'])
                     ->description(__('Contact the HOA to change the registered property address.'))
                     ->schema([
-                        Placeholder::make('registered_street')->label(__('Street'))->content(fn (): string => (string) Filament::auth()->user()->homeowner->street),
                         Placeholder::make('registered_block')->label(__('Block'))->content(fn (): string => (string) Filament::auth()->user()->homeowner->block),
                         Placeholder::make('registered_lot')->label(__('Lot'))->content(fn (): string => (string) Filament::auth()->user()->homeowner->lot),
                         Placeholder::make('registered_phase')->label(__('Registered phase'))->content(fn (): string => PropertyIdentity::phase(Filament::auth()->user()->homeowner)),
@@ -153,7 +154,7 @@ final class MyProfile extends Page
             throw $this->prefixValidationErrors($exception, 'profileData');
         }
 
-        Notification::make()->success()->title(__('Profile updated successfully!'))->send();
+        Notification::make()->success()->title(__('Homeowner Profile Updated Successfully!'))->send();
         $this->fillProfileForm();
 
         if ($emailChanged) {
@@ -177,6 +178,7 @@ final class MyProfile extends Page
         request()->session()->invalidate();
         request()->session()->regenerateToken();
 
+        request()->session()->flash('action_feedback', ActionFeedback::flash('success', 'Password Changed Successfully!', __('Sign in again with your new password.')));
         $this->redirect(Filament::getLoginUrl(), navigate: false);
     }
 
@@ -192,7 +194,7 @@ final class MyProfile extends Page
             'suffix' => $user->suffix,
             'sex' => $user->sex,
             'date_of_birth' => $user->date_of_birth?->toDateString(),
-            'contact_number' => $user->contact_number,
+            'contact_number' => PhilippineMobile::local($user->contact_number),
             'email' => $user->email,
             'residency_date' => $homeowner->residency_date?->toDateString(),
             'ownership_type' => $homeowner->ownership_type,

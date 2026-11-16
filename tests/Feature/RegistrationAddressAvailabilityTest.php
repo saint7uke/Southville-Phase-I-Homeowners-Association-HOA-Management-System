@@ -24,6 +24,7 @@ final class RegistrationAddressAvailabilityTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+        Storage::fake('local');
     }
 
     public function test_endpoint_rejects_a_normalized_owner_duplicate_without_exposing_account_data(): void
@@ -212,6 +213,7 @@ final class RegistrationAddressAvailabilityTest extends TestCase
     {
         return [
             'first_name' => 'Test',
+            'verification_document' => UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'),
             'last_name' => 'Resident',
             'sex' => 'Prefer not to say',
             'contact_number' => '09171234567',

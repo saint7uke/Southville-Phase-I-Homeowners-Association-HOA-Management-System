@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -35,11 +36,11 @@ final class Announcement extends Model
         'Financial',
     ];
 
-    protected $fillable = ['title', 'content', 'banner_image', 'category', 'audience', 'status', 'published_at', 'expires_at', 'created_by'];
+    protected $fillable = ['title', 'content', 'banner_image', 'category', 'audience', 'status', 'published_at', 'expires_at', 'created_by', 'is_important'];
 
     protected function casts(): array
     {
-        return ['published_at' => 'datetime', 'expires_at' => 'datetime'];
+        return ['published_at' => 'datetime', 'expires_at' => 'datetime', 'is_important' => 'boolean'];
     }
 
     public function creator(): BelongsTo
@@ -50,6 +51,11 @@ final class Announcement extends Model
     public function readers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'announcement_reads')->withPivot('read_at');
+    }
+
+    public function emailBlast(): HasOne
+    {
+        return $this->hasOne(AnnouncementEmailBlast::class);
     }
 
     public function scopePublished(Builder $query): Builder
@@ -75,6 +81,10 @@ final class Announcement extends Model
     {
         self::creating(fn (Announcement $announcement) => $announcement->created_by ??= app(AuthenticatedActor::class)->id());
         self::saving(function (Announcement $announcement): void {
+            if ($announcement->isDirty('is_important') && ($announcement->is_important || ($announcement->exists && $announcement->getRawOriginal('is_important')))) {
+                $actor = app(AuthenticatedActor::class)->user();
+                abort_unless($actor && $actor->account_status === 'Active' && $actor->hasRole('hoa_admin') && $actor->can('manage_settings') && $actor->can('manage_announcements'), 403);
+            }
             if ($announcement->status === 'Published') {
                 $announcement->published_at ??= now();
             }

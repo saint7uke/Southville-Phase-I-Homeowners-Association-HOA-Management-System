@@ -1,15 +1,16 @@
 <x-filament-panels::page>
     <div class="grid gap-6">
+        <details class="hoa-notification-preferences"><summary data-i18n="Notification preferences">{{ __('Notification preferences') }}</summary><x-sms-enrollment scope="profile" :user="auth('homeowner')->user()" /></details>
         @if (auth('homeowner')->user()?->homeowner?->profile_photo)
             <section aria-labelledby="current-photo-heading" class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
                 <h2 id="current-photo-heading" class="mb-4 text-base font-semibold" data-i18n="Current profile photo">{{ __('Current profile photo') }}</h2>
-                <img
+                <button type="button" class="hoa-avatar-edit" aria-label="{{ __('Edit profile photo') }}" x-data x-on:click="document.querySelector('[data-profile-field-wrapper=profile_photo_upload] input[type=file]')?.click()"><img
                     src="{{ route('homeowner.profile-photo', auth('homeowner')->user()->homeowner) }}"
                     alt="Profile photo of {{ auth('homeowner')->user()->full_name }}"
                     width="160"
                     height="160"
                     class="h-40 w-40 rounded-full object-cover"
-                >
+                ></button>
             </section>
         @endif
 
@@ -64,7 +65,7 @@
             @endif
             {{ $this->profileForm }}
             <div>
-                <x-filament::button type="submit" data-profile-submit wire:loading.attr="disabled" wire:target="saveProfile">
+                <x-filament::button type="submit" color="primary" icon="heroicon-o-check" data-hoa-record-action="true" data-profile-submit wire:loading.attr="disabled" wire:target="saveProfile">
                     <span wire:loading.remove wire:target="saveProfile" data-i18n="Save profile">{{ __('Save profile') }}</span>
                     <span wire:loading wire:target="saveProfile" role="status" data-i18n="Saving profile…">{{ __('Saving profile…') }}</span>
                 </x-filament::button>
@@ -87,7 +88,7 @@
             @endif
             {{ $this->passwordForm }}
             <div>
-                <x-filament::button type="submit" color="danger" data-password-submit wire:loading.attr="disabled" wire:target="savePassword">
+                <x-filament::button type="submit" color="primary" icon="heroicon-o-key" data-hoa-record-action="true" data-password-submit wire:loading.attr="disabled" wire:target="savePassword">
                     <span wire:loading.remove wire:target="savePassword" data-i18n="Change password and sign out">{{ __('Change password and sign out') }}</span>
                     <span wire:loading wire:target="savePassword" role="status" data-i18n="Changing password…">{{ __('Changing password…') }}</span>
                 </x-filament::button>

@@ -93,7 +93,8 @@ final class LandlordTenantManagementTest extends TestCase
     {
         $this->postJson(route('homeowner.register.landlord-availability'), [])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['phase_suffix', 'street', 'block', 'lot']);
+            ->assertJsonValidationErrors(['phase_suffix', 'block', 'lot'])
+            ->assertJsonMissingValidationErrors(['street']);
 
         $middleware = Route::getRoutes()->getByName('homeowner.register.landlord-availability')->gatherMiddleware();
         $this->assertContains('throttle:30,1', $middleware);
@@ -155,7 +156,7 @@ final class LandlordTenantManagementTest extends TestCase
         $this->assertStringNotContainsString('Deleted Owner', $json);
     }
 
-    public function test_landlord_lookup_requires_an_equivalent_street_without_revealing_the_registered_value(): void
+    public function test_confirmed_landlord_lookup_ignores_street_without_revealing_the_registered_value(): void
     {
         [$owner] = $this->resident('Owner', [], ['first_name' => 'Street', 'middle_name' => null, 'last_name' => 'Owner']);
 
@@ -163,19 +164,19 @@ final class LandlordTenantManagementTest extends TestCase
             ->assertOk()->assertJsonPath('options.0.label', $owner->full_name);
 
         $response = $this->postJson(route('homeowner.register.landlord-availability'), $this->address(['street' => 'Mahogany Street']))
-            ->assertOk()->assertJsonCount(0, 'options')->assertJsonPath('message', 'No registered landlord was found for this property. Check the address or contact the HOA.');
+            ->assertOk()->assertJsonCount(1, 'options')->assertJsonPath('options.0.label', $owner->full_name);
         $this->assertStringNotContainsString('Narra', $response->getContent());
     }
 
-    public function test_conflicting_owner_streets_at_one_property_fail_closed(): void
+    public function test_confirmed_property_matches_owners_despite_historical_street_spelling(): void
     {
         $this->resident('Owner', ['street' => 'Narra Street'], ['first_name' => 'First', 'middle_name' => null, 'last_name' => 'Owner']);
         $this->resident('Co-owner', ['street' => 'Mahogany Street'], ['first_name' => 'Second', 'middle_name' => null, 'last_name' => 'Owner']);
 
         $this->postJson(route('homeowner.register.landlord-availability'), $this->address())
-            ->assertOk()->assertJsonCount(0, 'options');
+            ->assertOk()->assertJsonCount(2, 'options');
         $this->postJson(route('homeowner.register.landlord-availability'), [...$this->address(), 'landlord_name' => 'First Owner'])
-            ->assertExactJson(['valid' => false, 'message' => LandlordMatcher::NOT_FOUND_MESSAGE]);
+            ->assertExactJson(['valid' => true, 'message' => LandlordMatcher::VALID_MESSAGE]);
     }
 
     public function test_selection_token_links_the_landlord_and_uses_authoritative_snapshots(): void
@@ -218,9 +219,13 @@ final class LandlordTenantManagementTest extends TestCase
 
         $streetToken = app(LandlordSelectionTokens::class)->issue($landlord->homeowner, $this->address());
         $landlord->homeowner->update(['street' => 'Mahogany Street']);
+        $this->assertSame($landlord->homeowner->id, app(LandlordSelectionTokens::class)->consume($streetToken, $this->address())->id);
+
+        $propertyToken = app(LandlordSelectionTokens::class)->issue($landlord->homeowner, $this->address());
+        $landlord->homeowner->update(['lot' => '99']);
         try {
-            app(LandlordSelectionTokens::class)->consume($streetToken, $this->address());
-            $this->fail('A token must fail after the registered landlord street changes.');
+            app(LandlordSelectionTokens::class)->consume($propertyToken, $this->address());
+            $this->fail('A token must fail after the confirmed property changes.');
         } catch (ValidationException $exception) {
             $this->assertArrayHasKey('landlord_name', $exception->errors());
         }

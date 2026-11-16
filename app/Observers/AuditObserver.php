@@ -7,6 +7,7 @@ namespace App\Observers;
 use App\Models\AuditLog;
 use App\Models\ContactMessage;
 use App\Models\ContactMessageActivity;
+use App\Models\User;
 use App\Support\AuthenticatedActor;
 use Illuminate\Database\Eloquent\Model;
 
@@ -54,6 +55,9 @@ final class AuditObserver
         }
 
         $sensitive = ['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes', 'email_verified_at'];
+        if ($model instanceof User) {
+            $sensitive[] = 'contact_number';
+        }
         if ($model instanceof ContactMessage) {
             $sensitive = [...$sensitive, 'name', 'email', 'phone', 'subject', 'message', 'ip_address'];
         }

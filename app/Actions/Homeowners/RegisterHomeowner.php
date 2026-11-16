@@ -6,11 +6,16 @@ namespace App\Actions\Homeowners;
 
 use App\Models\User;
 use App\Notifications\NewHomeownerRegistration;
+use App\Notifications\RegistrationReceived;
 use App\Services\LandlordMatcher;
 use App\Services\LandlordSelectionTokens;
 use App\Services\PropertyAddressAvailability;
+use App\Services\WorkflowMail;
+use App\Support\PhilippineMobile;
 use App\Support\PropertyAddress;
 use App\Support\PropertyIdentity;
+use App\Support\PropertyPhase;
+use App\Validation\RegistrationDocumentRules;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -30,9 +35,16 @@ final class RegisterHomeowner
         $data['phase'] = PropertyAddress::DEFAULT_PHASE;
         $data['phase_suffix'] = PropertyIdentity::suffix($data['phase_suffix'] ?? null);
         Validator::make($data, [
+            'verification_document' => RegistrationDocumentRules::rules(),
+            'contact_number' => PhilippineMobile::inputRules(),
             'house_number' => ['prohibited'],
-            'phase_suffix' => ['required', 'string', 'regex:/^[A-Z0-9]{1,10}$/D'],
-        ])->validate();
+            'sms_transactional_opt_in' => ['prohibited'],
+            'sms_announcement_opt_in' => ['prohibited'],
+            'sms_verification_id' => ['prohibited'],
+            'sms_verified_at' => ['prohibited'],
+            'verified_phone_hash' => ['prohibited'],
+            'phase_suffix' => PropertyPhase::rules(),
+        ], RegistrationDocumentRules::messages())->validate();
         $documentPath = null;
 
         try {
@@ -73,7 +85,7 @@ final class RegisterHomeowner
                 $user->homeowner()->create([
                     'house_number' => null,
                     'phase_suffix' => $data['phase_suffix'],
-                    'street' => $data['street'],
+                    'street' => null,
                     'block' => $data['block'] ?? null,
                     'lot' => $data['lot'] ?? null,
                     'phase' => 'Southville Phase I',
@@ -88,6 +100,14 @@ final class RegisterHomeowner
                     'status' => 'Inactive',
                 ]);
 
+                $mail = app(WorkflowMail::class);
+                $mail->queue($user, new RegistrationReceived, 'registration:'.$user->id);
+                User::role('hoa_admin')->where('account_status', 'Active')->get()->each(function (User $admin) use ($mail, $user): void {
+                    if ($admin->can('approve_homeowner_registrations') && filter_var($admin->email, FILTER_VALIDATE_EMAIL)) {
+                        $mail->queue($admin, new NewHomeownerRegistration($user), 'registration:'.$user->id);
+                    }
+                });
+
                 return $user;
             });
         } catch (Throwable $exception) {
@@ -101,8 +121,6 @@ final class RegisterHomeowner
 
             throw $exception;
         }
-
-        User::role('hoa_admin')->get()->each->notify(new NewHomeownerRegistration($user));
 
         return $user;
     }

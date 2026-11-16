@@ -14,8 +14,12 @@ final class PaymentReviewCompleted extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(private readonly Payment $payment)
+    private readonly Payment $payment;
+
+    public function __construct(Payment $payment)
     {
+        // Do not serialize loaded payer/account relations (including authentication data).
+        $this->payment = $payment->withoutRelations();
         $this->afterCommit();
     }
 
@@ -24,14 +28,27 @@ final class PaymentReviewCompleted extends Notification implements ShouldQueue
         return ['mail'];
     }
 
+    public function recipientCanReceive(object $notifiable): bool
+    {
+        $current = Payment::query()->with(['homeowner', 'payer'])->find($this->payment->id);
+
+        return $current !== null && in_array($current->review_status, ['Approved', 'Rejected'], true)
+            && in_array($notifiable->id, [$current->homeowner?->user_id, $current->payer?->user_id], true);
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
         $approved = $this->payment->review_status === 'Approved';
 
         return (new MailMessage)
             ->subject(__($approved ? 'Payment proof approved' : 'Payment proof rejected'))
+            ->greeting(__('Hello :name,', ['name' => $notifiable->full_name]))
             ->line(__('Payment :reference was :status.', ['reference' => $this->payment->or_number, 'status' => __($this->payment->review_status)]))
-            ->when(! $approved && filled($this->payment->review_notes), fn (MailMessage $mail) => $mail->line(__('Reason:').' '.$this->payment->review_notes))
+            ->markdown('notifications::email', ['details' => array_filter([
+                __('Reference') => $this->payment->or_number,
+                __('Status') => __($this->payment->review_status),
+                __('Reason:') => ! $approved ? $this->payment->review_notes : null,
+            ], fn ($value) => filled($value))])
             ->action(__('View payments'), url('/homeowner/payments'));
     }
 }

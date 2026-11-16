@@ -13,6 +13,7 @@ use App\Services\PropertyAddressAvailability;
 use App\Services\PropertyDuesAccounts;
 use App\Support\OperationalAccess;
 use App\Support\PropertyIdentity;
+use App\Support\PropertyPhase;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -23,7 +24,7 @@ final class ConfirmPropertyPhase
     {
         OperationalAccess::authorize($actor, 'manage_homeowners');
         $suffix = PropertyIdentity::suffix($suffix);
-        Validator::make(['phase_suffix' => $suffix], ['phase_suffix' => ['required', 'regex:/^[A-Z0-9]{1,10}$/D']])->validate();
+        Validator::make(['phase_suffix' => $suffix], ['phase_suffix' => PropertyPhase::rules()])->validate();
         $address = [...$resident->getAttributes(), 'phase_suffix' => $suffix];
 
         return app(PropertyAddressAvailability::class)->withAddressLock($address, $resident->id, function () use ($resident, $suffix): Homeowner {
@@ -49,8 +50,27 @@ final class ConfirmPropertyPhase
             if ($target->where('ownership_type', 'Owner')->count() > 1) {
                 $this->reject('Multiple Owner records require HOA review.');
             }
+            $snapshot = HouseholdMember::where('current_homeowner_id', $resident->id)->first();
+            $parents = Household::withTrashed()->where(function ($query) use ($snapshot, $address): void {
+                if ($snapshot) {
+                    $query->whereKey($snapshot->household_id)->orWhere(fn ($target) => PropertyIdentity::scope($target, $address));
+                } else {
+                    PropertyIdentity::scope($query, $address);
+                }
+            })
+                ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $propertyKey = PropertyIdentity::confirmedKey($address);
+            $targetHousehold = $parents->first(fn ($parent): bool => $propertyKey !== null
+                ? $parent->property_key === $propertyKey
+                : $parent->property_key === null && $parent->address_key === PropertyIdentity::key($address));
             $current = HouseholdMember::where('current_homeowner_id', $resident->id)->lockForUpdate()->first();
-            $household = PropertyIdentity::scope(Household::withTrashed(), $address)->lockForUpdate()->first();
+            if ($current) {
+                if (! $parents->has($current->household_id)) {
+                    $this->reject('Household membership changed. Reopen the head review and review all relationships again.');
+                }
+                $current->setRelation('household', $parents->get($current->household_id));
+            }
+            $household = $targetHousehold;
             if ($household && ($household->trashed() || ($current && $current->household_id !== $household->id))) {
                 $this->reject('Conflicting household identities require HOA review. No households were merged.');
             }

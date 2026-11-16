@@ -13,7 +13,8 @@ use App\Models\User;
 use App\Services\ButawReceipts;
 use App\Services\ButawReceiptSource;
 use Database\Seeders\RolesAndPermissionsSeeder;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
@@ -21,16 +22,19 @@ use Tests\TestCase;
 
 final class MySqlPropertyAndReceiptConcurrencyTest extends TestCase
 {
-    use DatabaseMigrations {
-        runDatabaseMigrations as private runDisposableMigrations;
+    use DatabaseTruncation {
+        truncateDatabaseTables as private truncateDisposableTables;
     }
 
-    public function runDatabaseMigrations(): void
+    protected function truncateDatabaseTables(): void
     {
         if (config('database.default') !== 'mysql') {
             $this->markTestSkipped('Property/receipt row-lock races require a separately configured disposable MySQL test database.');
         }
-        $this->runDisposableMigrations();
+        $this->truncateDisposableTables();
+        $this->beforeApplicationDestroyed(static function (): void {
+            RefreshDatabaseState::$migrated = false;
+        });
     }
 
     public function test_concurrent_owner_claims_ignore_street_spelling_and_create_only_one_account(): void
@@ -41,7 +45,7 @@ final class MySqlPropertyAndReceiptConcurrencyTest extends TestCase
             $data = ['first_name' => 'Race', 'last_name' => 'Owner', 'sex' => 'Male', 'contact_number' => '09171234567', 'date_of_birth' => '1990-01-01',
                 'email' => 'owner-race-'.$index.'@example.test', 'password' => 'SyntheticPass!2026', 'phase_suffix' => 'A', 'street' => $index === 1 ? 'Narra Street' : 'Different Road',
                 'block' => '7', 'lot' => '8', 'ownership_type' => 'Owner', 'residency_date' => '2020-01-01'];
-            $scripts[] = 'try { $user = app(App\\Actions\\Homeowners\\RegisterHomeowner::class)->handle('.var_export($data, true).'); echo json_encode(["status" => "registered", "id" => $user->id]); } '
+            $scripts[] = 'try { $data = '.var_export($data, true).'; $data["verification_document"] = Illuminate\\Http\\UploadedFile::fake()->create("proof.pdf", 10, "application/pdf"); $user = app(App\\Actions\\Homeowners\\RegisterHomeowner::class)->handle($data); echo json_encode(["status" => "registered", "id" => $user->id]); } '
                 .'catch (Illuminate\\Validation\\ValidationException $e) { echo json_encode(["status" => "invalid"]); }';
         }
         $results = $this->race($scripts);
@@ -66,11 +70,13 @@ final class MySqlPropertyAndReceiptConcurrencyTest extends TestCase
             'phase' => 'Southville Phase I', 'phase_suffix' => 'A', 'residency_date' => '2020-01-01', 'ownership_type' => 'Owner', 'status' => 'Active']);
         $schedule = DuesSetting::create(['name' => 'Race monthly dues', 'amount' => '489.00', 'frequency' => 'Monthly', 'starts_on' => '2026-01-01', 'is_active' => true]);
         $due = DuesObligation::create(['homeowner_id' => $owner->id, 'dues_setting_id' => $schedule->id, 'billing_year' => 2026, 'billing_month' => 10,
-            'due_date' => '2026-10-31', 'amount_due' => '489.00', 'penalty_amount' => '0.00', 'amount_paid' => '0.00', 'status' => 'Pending']);
-        $payment = app(RecordPayment::class)->handle(['dues_obligation_id' => $due->id, 'payment_method' => 'Cash', 'amount_paid' => '100.00', 'payment_date' => '2026-10-20'], $admin);
+            'due_date' => '2026-10-31', 'amount_due' => '100.00', 'penalty_amount' => '0.00', 'amount_paid' => '0.00', 'status' => 'Pending']);
+        $first = app(RecordPayment::class)->handle(['dues_obligation_id' => $due->id, 'payment_method' => 'Cash', 'amount_paid' => '50.00', 'payment_date' => '2026-10-20'], $admin);
+        $final = app(RecordPayment::class)->handle(['dues_obligation_id' => $due->id, 'payment_method' => 'Cash', 'amount_paid' => '50.00', 'payment_date' => '2026-10-20'], $admin);
         app(ButawReceiptSource::class)->approve(['reviewed' => true, 'note' => 'Synthetic approval for isolated concurrency verification only.'], $admin);
         $scripts = [];
         foreach ([1, 2] as $index) {
+            $payment = $index === 1 ? $first : $final;
             $token = app(ButawReceipts::class)->prepare($payment->id, $admin, $owner->id);
             $scripts[] = 'config(["filesystems.disks.local.root" => '.var_export(Storage::disk('local')->path(''), true).']); '
                 .'$document = app(App\\Services\\ButawReceipts::class)->generate('.var_export($token, true).', '.$payment->id.', App\\Models\\User::findOrFail('.$admin->id.'), '.$owner->id.'); '

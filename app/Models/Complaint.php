@@ -21,7 +21,7 @@ final class Complaint extends Model
 
     private bool $isReopening = false;
 
-    protected $fillable = ['homeowner_id', 'ticket_number', 'subject', 'description', 'attachment', 'attachment_name', 'category', 'priority', 'status', 'admin_remarks', 'handled_by', 'resolved_at'];
+    protected $fillable = ['homeowner_id', 'ticket_number', 'subject', 'description', 'attachment', 'attachment_name', 'category', 'category_other', 'priority', 'status', 'admin_remarks', 'handled_by', 'resolved_at'];
 
     protected function casts(): array
     {

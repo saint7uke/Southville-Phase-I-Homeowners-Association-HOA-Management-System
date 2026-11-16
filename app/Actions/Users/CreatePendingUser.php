@@ -7,6 +7,7 @@ namespace App\Actions\Users;
 use App\Enums\UserAccountStatus;
 use App\Models\User;
 use App\Support\PersonName;
+use App\Support\PropertyPhase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
@@ -19,6 +20,8 @@ final class CreatePendingUser
     public function handle(array $data, User $actor): User
     {
         Gate::forUser($actor)->authorize('create', User::class);
+
+        Validator::make($data, ['house_number' => ['prohibited']])->validate();
 
         $data = $this->normalize($data);
         $name = ['required', 'string', 'max:100', "regex:/^[\pL\s'.-]+$/u"];
@@ -34,8 +37,7 @@ final class CreatePendingUser
             'email' => ['required', 'email:rfc', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', Password::defaults()],
             'role' => ['required', Rule::in(['hoa_admin', 'hoa_staff', 'homeowner'])],
-            'house_number' => ['required_if:role,homeowner', 'nullable', 'string', 'max:50'],
-            'street' => ['required_if:role,homeowner', 'nullable', 'string', 'max:100'],
+            'phase_suffix' => ['required_if:role,homeowner', 'nullable', 'string', Rule::in(array_keys(PropertyPhase::options()))],
             'block' => ['required_if:role,homeowner', 'nullable', 'string', 'max:20'],
             'lot' => ['required_if:role,homeowner', 'nullable', 'string', 'max:20'],
             'residency_date' => ['required_if:role,homeowner', 'nullable', 'date', 'before_or_equal:today'],
@@ -53,7 +55,7 @@ final class CreatePendingUser
 
         return DB::transaction(function () use ($validated): User {
             $role = (string) $validated['role'];
-            $homeownerFields = ['house_number', 'street', 'block', 'lot', 'residency_date', 'ownership_type', 'emergency_contact_name', 'emergency_contact_number'];
+            $homeownerFields = ['phase_suffix', 'block', 'lot', 'residency_date', 'ownership_type', 'emergency_contact_name', 'emergency_contact_number'];
             $homeownerData = collect($validated)->only($homeownerFields)->all();
             unset($validated['role']);
             foreach ($homeownerFields as $field) {
@@ -66,6 +68,8 @@ final class CreatePendingUser
             if ($role === 'homeowner') {
                 $user->homeowner()->create([
                     ...$homeownerData,
+                    'house_number' => null,
+                    'street' => null,
                     'phase' => 'Southville Phase I',
                     'status' => 'Inactive',
                 ]);
@@ -81,12 +85,6 @@ final class CreatePendingUser
         foreach (['first_name', 'middle_name', 'last_name', 'emergency_contact_name'] as $field) {
             if (array_key_exists($field, $data)) {
                 $data[$field] = PersonName::normalize($data[$field]);
-            }
-        }
-
-        foreach (['house_number', 'street'] as $field) {
-            if (array_key_exists($field, $data)) {
-                $data[$field] = $this->collapseWhitespace($data[$field]);
             }
         }
 

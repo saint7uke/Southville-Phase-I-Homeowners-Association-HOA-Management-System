@@ -13,7 +13,9 @@ use App\Models\User;
 use App\Notifications\CertificateIssued;
 use App\Notifications\OperationalAlert;
 use App\Notifications\WorkflowStatusChanged;
+use App\Services\WorkflowMail;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 final class WorkflowNotificationObserver
 {
@@ -22,7 +24,7 @@ final class WorkflowNotificationObserver
         $settings = SystemSetting::current();
 
         if ($model instanceof Certificate && $settings->certificate_notifications) {
-            $model->homeowner()->with('user')->firstOrFail()->user->notify(new CertificateIssued($model->id));
+            app(WorkflowMail::class)->queue($model->homeowner()->with('user')->firstOrFail()->user, new CertificateIssued($model->id), 'certificate-issued:'.$model->id);
 
             return;
         }
@@ -30,7 +32,7 @@ final class WorkflowNotificationObserver
         $alert = match (true) {
             $model instanceof Complaint && $settings->complaint_notifications => new OperationalAlert('New homeowner complaint', 'Complaint :reference: :subject', url('/staff/complaints'), ['reference' => $model->ticket_number, 'subject' => $model->subject], 'manage_complaints'),
             $model instanceof ServiceRequest && $settings->request_notifications => new OperationalAlert('New homeowner service request', 'Request :reference: :type', url('/staff/service-requests'), ['reference' => $model->ticket_number, 'type' => $model->request_type], 'manage_requests'),
-            $model instanceof ContactMessage && $settings->contact_notifications => new OperationalAlert('New public contact message', ':name: :subject', url('/staff/contact-messages'), ['name' => $model->name, 'subject' => $model->subject], 'manage_contact_messages'),
+            $model instanceof ContactMessage && $settings->contact_notifications => new OperationalAlert('New HOA inquiry', ':name: :subject', url('/staff/contact-messages'), ['name' => $model->name, 'subject' => $model->subject], 'manage_contact_messages'),
             default => null,
         };
 
@@ -38,9 +40,9 @@ final class WorkflowNotificationObserver
             User::query()
                 ->whereHas('roles', fn ($query) => $query->where('name', 'hoa_staff')->where('guard_name', 'web'))
                 ->where('account_status', 'Active')
-                ->each(function (User $user) use ($alert): void {
+                ->each(function (User $user) use ($alert, $model): void {
                     if ($alert->recipientCanReceive($user)) {
-                        $user->notify($alert);
+                        app(WorkflowMail::class)->queue($user, $alert, 'created:'.get_class($model).':'.$model->id);
                     }
                 });
         }
@@ -57,10 +59,10 @@ final class WorkflowNotificationObserver
             $remarks = $model->getOriginal('status') === 'Resolved' && $model->status === 'Under Review'
                 ? null
                 : $model->admin_remarks;
-            $model->homeowner()->with('user')->firstOrFail()->user->notify(new WorkflowStatusChanged('complaint', $model->ticket_number, $model->status, $remarks));
+            app(WorkflowMail::class)->queue($model->homeowner()->with('user')->firstOrFail()->user, new WorkflowStatusChanged('complaint', $model->ticket_number, $model->status, $remarks), 'complaint-status:'.$model->id.':'.Str::uuid());
         }
         if ($model instanceof ServiceRequest && $settings->request_notifications) {
-            $model->homeowner()->with('user')->firstOrFail()->user->notify(new WorkflowStatusChanged('request', $model->ticket_number, $model->status, $model->admin_remarks));
+            app(WorkflowMail::class)->queue($model->homeowner()->with('user')->firstOrFail()->user, new WorkflowStatusChanged('request', $model->ticket_number, $model->status, $model->admin_remarks), 'request-status:'.$model->id.':'.Str::uuid());
         }
     }
 }

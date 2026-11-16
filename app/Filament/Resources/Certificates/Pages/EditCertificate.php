@@ -3,9 +3,12 @@
 namespace App\Filament\Resources\Certificates\Pages;
 
 use App\Actions\Certificates\RevokeCertificate;
+use App\Filament\Concerns\HasIconOnlyRecordActions;
+use App\Filament\Concerns\HasSpecificFeedback;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Models\Certificate;
 use App\Models\User;
+use App\Support\ActionFeedback;
 use App\Support\AuthenticatedActor;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -19,6 +22,9 @@ use Illuminate\Validation\ValidationException;
 
 class EditCertificate extends EditRecord
 {
+    use HasIconOnlyRecordActions;
+    use HasSpecificFeedback;
+
     protected static string $resource = CertificateResource::class;
 
     protected function mutateFormDataBeforeFill(array $data): array
@@ -52,6 +58,8 @@ class EditCertificate extends EditRecord
                         throw new AuthorizationException;
                     }
                     app(RevokeCertificate::class)->handle($record, $actor, $data['reason']);
+                    $record->refresh();
+                    ActionFeedback::success('Certificate Revoked Successfully!');
                 }),
             DeleteAction::make()->visible(fn (): bool => Filament::getCurrentPanel()?->getId() === 'admin'),
             RestoreAction::make()->visible(fn (): bool => Filament::getCurrentPanel()?->getId() === 'admin'),

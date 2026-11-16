@@ -20,7 +20,7 @@ final class ContactMessage extends Model
 
     public const STATUSES = ['New', 'In Progress', 'Awaiting Resident', 'Closed'];
 
-    protected $fillable = ['name', 'email', 'phone', 'subject', 'message', 'status', 'first_handled_by', 'first_handled_at', 'handled_by', 'handled_at', 'closed_at', 'ip_address'];
+    protected $fillable = ['user_id', 'name', 'email', 'phone', 'subject', 'message', 'status', 'first_handled_by', 'first_handled_at', 'handled_by', 'handled_at', 'closed_at', 'ip_address'];
 
     protected function casts(): array
     {

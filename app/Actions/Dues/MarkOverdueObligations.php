@@ -7,8 +7,10 @@ namespace App\Actions\Dues;
 use App\Models\DuesObligation;
 use App\Models\SystemSetting;
 use App\Notifications\OverdueDuesNotice;
+use App\Services\WorkflowMail;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 final class MarkOverdueObligations
 {
@@ -26,15 +28,18 @@ final class MarkOverdueObligations
             ->orderBy('id')
             ->chunkById(200, function (Collection $obligations) use (&$changed, $notificationsEnabled): void {
                 foreach ($obligations as $obligation) {
-                    $updated = DuesObligation::query()->whereKey($obligation->id)->whereIn('status', ['Pending', 'Partial'])->update(['status' => 'Overdue', 'updated_at' => now()]);
-                    $changed += $updated;
+                    DB::transaction(function () use ($obligation, &$changed, $notificationsEnabled): void {
+                        $updated = DuesObligation::query()->whereKey($obligation->id)->whereIn('status', ['Pending', 'Partial'])->update(['status' => 'Overdue', 'updated_at' => now()]);
+                        $changed += $updated;
 
-                    if ($updated === 1 && $notificationsEnabled) {
-                        $obligation->homeowner->user->notify(new OverdueDuesNotice(
-                            $obligation->duesSetting->name,
-                            $obligation->due_date->format('M d, Y'),
-                        ));
-                    }
+                        if ($updated === 1 && $notificationsEnabled) {
+                            app(WorkflowMail::class)->queue($obligation->homeowner->user, new OverdueDuesNotice(
+                                $obligation->duesSetting->name,
+                                $obligation->due_date->format('M d, Y'),
+                                $obligation->id,
+                            ), 'overdue:'.$obligation->id);
+                        }
+                    });
                 }
             });
 

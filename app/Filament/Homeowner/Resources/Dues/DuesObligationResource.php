@@ -76,7 +76,7 @@ final class DuesObligationResource extends Resource
                         'submission_token' => $data['submission_token'],
                         'notes' => $data['notes'] ?? null,
                     ], $proof);
-                    Notification::make()->success()->title(__('Proof submitted for staff review'))->send();
+                    Notification::make()->success()->title(__('Payment Proof Submitted Successfully!'))->send();
                 }),
         ]);
     }

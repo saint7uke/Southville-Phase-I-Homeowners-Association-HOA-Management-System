@@ -6,10 +6,13 @@ namespace App\Filament\Resources\Payments\Tables;
 
 use App\Actions\Payments\ChangePaymentDeletionState;
 use App\Actions\Payments\ReviewPaymentProof;
+use App\Filament\Resources\Payments\Actions\InstallmentActions;
 use App\Filament\Resources\Payments\Actions\ReceiptActions;
 use App\Models\Payment;
 use App\Models\User;
+use App\Support\ActionFeedback;
 use App\Support\AuthenticatedActor;
+use App\Support\Money;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -39,12 +42,17 @@ final class PaymentsTable
             TextColumn::make('duesObligation.amount_due')->label(__('Amount due'))->money('PHP')->placeholder(__('Legacy')),
             TextColumn::make('amount_paid')->money('PHP')->sortable(),
             TextColumn::make('penalty')->money('PHP')->sortable()->toggleable(),
-            TextColumn::make('balance')->money('PHP')->sortable(),
+            TextColumn::make('balance')->label(__('Balance after installment'))->money('PHP')->sortable(),
+            TextColumn::make('duesObligation.status')->label(__('Current obligation status'))->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
+            TextColumn::make('current_obligation_balance')->label(__('Current obligation balance'))
+                ->state(fn (Payment $record): ?string => $record->duesObligation ? Money::fromMinor(
+                    Money::toMinor((string) $record->duesObligation->amount_due) + Money::toMinor((string) $record->duesObligation->penalty_amount)
+                    - Money::toMinor((string) $record->duesObligation->amount_paid)) : null)->money('PHP'),
             TextColumn::make('payment_date')->date()->sortable(),
             TextColumn::make('payment_method')->badge(),
             TextColumn::make('transaction_reference')->label(__('Reference'))->placeholder(__('Cash / legacy'))->copyable()->toggleable(),
             TextColumn::make('covered_period')->label(__('Billing period')),
-            TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->label(__('Payment status'))->badge(),
+            TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->label(__('Installment status'))->badge(),
             TextColumn::make('review_status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->label(__('Review status'))->badge(),
             TextColumn::make('recorder.full_name')->label(__('Recorded by'))->toggleable(),
         ])->defaultSort('payment_date', 'desc')->filters([
@@ -73,9 +81,11 @@ final class PaymentsTable
                     $actor = app(AuthenticatedActor::class)->user();
                     abort_unless($actor instanceof User, 403);
                     app(ReviewPaymentProof::class)->approve($record, $actor);
+                    ActionFeedback::success('Payment Proof Approved Successfully!');
                 }),
             Action::make('rejectProof')
                 ->label(__('Reject proof'))
+                ->modalSubmitActionLabel(__('Yes, Reject'))
                 ->color('danger')
                 ->requiresConfirmation()
                 ->schema([
@@ -86,7 +96,9 @@ final class PaymentsTable
                     $actor = app(AuthenticatedActor::class)->user();
                     abort_unless($actor instanceof User, 403);
                     app(ReviewPaymentProof::class)->reject($record, $actor, $data['review_notes']);
+                    ActionFeedback::success('Payment Proof Rejected Successfully!');
                 }),
+            ...InstallmentActions::make(),
             ...ReceiptActions::make(),
             EditAction::make(),
             Action::make('deletePayment')
@@ -96,6 +108,7 @@ final class PaymentsTable
                     $actor = app(AuthenticatedActor::class)->user();
                     abort_unless($actor instanceof User, 403);
                     app(ChangePaymentDeletionState::class)->delete($record, $actor);
+                    ActionFeedback::success('Payment Record Archived Successfully!');
                 }),
             Action::make('restorePayment')
                 ->label(__('Restore'))->icon('heroicon-o-arrow-uturn-left')->requiresConfirmation()
@@ -104,6 +117,7 @@ final class PaymentsTable
                     $actor = app(AuthenticatedActor::class)->user();
                     abort_unless($actor instanceof User, 403);
                     app(ChangePaymentDeletionState::class)->restore($record, $actor);
+                    ActionFeedback::success('Payment Record Restored Successfully!');
                 }),
         ])->toolbarActions([
             BulkActionGroup::make([

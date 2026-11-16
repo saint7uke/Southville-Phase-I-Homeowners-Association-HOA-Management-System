@@ -112,6 +112,7 @@ final class OriginalResidencyTemplateTest extends TestCase
         $this->assertSame($template->id, $certificate->certificate_template_id);
         $this->assertSame('José Dela Cruz', $certificate->document_snapshot['resident_name']);
         $this->assertSame('12', $certificate->document_snapshot['address']['block']);
+        $this->assertArrayNotHasKey('house_number', $certificate->document_snapshot['address']);
         $this->assertSame($template->layout, Arr::except($certificate->document_snapshot['layout'], ['font_sha256']));
         $pdf = Storage::disk('local')->get($certificate->file_path);
         $this->assertStringStartsWith('%PDF-', $pdf);
@@ -204,7 +205,7 @@ final class OriginalResidencyTemplateTest extends TestCase
         Livewire::test(ListCertificates::class)
             ->callAction('confirmResidencySource', ['reviewed' => true, 'confirmed' => true, 'note' => 'Synthetic HOA confirmation for this isolated test.'])
             ->assertHasNoActionErrors()
-            ->assertNotified('Official Residency source confirmed');
+            ->assertNotified('Residency Certificate Source Confirmed Successfully!');
         $this->assertSame(OriginalCertificateRenderer::ID, CertificateTemplate::sole()->renderer);
         $this->assertSame('Approved', CertificateTemplate::sole()->status);
     }

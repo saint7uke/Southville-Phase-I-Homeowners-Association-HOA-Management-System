@@ -10,7 +10,7 @@ use App\Models\User;
 use App\Services\ButawReceiptEligibility;
 use App\Services\ButawReceiptSource;
 use App\Support\OperationalAccess;
-use Illuminate\Support\Arr;
+use App\Support\PropertySnapshot;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
@@ -38,12 +38,12 @@ final class ConfirmReceiptDetails
                 throw ValidationException::withMessages(['confirmed' => __('The recorded collector requires HOA review. An arbitrary typed collector cannot be used.')]);
             }
             $payment->property_snapshot = [
-                ...Arr::only($payment->homeowner->getAttributes(), ['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix', 'property_key', 'address_key']),
+                ...PropertySnapshot::from($payment->homeowner),
                 'collector_id' => $collector->id, 'collector_name' => $collector->full_name, 'collector_authorized' => true,
                 'confirmed_by' => $actor->id, 'confirmed_at' => now()->toIso8601String(), 'confirmation_note' => $data['note'],
             ];
             // Checks payment/year/penalty and complete block/lot before any write.
-            app(ButawReceiptEligibility::class)->snapshot($payment);
+            app(ButawReceiptEligibility::class)->installmentSnapshot($payment);
             $payment->save();
 
             return $payment->refresh();

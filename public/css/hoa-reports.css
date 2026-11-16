@@ -239,14 +239,21 @@
 .hoa-reports__button,
 .hoa-reports__page-button,
 .hoa-report-dialog__close {
-    min-block-size: 2.5rem;
+    min-block-size: 2.75rem;
     border: 1px solid transparent;
-    border-radius: .55rem;
+    border-radius: .7rem;
     padding: .55rem .7rem;
     font: inherit;
     font-weight: 700;
     cursor: pointer;
     touch-action: manipulation;
+}
+
+.hoa-reports__button:focus-visible,
+.hoa-reports__page-button:focus-visible,
+.hoa-report-dialog__close:focus-visible {
+    outline: 3px solid #1474a4;
+    outline-offset: 3px;
 }
 
 .hoa-reports__button {

@@ -70,6 +70,8 @@ final class HouseholdSummaryExport extends DefaultValueBinder implements FromCol
     {
         return __('PROVISIONAL RBI — subject to HOA confirmation')."\n"
             .$this->data['household']->identifier.' — '.$this->data['household']->full_address."\n"
+            .__('Household head').': '.($this->data['head_name'] ?? __('Not assigned'))."\n"
+            .(! empty($this->data['warning']) ? $this->data['warning']."\n" : '')
             .__('Current members').': '.$this->data['members']->count().' | '.__('Generated').' '.now()->format('Y-m-d H:i').' | '.$this->generatedBy;
     }
 

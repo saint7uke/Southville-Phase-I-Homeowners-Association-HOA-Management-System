@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Filament\Homeowner\Resources\ServiceRequests\ServiceRequestResource;
 use App\Models\Certificate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Facades\URL;
 
 final class CertificateIssued extends Notification implements ShouldQueue
 {
@@ -35,19 +35,21 @@ final class CertificateIssued extends Notification implements ShouldQueue
 
         $this->certificate = Certificate::query()->find($this->certificateId);
 
-        return $this->certificate !== null;
+        return $this->certificate !== null && $this->certificate->status === 'Issued'
+            && $this->certificate->homeowner?->user_id === $notifiable->id;
     }
 
     public function toMail(object $notifiable): MailMessage
     {
         $certificate = $this->certificate ?? Certificate::query()->findOrFail($this->certificateId);
-        $url = URL::temporarySignedRoute('certificates.download', now()->addMinutes(30), $certificate);
+        $url = ServiceRequestResource::getUrl('index', panel: 'homeowner');
 
         return (new MailMessage)
-            ->subject(__('Your HOA certificate is ready'))
+            ->subject(__('Your HOA certificate has been issued'))
             ->greeting(__('Hello :name.', ['name' => $notifiable->full_name]))
             ->line(__(':type :number has been issued.', ['type' => $certificate->type, 'number' => $certificate->certificate_number]))
-            ->line(__('The secure download link expires in 30 minutes and requires your homeowner sign-in.'))
-            ->action(__('Download certificate'), $url);
+            ->line(__('Certificates must be collected at the HOA office with the required signature and dry seal.'))
+            ->line(__('Check your certificate request for pickup readiness before visiting the office.'))
+            ->action(__('Track certificate request'), $url);
     }
 }

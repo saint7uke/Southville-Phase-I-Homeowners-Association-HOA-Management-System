@@ -55,7 +55,17 @@ final class MySqlTenantPropertyPaymentsTest extends TestCase
             DB::transaction(function () use ($staff, $owner, $landlord, $tenant, $due, $change, &$process): void {
                 app(PropertyAddressAvailability::class)->lockProperty($owner->getAttributes());
                 $process = $this->worker($staff, $tenant, $due);
-                $this->assertTrue($process->waitUntil(fn ($type, $output) => str_contains($output, 'READY')), $process->getErrorOutput().$process->getOutput());
+                // Read accumulated output: waitUntil() can consume an already
+                // emitted READY during its initial Windows status update before
+                // installing the callback, leaving both processes waiting.
+                $deadline = microtime(true) + 20;
+                while (! str_contains($process->getOutput(), "READY\n")) {
+                    if (! $process->isRunning() || microtime(true) >= $deadline) {
+                        $this->fail('Payment worker did not become ready: '.$process->getErrorOutput().$process->getOutput());
+                    }
+                    usleep(20000);
+                }
+                $this->assertTrue($process->isRunning(), 'The ready worker must remain blocked by the property mutex.');
                 if ($change === 'unlink') {
                     $tenant->update(['landlord_homeowner_id' => null]);
                 } else {
@@ -121,6 +131,7 @@ final class MySqlTenantPropertyPaymentsTest extends TestCase
         $payload = var_export(['dues_obligation_id' => $due->id, 'payer_homeowner_id' => $tenant->id, 'amount_paid' => '400.00', 'payment_date' => '2026-10-23', 'payment_method' => 'Cash', 'submission_token' => (string) Str::uuid()], true);
         $script = 'require "tests/bootstrap.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); '
             .'Illuminate\\Support\\Facades\\Notification::fake(); Illuminate\\Support\\Facades\\Bus::fake(); '
+            .'Illuminate\\Support\\Facades\\Http::preventStrayRequests(); '
             .'Carbon\\Carbon::setTestNow("2026-10-23 10:00:00"); '
             .'$tenant = App\\Models\\Homeowner::with("landlord.user", "user")->findOrFail('.$tenant->id.'); '
             .'echo "READY\n"; flush(); '

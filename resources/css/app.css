@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './workflow-revisions.css';
+@import './record-actions.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -56,10 +58,16 @@ button, input, select, textarea { font: inherit; }
 .hero h1 { margin: 0; max-inline-size: 11ch; font-size: clamp(2.65rem, 2rem + 3vw, 5.6rem); line-height: .98; letter-spacing: -.055em; }
 .hero-copy > p:not(.hero-kicker) { max-inline-size: 38rem; margin-block: 1.5rem; color: var(--muted); font-size: clamp(1.05rem, .98rem + .3vw, 1.25rem); }
 .hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
-.button { min-block-size: 3rem; display: inline-flex; align-items: center; justify-content: center; padding-inline: 1.25rem; border: 2px solid transparent; border-radius: .65rem; font-weight: 750; text-decoration: none; white-space: nowrap; transition: transform .18s ease, background .18s ease; }
-.button:active { transform: translateY(1px); }
-.button-primary { background: var(--accent); color: white; }
-.button-primary:hover { background: var(--accent-hover); }
+.button, .hoa-button { min-block-size: 2.75rem; display: inline-flex; align-items: center; justify-content: center; gap: .55rem; padding: .65rem 1rem; border: 1px solid #c7d3df; border-radius: .7rem; background: var(--surface); color: var(--ink); font-weight: 700; text-decoration: none; white-space: nowrap; transition: transform .18s ease, background .18s ease, border-color .18s ease; }
+.button:active, .hoa-button:active { transform: translateY(1px); }
+.button-primary, .hoa-button-primary { border-color: #1769cc; background: #1769cc; color: white !important; }
+.button-primary:hover, .hoa-button-primary:hover { border-color: #125bb4; background: #125bb4; }
+.button-danger, .hoa-button-danger { border-color: #e5a7a7; background: #fff0f0; color: #a61b1b; }
+.button-success, .hoa-button-success { border-color: #a8dfbd; background: #eaf8ef; color: #176b3a; }
+.button-warning, .hoa-button-warning { border-color: #ead19a; background: #fff8e6; color: #805900; }
+.button svg, .hoa-button svg { width: 1.1rem; height: 1.1rem; flex: none; }
+.hoa-action-icon { width: 1.1rem; height: 1.1rem; flex: none; }
+.button:focus-visible, .hoa-button:focus-visible { outline: 3px solid #1474a4; outline-offset: 3px; }
 .password-field { position: relative; }
 .password-field input { inline-size: 100%; padding-inline-end: 3.25rem; }
 .password-toggle { position: absolute; inset-block-start: 50%; inset-inline-end: .55rem; display: inline-grid; width: 2rem; height: 2rem; place-items: center; transform: translateY(-50%); margin: 0; padding: 0; border: 0; border-radius: .45rem; background: transparent; color: var(--accent); cursor: pointer; text-decoration: none; }
@@ -67,7 +75,7 @@ button, input, select, textarea { font: inherit; }
 .password-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .password-eye-hide { display: none; }
 .password-eye[hidden] { display: none; }
-.button-secondary { border-color: var(--ink); color: var(--ink); }
+.button-secondary { border-color: #c7d3df; color: var(--ink); }
 .hero-media { margin: 0; overflow: hidden; border-radius: 1rem; box-shadow: 0 1.5rem 4rem rgb(45 60 70 / .17); }
 .hero-media img { inline-size: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
 .trust-strip { inline-size: min(calc(100% - 2rem), 80rem); margin-inline: auto; padding-block: 1.5rem; display: grid; gap: .75rem; border-block: 1px solid var(--border); color: var(--muted); font-weight: 700; }
@@ -180,7 +188,9 @@ button, input, select, textarea { font: inherit; }
         --dark-panel: #2c3943;
         --focus: #66c7f4;
     }
-    .button-primary, .nav-login, .brand-mark { color: #25131a !important; }
+    .button, .hoa-button { border-color: #526575; background: #172b37; color: #e5f2f7; }
+    .button-primary, .hoa-button-primary, .nav-login, .brand-mark { border-color: #3485e7; background: #3485e7; color: white !important; }
+    .button-danger, .hoa-button-danger { border-color: #8d4348; background: #492b31; color: #ffd8d8; }
     .hero-media { box-shadow: 0 1.5rem 4rem rgb(0 0 0 / .3); }
     .error { color: #ff87a7; }
 }

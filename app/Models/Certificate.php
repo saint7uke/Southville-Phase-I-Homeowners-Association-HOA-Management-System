@@ -18,7 +18,7 @@ final class Certificate extends Model
 
     protected function casts(): array
     {
-        return ['issued_at' => 'datetime', 'expires_at' => 'datetime', 'revoked_at' => 'datetime', 'document_snapshot' => 'array'];
+        return ['issued_at' => 'datetime', 'expires_at' => 'datetime', 'revoked_at' => 'datetime', 'ready_for_pickup_at' => 'datetime', 'collected_at' => 'datetime', 'document_snapshot' => 'array'];
     }
 
     protected static function booted(): void

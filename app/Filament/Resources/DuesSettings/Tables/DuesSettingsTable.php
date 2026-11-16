@@ -5,6 +5,7 @@ namespace App\Filament\Resources\DuesSettings\Tables;
 use App\Actions\Dues\CloseDuesSetting;
 use App\Models\DuesSetting;
 use App\Models\User;
+use App\Support\ActionFeedback;
 use App\Support\AuthenticatedActor;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -73,6 +74,7 @@ class DuesSettingsTable
                         abort_unless($actor instanceof User, 403);
                         try {
                             app(CloseDuesSetting::class)->handle($record, $actor);
+                            ActionFeedback::success('Dues Settings Deactivated Successfully!');
                         } catch (ValidationException $exception) {
                             Notification::make()->danger()->title(__('Please review the form'))->body(collect($exception->errors())->flatten()->first())->send();
                             $action->halt();

@@ -54,7 +54,7 @@ class ListCertificates extends ListRecords
                     Textarea::make('note')->label(__('Approval evidence / note'))->required()->minLength(10)->maxLength(2000)])
                 ->action(function (array $data): void {
                     $this->runValidatedDomainAction(fn () => app(ButawReceiptSource::class)->approve($data, app(AuthenticatedActor::class)->user()));
-                    Notification::make()->success()->title(__('Original receipt source confirmed.'))->send();
+                    Notification::make()->success()->title(__('Original Receipt Source Confirmed Successfully!'))->send();
                 }),
             Action::make('reviewResidencySource')->label(__('Review uploaded Residency document'))->url(route('certificates.residency-reference'))->openUrlInNewTab()
                 ->visible(fn () => OperationalAccess::allows(app(AuthenticatedActor::class)->user(), 'manage_settings', true)),
@@ -68,7 +68,7 @@ class ListCertificates extends ListRecords
                     Textarea::make('note')->label(__('Approval evidence / note'))->required()->minLength(10)->maxLength(2000),
                 ])->action(function (array $data): void {
                     $this->runValidatedDomainAction(fn () => app(CertificateTemplates::class)->confirmResidencySource($data, app(AuthenticatedActor::class)->user()));
-                    Notification::make()->success()->title(__('Official Residency source confirmed'))->send();
+                    Notification::make()->success()->title(__('Residency Certificate Source Confirmed Successfully!'))->send();
                 }),
             Action::make('setupCohabitationSource')->label(fn (): string => __('Original Cohabitation document').' — '.__(app(CohabitationCertificateSource::class)->setupStatus()['label']))
                 ->modalHeading(__('Original Cohabitation document'))
@@ -95,7 +95,7 @@ class ListCertificates extends ListRecords
                         ->visible(fn (): bool => app(CohabitationCertificateSource::class)->setupStatus()['state'] === 'ready'),
                 ])->action(function (array $data): void {
                     $this->runValidatedDomainAction(fn () => app(CohabitationCertificateSource::class)->confirm($data, app(AuthenticatedActor::class)->user()));
-                    Notification::make()->success()->title(__('Original Cohabitation source confirmed.'))->send();
+                    Notification::make()->success()->title(__('Cohabitation Certificate Source Confirmed Successfully!'))->send();
                 }),
         ];
     }

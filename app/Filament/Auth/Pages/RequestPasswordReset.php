@@ -10,10 +10,12 @@ use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Auth\Events\PasswordResetLinkSent;
 use Illuminate\Contracts\Auth\CanResetPassword;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
 use LogicException;
 use SensitiveParameter;
+use Throwable;
 
 final class RequestPasswordReset extends BaseRequestPasswordReset
 {
@@ -31,26 +33,33 @@ final class RequestPasswordReset extends BaseRequestPasswordReset
 
         RateLimiter::hit($key, 60);
 
-        Password::broker(Filament::getAuthPasswordBroker())->sendResetLink(
-            $this->getCredentialsFromFormData($data),
-            function (CanResetPassword $user, #[SensitiveParameter] string $token): void {
-                if (
-                    method_exists($user, 'canAccessPanel')
-                    && ! $user->canAccessPanel(Filament::getCurrentOrDefaultPanel())
-                ) {
-                    return;
-                }
+        try {
+            Password::broker(Filament::getAuthPasswordBroker())->sendResetLink(
+                $this->getCredentialsFromFormData($data),
+                function (CanResetPassword $user, #[SensitiveParameter] string $token): void {
+                    if (
+                        method_exists($user, 'canAccessPanel')
+                        && ! $user->canAccessPanel(Filament::getCurrentOrDefaultPanel())
+                    ) {
+                        return;
+                    }
 
-                if (! method_exists($user, 'notify')) {
-                    throw new LogicException('The password-reset recipient must support notifications.');
-                }
+                    if (! method_exists($user, 'notify')) {
+                        throw new LogicException('The password-reset recipient must support notifications.');
+                    }
 
-                $notification = app(ResetPasswordNotification::class, ['token' => $token]);
-                $notification->url = Filament::getResetPasswordUrl($token, $user);
-                $user->notify($notification);
-                event(new PasswordResetLinkSent($user));
-            },
-        );
+                    $notification = app(ResetPasswordNotification::class, ['token' => $token]);
+                    $notification->url = Filament::getResetPasswordUrl($token, $user);
+                    $user->notifyNow($notification);
+                    event(new PasswordResetLinkSent($user));
+                },
+            );
+        } catch (Throwable $exception) {
+            Log::warning('Panel password reset mail delivery failed.', [
+                'exception' => $exception::class,
+                'code' => 'password_reset_transport_failure',
+            ]);
+        }
 
         $this->form->fill();
         $this->genericNotification()->send();
@@ -69,9 +78,9 @@ final class RequestPasswordReset extends BaseRequestPasswordReset
     private function genericNotification(): Notification
     {
         return Notification::make()
-            ->title(__('Check your email'))
+            ->title(__('Password Reset Requested'))
             ->body(__('If an eligible account matches that address, a password reset link will be sent shortly.'))
-            ->success();
+            ->info();
     }
 
     private function rateLimitedNotification(): Notification

@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\DuesSettings\Pages;
 
 use App\Actions\Dues\SaveDuesSetting;
+use App\Filament\Concerns\HasIconOnlyRecordActions;
+use App\Filament\Concerns\HasSpecificFeedback;
 use App\Filament\Resources\DuesSettings\DuesSettingResource;
 use App\Models\User;
 use App\Support\AuthenticatedActor;
@@ -14,6 +16,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditDuesSetting extends EditRecord
 {
+    use HasIconOnlyRecordActions;
+    use HasSpecificFeedback;
+
     protected static string $resource = DuesSettingResource::class;
 
     protected function getHeaderActions(): array

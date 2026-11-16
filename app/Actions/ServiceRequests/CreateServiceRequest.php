@@ -10,6 +10,8 @@ use App\Models\ServiceRequest;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Notifications\WorkflowStatusChanged;
+use App\Services\CertificateDuesEligibility;
+use App\Services\WorkflowMail;
 use App\Validation\ServiceRequestSubmissionValidator;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
@@ -39,6 +41,7 @@ final class CreateServiceRequest
 
         try {
             return DB::transaction(function () use ($homeowner, $data, $files, $uploader, &$storedPaths): ServiceRequest {
+                app(CertificateDuesEligibility::class)->lockForResident($homeowner->getKey());
                 $homeowner = Homeowner::withTrashed()->lockForUpdate()->find($homeowner->getKey());
                 if (! $homeowner instanceof Homeowner) {
                     throw ValidationException::withMessages(['homeowner_id' => __('Select a current resident.')]);
@@ -50,6 +53,7 @@ final class CreateServiceRequest
                 }
 
                 $validated = $this->validator->validate($homeowner, $data, $files, $uploader);
+                app(CertificateDuesEligibility::class)->assertEligible($homeowner, lock: true);
                 if (filled($validated['handled_by'] ?? null)) {
                     $handler = User::query()->lockForUpdate()->find($validated['handled_by']);
                     if (! $handler instanceof User || $handler->account_status !== 'Active' || ! $handler->hasRole('hoa_staff')) {
@@ -60,7 +64,7 @@ final class CreateServiceRequest
                 $storedPaths = $this->attachments->handle($request, $files, $uploader)->pluck('path')->all();
 
                 if ($uploader->hasRole('hoa_admin') && $homeowner->user_id !== $uploader->id && SystemSetting::current()->request_notifications) {
-                    $resident->notify(new WorkflowStatusChanged('service request', $request->ticket_number, 'Pending'));
+                    app(WorkflowMail::class)->queue($resident, new WorkflowStatusChanged('service request', $request->ticket_number, 'Pending'), 'request-created:'.$request->id);
                 }
 
                 return $request;

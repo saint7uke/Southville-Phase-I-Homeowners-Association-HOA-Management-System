@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Payments;
 
 use App\Actions\Dues\GenerateSettingObligations;
+use App\Actions\Dues\PrepareMonthlyAssessment;
 use App\Models\DuesObligation;
 use App\Models\DuesSetting;
 use App\Models\Homeowner;
@@ -12,13 +13,13 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Services\PropertyAddressAvailability;
 use App\Services\PropertyDuesAccounts;
+use App\Services\Sms\SmsEvents;
 use App\Support\Money;
 use App\Support\PropertyIdentity;
 use App\Support\PropertySnapshot;
 use App\Validation\PaymentValidator;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
@@ -45,6 +46,9 @@ final class RecordPayment
     private function record(array $data, User $recorder): Payment
     {
         Gate::forUser($recorder)->authorize('create', Payment::class);
+        if (blank($data['dues_obligation_id'] ?? null) && array_key_exists('billing_month', $data)) {
+            $data['dues_obligation_id'] = app(PrepareMonthlyAssessment::class)->handle($data, $recorder)->id;
+        }
         if (blank($data['dues_obligation_id'] ?? null) && filled($data['homeowner_id'] ?? null) && filled($data['dues_setting_id'] ?? null)) {
             Validator::make($data, [
                 'homeowner_id' => ['required', 'integer', 'exists:homeowners,id'],
@@ -141,7 +145,7 @@ final class RecordPayment
                     'status' => $balance === 0 ? 'Paid' : ($obligation->due_date->isBefore(today()) ? 'Overdue' : 'Partial'),
                 ]);
 
-                return Payment::query()->create([
+                $payment = Payment::query()->create([
                     'homeowner_id' => $obligation->homeowner_id,
                     'payer_homeowner_id' => $payer->id,
                     'dues_setting_id' => $obligation->dues_setting_id,
@@ -163,11 +167,14 @@ final class RecordPayment
                     'reviewed_by' => $recorder->id,
                     'recorded_by' => $recorder->id,
                     'property_snapshot' => [
-                        ...Arr::only($obligation->homeowner->getAttributes(), ['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix', 'property_key', 'address_key']),
+                        ...PropertySnapshot::from($obligation->homeowner),
                         'collector_id' => $recorder->id, 'collector_name' => $recorder->full_name,
                         'collector_authorized' => $recorder->hasAnyRole(['hoa_admin', 'hoa_staff']) && $recorder->can('manage_payments'),
                     ],
                 ]);
+                app(SmsEvents::class)->payment($payment);
+
+                return $payment;
             }, 3);
         } catch (QueryException $exception) {
             if ($existing = Payment::withTrashed()->where('submission_token', $validated['submission_token'])->first()) {

@@ -10,6 +10,7 @@ use App\Services\LandlordSelectionTokens;
 use App\Support\PersonName;
 use App\Support\PropertyAddress;
 use App\Support\PropertyIdentity;
+use App\Support\PropertyPhase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,8 +23,7 @@ final class LandlordAvailabilityController extends Controller
             'landlord_name' => ['nullable', 'string', 'max:100', "regex:/^[\pL\s'.-]+$/u"],
             'search' => ['nullable', 'string', 'max:100', "regex:/^[\pL\s'.-]+$/u"],
             'house_number' => ['prohibited'],
-            'phase_suffix' => ['required', 'string', 'regex:/^[A-Z0-9]{1,10}$/D'],
-            'street' => ['required', 'string', 'max:100'],
+            'phase_suffix' => PropertyPhase::rules(),
             'block' => ['required', 'string', 'max:20'],
             'lot' => ['required', 'string', 'max:20'],
         ]);

@@ -11,6 +11,7 @@ use App\Models\SystemSetting;
 use App\Models\User;
 use App\Support\OperationalAccess;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -22,14 +23,19 @@ final class ResidencyCertificatePreviews
         OperationalAccess::authorize($actor, 'manage_requests');
         app(CertificateTemplates::class)->assertSchema(true);
         $payload = $this->payload($data, $requestId);
-        $snapshot = $this->context($payload, actor: $actor, stage: true);
-        // Fail on fit/font/source errors before creating even a preview record.
-        app(OriginalCertificateRenderer::class)->render($snapshot['layout'], app(OriginalCertificateRenderer::class)->values($snapshot, now()), true);
-        $token = Str::random(64);
-        CertificatePreview::create(['token_hash' => hash('sha256', $token), 'actor_id' => $actor->id,
-            'payload' => $payload, 'snapshot' => $snapshot, 'fingerprint' => $this->fingerprint($snapshot), 'expires_at' => now()->addMinutes(15)]);
 
-        return $token;
+        return DB::transaction(function () use ($payload, $actor): string {
+            app(CertificateDuesEligibility::class)->lockForResident($payload['homeowner_id']);
+            app(CertificateDuesEligibility::class)->assertEligible(Homeowner::findOrFail($payload['homeowner_id']), 'homeowner_id', true);
+            $snapshot = $this->context($payload, lock: true, actor: $actor, stage: true);
+            // Fail on fit/font/source errors before creating even a preview record.
+            app(OriginalCertificateRenderer::class)->render($snapshot['layout'], app(OriginalCertificateRenderer::class)->values($snapshot, now()), true);
+            $token = Str::random(64);
+            CertificatePreview::create(['token_hash' => hash('sha256', $token), 'actor_id' => $actor->id,
+                'payload' => $payload, 'snapshot' => $snapshot, 'fingerprint' => $this->fingerprint($snapshot), 'expires_at' => now()->addMinutes(15)]);
+
+            return $token;
+        });
     }
 
     public function read(string $token, User $actor): CertificatePreview
@@ -50,7 +56,13 @@ final class ResidencyCertificatePreviews
     {
         OperationalAccess::authorize($actor, 'manage_requests');
         app(CertificateTemplates::class)->assertSchema(true);
-        $preview = CertificatePreview::whereKey(hash('sha256', $token ?? ''))->lockForUpdate()->first();
+        $preview = CertificatePreview::whereKey(hash('sha256', $token ?? ''))->first();
+        $this->assertOwner($preview, $actor);
+        if ($preview->payload != $this->payload($data, $requestId)) {
+            $this->invalid();
+        }
+        app(CertificateDuesEligibility::class)->lockForResident((int) $preview->payload['homeowner_id']);
+        $preview = CertificatePreview::whereKey($preview->token_hash)->lockForUpdate()->first();
         $this->assertOwner($preview, $actor);
         if ($preview->payload != $this->payload($data, $requestId)) {
             $this->invalid();
@@ -107,10 +119,13 @@ final class ResidencyCertificatePreviews
             $owner = Homeowner::whereKey($owner->id)->lockForUpdate()->firstOrFail();
         }
         $owner->setRelation('user', $user);
+        app(CertificateDuesEligibility::class)->assertEligible($owner, 'homeowner_id', $lock);
         if ($payload['type'] === CohabitationCertificateData::TYPE) {
             $data = app(CohabitationCertificateData::class)->validate($payload, $owner, $request, $lock);
             $source = app(CohabitationCertificateSource::class);
-            $template = $lock ? $source->approved() : ($stage ? $source->draft($actor) : $source->previewTemplate());
+            // Preparing an actor-bound review draft may stage the source. Issuance
+            // validation still requires the approved source under the same locks.
+            $template = $stage ? $source->draft($actor) : ($lock ? $source->approved() : $source->previewTemplate());
             app(OriginalCertificateRenderer::class)->assertYear($template->layout, now());
             $layout = $template->layout;
             // Approval metadata is not document content: a reviewed draft can be confirmed later.
@@ -121,7 +136,7 @@ final class ResidencyCertificatePreviews
             }
 
             return ['resident_name' => $user->full_name, 'address' => $data['address'], 'purpose' => $payload['purpose'],
-                'registered_address' => Arr::only($owner->getAttributes(), ['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix']),
+                'registered_address' => Arr::only($owner->getAttributes(), ['block', 'lot', 'phase', 'phase_suffix']),
                 'cohabitation' => $data, 'template_id' => $template->id, 'template_version' => $template->version,
                 'layout' => $layout, 'signatory_name' => $layout['printed_signatory_name'], 'signatory_title' => $layout['printed_signatory_title'],
                 'issuance_date' => now()->toDateString()];
@@ -129,10 +144,10 @@ final class ResidencyCertificatePreviews
         $template = app(CertificateTemplates::class)->assertIssuable('Certificate of Residency');
         app(OriginalCertificateRenderer::class)->assertYear($template->layout, now());
         $font = app(ResidencyFont::class)->checksum();
-        $address = $request?->address_snapshot ?? Arr::only($owner->getAttributes(), ['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix']);
+        $address = Arr::only($request?->address_snapshot ?? $owner->getAttributes(), ['block', 'lot', 'phase', 'phase_suffix']);
 
         return ['resident_name' => $user->full_name, 'address' => $address, 'purpose' => $payload['purpose'],
-            'registered_address' => Arr::only($owner->getAttributes(), ['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix']),
+            'registered_address' => Arr::only($owner->getAttributes(), ['block', 'lot', 'phase', 'phase_suffix']),
             'template_id' => $template->id, 'template_version' => $template->version,
             'layout' => [...$template->layout, 'font_sha256' => $font],
             'signatory_name' => $settings->certificate_signatory_name, 'signatory_title' => $settings->certificate_signatory_title,

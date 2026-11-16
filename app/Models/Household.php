@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\CurrentPropertyAddress;
 use App\Support\PropertyIdentity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -17,8 +18,10 @@ final class Household extends Model
     protected static function booted(): void
     {
         self::saving(function (self $household): void {
-            $household->phase_suffix = PropertyIdentity::suffix($household->phase_suffix);
-            $household->property_key = PropertyIdentity::confirmedKey($household);
+            if (! $household->exists || $household->isDirty(['phase', 'phase_suffix', 'block', 'lot'])) {
+                $household->phase_suffix = PropertyIdentity::suffix($household->phase_suffix);
+                $household->property_key = PropertyIdentity::confirmedKey($household);
+            }
         });
     }
 
@@ -44,6 +47,6 @@ final class Household extends Model
 
     public function getFullAddressAttribute(): string
     {
-        return PropertyIdentity::address($this);
+        return CurrentPropertyAddress::display($this);
     }
 }

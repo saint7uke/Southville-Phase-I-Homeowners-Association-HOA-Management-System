@@ -14,6 +14,10 @@ final class ReceiptActions
     public static function make(): array
     {
         return [
+            Action::make('monthlyReceiptPending')->label(__('Monthly dues not fully paid'))->icon('heroicon-o-lock-closed')->disabled()
+                ->tooltip(__('Fully settle the monthly dues before generating a monthly receipt.'))
+                ->visible(fn (Payment $record): bool => ! $record->trashed() && $record->duesObligation?->duesSetting?->frequency === 'Monthly'
+                    && $record->duesObligation->status !== 'Paid' && app(PaymentReceiptResolver::class)->receiptDocument($record) === null),
             Action::make('printReceipt')->label(__('View / Print'))->icon('heroicon-o-printer')
                 ->url(fn (Payment $record): ?string => app(PaymentReceiptResolver::class)->documentUrl($record, true))
                 ->openUrlInNewTab()->visible(fn (Payment $record): bool => app(PaymentReceiptResolver::class)->state($record) === 'saved'),

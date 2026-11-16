@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Actions\Payments\ChangePaymentDeletionState;
 use App\Actions\Payments\ConfirmReceiptDetails;
+use App\Actions\Payments\RecordAdditionalPayment;
 use App\Actions\Payments\RecordPayment;
+use App\Actions\Payments\ReviewPaymentProof;
+use App\Actions\Payments\UpdatePaymentMetadata;
 use App\Filament\Resources\Certificates\Pages\CreateCertificate;
 use App\Filament\Resources\Certificates\Pages\ListCertificates;
+use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Models\Certificate;
 use App\Models\DuesObligation;
 use App\Models\DuesSetting;
@@ -20,11 +25,14 @@ use App\Services\ButawReceiptEligibility;
 use App\Services\ButawReceipts;
 use App\Services\ButawReceiptSource;
 use App\Services\OriginalCertificateRenderer;
+use App\Services\PaymentReceiptResolver;
 use App\Support\OriginalLayoutPdf;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
@@ -54,13 +62,16 @@ final class ButawReceiptTest extends TestCase
 
     public function test_recorded_partial_cash_payment_has_property_and_collector_snapshot(): void
     {
-        $payment = $this->payment();
-        $snapshot = app(ButawReceiptEligibility::class)->snapshot($payment);
+        $payment = $this->payment('500.00');
+        $snapshot = app(ButawReceiptEligibility::class)->installmentSnapshot($payment);
         $this->assertSame('100.00', $snapshot['values']['amount']);
         $this->assertSame('October', $snapshot['values']['month']);
         $this->assertSame($this->admin->full_name, $snapshot['values']['collector']);
         $this->assertSame('Partial', $payment->status);
         $this->assertSame('A', $payment->property_snapshot['phase_suffix']);
+        $this->assertArrayNotHasKey('house_number', $payment->property_snapshot);
+        $this->expectException(ValidationException::class);
+        app(ButawReceiptEligibility::class)->snapshot($payment);
     }
 
     public function test_receipt_source_confirmation_is_hidden_once_the_current_source_is_approved(): void
@@ -287,7 +298,14 @@ final class ButawReceiptTest extends TestCase
         $this->assertStringNotContainsString('/AcroForm', $bytes);
         $this->actingAs($this->admin, 'admin')->get(route('certificates.butaw.download', $document))->assertOk()->assertDownload();
         $this->get(route('certificates.butaw.download', ['paymentDocument' => $document, 'view' => 1]))->assertOk()->assertHeader('Content-Disposition', 'inline; filename=resibo-butaw-'.$document->id.'.pdf');
-        $payment->update(['review_status' => 'Rejected']);
+        try {
+            $payment->update(['review_status' => 'Rejected']);
+            $this->fail('Issued settlement contributions must be protected.');
+        } catch (ValidationException) {
+            $this->assertSame('Recorded', $payment->fresh()->review_status);
+        }
+        // Simulate external corruption to retain download-time eligibility coverage.
+        DB::table('payments')->where('id', $payment->id)->update(['review_status' => 'Rejected']);
         $this->get(route('certificates.butaw.download', $document))->assertNotFound();
     }
 
@@ -325,7 +343,7 @@ final class ButawReceiptTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         Livewire::actingAs($this->admin, 'admin')->test(CreateCertificate::class)
             ->fillForm(['document_kind' => 'butaw', 'receipt_homeowner_id' => $payment->homeowner_id, 'payment_id' => $payment->id])->call('preparePreview')->assertHasNoFormErrors()
-            ->call('generateReceipt')->assertHasNoFormErrors()->assertNotified('Monthly dues receipt is ready.');
+            ->call('generateReceipt')->assertHasNoFormErrors()->assertNotified('Monthly Dues Receipt Generated Successfully!');
         $this->assertSame(1, PaymentDocument::count());
         $this->assertSame(0, Certificate::count());
     }
@@ -470,7 +488,7 @@ final class ButawReceiptTest extends TestCase
 
     public function test_actual_tenant_payer_is_distinct_from_the_liable_homeowner_in_receipt_details(): void
     {
-        $existing = $this->payment();
+        $existing = $this->payment('125.00');
         $user = User::factory()->create(['account_status' => 'Active']);
         $user->assignRole('homeowner');
         $tenant = Homeowner::create([
@@ -485,7 +503,7 @@ final class ButawReceiptTest extends TestCase
             ->set('data.receipt_homeowner_id', $existing->homeowner_id)->set('data.payment_id', $payment->id);
         $this->assertSame($user->full_name, $page->instance()->receiptDetails()['payer_name']);
         $this->assertSame($existing->homeowner->user->full_name, $page->instance()->receiptDetails()['liable_name']);
-        $this->assertSame('25.00', $page->instance()->receiptDetails()['values']['amount']);
+        $this->assertSame('125.00', $page->instance()->receiptDetails()['values']['amount']);
         $page->set('data.receipt_homeowner_id', $tenant->id)->assertSchemaComponentExists('payment_id', null, fn ($field) => $field->getOptions() === []);
     }
 
@@ -519,7 +537,260 @@ final class ButawReceiptTest extends TestCase
         $this->assertDatabaseCount('payment_documents', 0);
     }
 
-    private function payment(): Payment
+    public function test_installments_preserve_history_and_produce_one_aggregate_settlement_receipt(): void
+    {
+        $this->syntheticSource();
+        $first = $this->payment('500.00');
+        $original = $first->fresh()->getAttributes();
+        $second = $this->additional($first, '150.00');
+        $final = $this->additional($first, '250.00');
+        $this->assertSame($original, $first->fresh()->getAttributes());
+        $this->assertSame('Partial', $second->status);
+        $this->assertSame('Paid', $final->status);
+        $this->assertSame('Paid', $first->duesObligation->fresh()->status);
+        $snapshot = app(ButawReceiptEligibility::class)->snapshot($first->fresh());
+        $this->assertSame('500.00', $snapshot['values']['amount']);
+        $this->assertSame($final->id, $snapshot['payment_id']);
+        $this->assertCount(3, $snapshot['installments']);
+        $service = app(ButawReceipts::class);
+        $a = $service->prepare($first->id, $this->admin);
+        $b = $service->prepare($second->id, $this->admin);
+        $document = $service->generate($a, $first->id, $this->admin);
+        $this->assertSame($document->id, $service->generate($b, $second->id, $this->admin)->id);
+        $this->assertSame($final->id, $document->payment_id);
+        $this->assertSame($first->dues_obligation_id, $document->settlement_obligation_id);
+        $this->assertDatabaseCount('payment_documents', 1);
+        $this->actingAs($this->admin, 'admin');
+        $resolver = app(PaymentReceiptResolver::class);
+        $this->assertSame($resolver->documentUrl($final), $resolver->documentUrl($first->fresh()));
+    }
+
+    public function test_partial_preview_is_blocked_without_creating_intent(): void
+    {
+        $this->syntheticSource();
+        $payment = $this->payment('500.00');
+        try {
+            app(ButawReceipts::class)->prepare($payment->id, $this->admin);
+            $this->fail('Partial monthly receipts must be blocked.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('payment_id', $exception->errors());
+        }
+        $this->assertDatabaseCount('payment_document_previews', 0);
+        $this->assertDatabaseCount('payment_documents', 0);
+    }
+
+    public function test_additional_payment_retries_and_invalid_amounts_do_not_duplicate_or_overpay(): void
+    {
+        $payment = $this->payment('500.00');
+        $token = (string) Str::uuid();
+        $second = $this->additional($payment, '150.00', ['submission_token' => $token]);
+        $this->assertSame($second->id, $this->additional($payment, '150.00', ['submission_token' => $token])->id);
+        foreach (['0', '-1', '250.01'] as $amount) {
+            try {
+                $this->additional($payment, $amount);
+                $this->fail('Invalid installment accepted.');
+            } catch (ValidationException) {
+                $this->assertSame('250.00', $payment->duesObligation->fresh()->amount_paid);
+            }
+        }
+        $this->additional($payment, '250.00');
+        $this->expectException(ValidationException::class);
+        $this->additional($payment, '1.00');
+    }
+
+    public function test_crafted_obligation_switch_and_homeowner_access_are_denied(): void
+    {
+        $payment = $this->payment('500.00');
+        try {
+            $this->additional($payment, '1.00', ['dues_obligation_id' => $this->payment()->dues_obligation_id]);
+            $this->fail('Forged obligation accepted.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('dues_obligation_id', $exception->errors());
+        }
+        $this->expectException(AuthorizationException::class);
+        app(RecordAdditionalPayment::class)->handle($payment, ['amount_paid' => '1.00'], $payment->homeowner->user);
+    }
+
+    public function test_settlement_rejects_inconsistent_totals_and_unsupported_installments(): void
+    {
+        $first = $this->payment('500.00');
+        $this->additional($first, '400.00');
+        foreach ([['payment_method' => 'GCash'], ['penalty' => '1.00'], ['property_snapshot' => null]] as $change) {
+            $original = $first->getAttributes();
+            $first->forceFill($change)->save();
+            try {
+                app(ButawReceiptEligibility::class)->snapshot($first->fresh());
+                $this->fail('Unsupported contributing payment accepted.');
+            } catch (ValidationException) {
+                $this->assertDatabaseCount('payment_documents', 0);
+            }
+            $first->setRawAttributes($original)->save();
+        }
+        $first->duesObligation->update(['amount_paid' => '499.00']);
+        $this->expectException(ValidationException::class);
+        app(ButawReceiptEligibility::class)->snapshot($first->fresh());
+    }
+
+    public function test_issued_settlement_freezes_all_contributing_payments(): void
+    {
+        $this->syntheticSource();
+        $first = $this->payment('500.00');
+        $last = $this->additional($first, '400.00');
+        $service = app(ButawReceipts::class);
+        $service->generate($service->prepare($last->id, $this->admin), $last->id, $this->admin);
+        foreach ([$first, $last] as $payment) {
+            foreach (['edit', 'archive'] as $operation) {
+                try {
+                    if ($operation === 'edit') {
+                        app(UpdatePaymentMetadata::class)->handle($payment, ['payment_date' => '2026-10-19'], $this->admin);
+                    } else {
+                        app(ChangePaymentDeletionState::class)->delete($payment, $this->admin);
+                    }
+                    $this->fail('Issued settlement changed.');
+                } catch (ValidationException) {
+                    $this->assertFalse($payment->fresh()->trashed());
+                    $this->assertSame('2026-10-20', $payment->fresh()->payment_date->toDateString());
+                }
+            }
+        }
+    }
+
+    public function test_pending_proofs_reserve_balance_and_only_approval_settles_the_month(): void
+    {
+        $first = $this->payment('500.00');
+        // Existing legacy proof fixture: new electronic submissions remain disabled.
+        $pending = Payment::create([
+            'homeowner_id' => $first->homeowner_id, 'payer_homeowner_id' => $first->payer_homeowner_id,
+            'dues_setting_id' => $first->dues_setting_id, 'dues_obligation_id' => $first->dues_obligation_id,
+            'amount_paid' => '200.00', 'penalty' => '0.00', 'balance' => '200.00', 'status' => 'Pending Review',
+            'review_status' => 'Pending', 'payment_method' => 'Cash', 'payment_date' => '2026-10-20',
+            'covered_period' => 'October 2026', 'property_snapshot' => $first->property_snapshot,
+            'recorded_by' => $this->admin->id,
+        ]);
+        try {
+            $this->additional($first, '200.01');
+            $this->fail('Reserved balance must not be allocated twice.');
+        } catch (ValidationException) {
+            $this->assertSame('100.00', $first->duesObligation->fresh()->amount_paid);
+        }
+        $this->additional($first, '200.00');
+        $this->assertSame('Partial', $first->duesObligation->fresh()->status);
+        app(ReviewPaymentProof::class)->approve($pending, $this->admin);
+        $this->assertSame('Paid', $first->duesObligation->fresh()->status);
+        $this->assertSame('500.00', app(ButawReceiptEligibility::class)->snapshot($first->fresh())['values']['amount']);
+    }
+
+    public function test_changes_to_an_earlier_installment_invalidate_the_settlement_preview(): void
+    {
+        $this->syntheticSource();
+        $first = $this->payment('500.00');
+        $last = $this->additional($first, '400.00');
+        $service = app(ButawReceipts::class);
+        $token = $service->prepare($last->id, $this->admin);
+        app(UpdatePaymentMetadata::class)->handle($first, ['payment_date' => '2026-10-19'], $this->admin);
+        try {
+            $service->generate($token, $last->id, $this->admin);
+            $this->fail('Earlier installments belong to the preview fingerprint.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('preview_token', $exception->errors());
+        }
+        $this->assertDatabaseCount('payment_documents', 0);
+    }
+
+    public function test_staff_can_record_installments_and_another_billing_month_remains_payable(): void
+    {
+        $first = $this->payment('500.00');
+        $staff = User::factory()->create(['account_status' => 'Active']);
+        $staff->assignRole('hoa_staff');
+        $final = app(RecordAdditionalPayment::class)->handle($first, [
+            'amount_paid' => '400.00', 'payment_method' => 'Cash', 'payment_date' => '2026-10-20',
+        ], $staff);
+        $this->assertSame($staff->id, $final->recorded_by);
+        $next = DuesObligation::create(['homeowner_id' => $first->homeowner_id, 'dues_setting_id' => $first->dues_setting_id,
+            'billing_year' => 2026, 'billing_month' => 11, 'due_date' => '2026-11-30',
+            'amount_due' => '500.00', 'amount_paid' => '0.00', 'penalty_amount' => '0.00', 'status' => 'Pending']);
+        $payment = app(RecordPayment::class)->handle(['dues_obligation_id' => $next->id,
+            'amount_paid' => '500.00', 'payment_method' => 'Cash', 'payment_date' => '2026-10-20'], $staff);
+        $this->assertSame('Paid', $payment->duesObligation->fresh()->status);
+        $this->assertSame($staff->full_name, app(ButawReceiptEligibility::class)->snapshot($first->fresh())['values']['collector']);
+    }
+
+    public function test_additional_payment_failure_rolls_back_ledger_and_audit_records(): void
+    {
+        $first = $this->payment('500.00');
+        $auditCount = DB::table('audit_logs')->count();
+        Event::listen('eloquent.creating: '.Payment::class, fn () => throw new \RuntimeException('Synthetic installment persistence failure'));
+        try {
+            $this->additional($first, '400.00');
+            $this->fail('Payment creation must fail.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Synthetic installment persistence failure', $exception->getMessage());
+        } finally {
+            Event::forget('eloquent.creating: '.Payment::class);
+        }
+        $this->assertDatabaseCount('payments', 1);
+        $this->assertSame('100.00', $first->duesObligation->fresh()->amount_paid);
+        $this->assertSame($auditCount, DB::table('audit_logs')->count());
+    }
+
+    public function test_settlement_document_resolution_does_not_grant_an_earlier_payer_access_to_final_payer_details(): void
+    {
+        $this->syntheticSource();
+        $first = $this->payment('500.00');
+        $tenantUser = User::factory()->create(['account_status' => 'Active']);
+        $tenantUser->assignRole('homeowner');
+        $tenant = Homeowner::create([
+            ...$first->homeowner->only(['block', 'lot', 'phase', 'phase_suffix', 'residency_date']),
+            'user_id' => $tenantUser->id, 'ownership_type' => 'Tenant', 'status' => 'Active',
+            'landlord_homeowner_id' => $first->homeowner_id,
+        ]);
+        $tenantPayment = $this->additional($first, '100.00', ['payer_homeowner_id' => $tenant->id]);
+        $final = $this->additional($first, '300.00');
+        $service = app(ButawReceipts::class);
+        $document = $service->generate($service->prepare($final->id, $this->admin), $final->id, $this->admin);
+        $this->actingAs($tenantUser, 'homeowner');
+        Filament::setCurrentPanel('homeowner');
+        $this->assertNull(app(PaymentReceiptResolver::class)->receiptDocument($tenantPayment->fresh()));
+        $this->get(route('certificates.butaw.download', $document))->assertNotFound();
+        $this->assertDatabaseCount('payment_documents', 1);
+    }
+
+    public function test_installment_dialog_history_and_cancel_preserve_records(): void
+    {
+        $this->payment('500.00');
+        $payment = $this->payment('500.00');
+        $this->actingAs($this->admin, 'admin');
+        Filament::setCurrentPanel('admin');
+        $action = TestAction::make('recordAdditionalPayment')->table($payment);
+        $page = Livewire::test(ListPayments::class)
+            ->assertActionVisible($action)->mountAction($action)->assertActionMounted($action);
+        $content = $page->instance()->getMountedAction()->getModalContent()->render();
+        $this->assertStringContainsString('Available balance', $content);
+        $this->assertStringContainsString('PHP 400.00', $content);
+        $page->unmountAction();
+        $this->assertDatabaseCount('payments', 2);
+        $page->callAction($action, ['payer_homeowner_id' => $payment->homeowner_id, 'amount_paid' => '400.01',
+            'payment_date' => '2026-10-20', 'payment_method' => 'Cash', 'submission_token' => (string) Str::uuid()])
+            ->assertHasActionErrors(['amount_paid']);
+        $this->assertDatabaseCount('payments', 2);
+        $page->unmountAction();
+        $page->callAction($action, ['payer_homeowner_id' => $payment->homeowner_id, 'amount_paid' => '400.00',
+            'payment_date' => '2026-10-20', 'payment_method' => 'Cash', 'submission_token' => (string) Str::uuid()])->assertHasNoActionErrors();
+        $this->assertDatabaseCount('payments', 3);
+        $page->mountAction(TestAction::make('installmentHistory')->table($payment));
+        $content = $page->instance()->getMountedAction()->getModalContent()->render();
+        $this->assertStringContainsString($payment->or_number, $content);
+        $this->assertStringContainsString('Paid', $content);
+    }
+
+    private function additional(Payment $payment, string $amount, array $extra = []): Payment
+    {
+        return app(RecordAdditionalPayment::class)->handle($payment, [
+            'amount_paid' => $amount, 'payment_method' => 'Cash', 'payment_date' => '2026-10-20', ...$extra,
+        ], $this->admin);
+    }
+
+    private function payment(string $assessment = '100.00'): Payment
     {
         $user = User::factory()->create(['account_status' => 'Active']);
         $user->assignRole('homeowner');
@@ -527,7 +798,7 @@ final class ButawReceiptTest extends TestCase
             'block' => (string) $user->id, 'lot' => '2', 'phase' => 'Southville Phase I', 'phase_suffix' => 'A', 'residency_date' => '2020-01-01', 'ownership_type' => 'Owner', 'status' => 'Active']);
         $schedule = DuesSetting::create(['name' => 'Test monthly '.Str::random(8), 'amount' => '500.00', 'frequency' => 'Monthly', 'starts_on' => '2026-01-01', 'is_active' => true]);
         $obligation = DuesObligation::create(['homeowner_id' => $resident->id, 'dues_setting_id' => $schedule->id, 'billing_year' => 2026, 'billing_month' => 10,
-            'due_date' => '2026-10-31', 'amount_due' => '500.00', 'penalty_amount' => '0.00', 'amount_paid' => '0.00', 'status' => 'Pending']);
+            'due_date' => '2026-10-31', 'amount_due' => $assessment, 'penalty_amount' => '0.00', 'amount_paid' => '0.00', 'status' => 'Pending']);
 
         return app(RecordPayment::class)->handle(['dues_obligation_id' => $obligation->id, 'payment_method' => 'Cash', 'amount_paid' => '100.00', 'penalty' => '0.00', 'payment_date' => '2026-10-20'], $this->admin);
     }

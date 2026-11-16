@@ -84,7 +84,7 @@ test('admin generates Residency certificates entirely from the certificate resou
         await dialog.getByRole('switch').nth(1).click();
         await dialog.getByLabel('Approval evidence / note').fill('Synthetic HOA approval for this isolated browser fixture only.');
         await dialog.getByRole('button', { name: 'Confirm source', exact: true }).click();
-        await expect(page.getByText('Official Residency source confirmed', { exact: true })).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByText('Residency Certificate Source Confirmed Successfully!', { exact: true })).toBeVisible({ timeout: 30_000 });
     }
     await page.reload();
     await page.getByRole('button', { name: 'Document setup', exact: true }).click();

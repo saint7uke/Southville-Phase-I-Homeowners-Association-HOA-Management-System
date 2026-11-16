@@ -1,3 +1,6 @@
+@import './workflow-revisions.css';
+@import './registration-scroll.css';
+
 .hoa-loading { min-height: 100svh; display: grid; place-items: center; padding: 2rem; background: #082c42; color: #fff; font-family: 'Poppins', system-ui, sans-serif; }
 
 .hoa-landing {
@@ -32,6 +35,7 @@
 .hoa-eyebrow > span { width: 2rem; height: 2px; background: currentColor; }
 .hoa-eyebrow-light { color: #ccefff; }
 .hoa-button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: .65rem; padding: .78rem 1.35rem; border: 1px solid transparent; border-radius: 999px; font-size: .84rem; font-weight: 700; transition: transform .2s ease, background-color .2s ease, border-color .2s ease; }
+.hoa-action-icon { width: 1.1rem; height: 1.1rem; flex: none; }
 .hoa-button:hover { transform: translateY(-2px); }
 .hoa-button-small { min-height: 42px; padding: .58rem 1.05rem; font-size: .78rem; }
 .hoa-button-primary { background: var(--hoa-blue); color: #052637 !important; }
@@ -121,6 +125,7 @@
 
 .hoa-announcements { background: #fff; }
 .hoa-heading-row { max-width: none; }
+.hoa-announcement-header { display: flex; justify-content: flex-end; margin-bottom: 1.5rem; }
 .hoa-announcement-grid { display: grid; gap: 1rem; }
 .hoa-announcement-card { position: relative; min-height: 290px; padding: 1.6rem; border: 1px solid var(--hoa-line); border-radius: 18px; }
 .hoa-announcement-card > div:first-child { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; padding-right: 2rem; color: var(--hoa-muted); font-size: .68rem; }
@@ -231,6 +236,28 @@
 .hoa-auth-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgb(5 38 57 / .95), rgb(8 44 66 / .78)), url('/images/southville-community-hero.webp') center / cover; }
 .hoa-auth-card { position: relative; z-index: 2; width: min(100%, 32rem); padding: clamp(1.5rem, 5vw, 3rem); border: 1px solid rgb(255 255 255 / .25); border-radius: 20px; background: #fff; box-shadow: 0 25px 50px rgb(2 16 24 / .25); }
 .hoa-auth-card-confirmation { text-align: center; }
+.hoa-submitted-page { margin: 0; color-scheme: light; font-family: 'Poppins', system-ui, sans-serif; }
+.hoa-auth-shell.hoa-submitted-shell { align-content: center; padding-block: clamp(1rem, 4vw, 3rem); }
+.hoa-submitted-shell .hoa-auth-overlay { background: linear-gradient(135deg, rgb(5 38 57 / .64), rgb(8 44 66 / .48)), url('/images/hoa-hero.webp') center / cover; }
+.hoa-submitted-shell .hoa-auth-card-confirmation { width: min(100%, 36rem); display: grid; gap: 1rem; margin-block: auto; padding: clamp(1.25rem, 4vw, 2.5rem); color: #193f50; }
+.hoa-submitted-shell .hoa-auth-brand { margin: 0 0 .25rem; gap: .5rem; }
+.hoa-submitted-logo { width: 72px; height: 72px; object-fit: contain; margin-inline: auto; }
+.hoa-submitted-shell .hoa-status-icon { margin: 0 auto; width: 3rem; height: 3rem; }
+.hoa-submitted-shell .hoa-status-icon svg { width: 1.65rem; height: 1.65rem; }
+.hoa-submitted-shell .hoa-submitted-icon-approved { background: #e6f7ed; color: #176b3a; }
+.hoa-submitted-shell .hoa-submitted-icon-rejected { background: #ffeded; color: #9d2929; }
+.hoa-submitted-shell .hoa-eyebrow { justify-content: center; margin: 0; }
+.hoa-submitted-shell .hoa-eyebrow > span:last-child { width: auto; height: auto; background: transparent; }
+.hoa-submitted-shell .hoa-auth-lead, .hoa-submitted-shell .hoa-hint { margin: 0; line-height: 1.65; overflow-wrap: anywhere; }
+.hoa-submitted-shell .hoa-status-pill { justify-self: center; margin: 0; }
+.hoa-submitted-shell .hoa-status-pill > span:last-child { width: auto; height: auto; background: transparent; }
+.hoa-submitted-details { display: grid; gap: .85rem; }
+.hoa-submitted-shell .hoa-auth-alert { margin: 0; overflow-wrap: anywhere; }
+.hoa-submitted-actions { display: grid; gap: .75rem; padding-top: .5rem; }
+.hoa-submitted-actions .hoa-button { min-height: 48px; white-space: normal; }
+.hoa-submitted-page :is(a, select):focus-visible { outline: 3px solid #0879ad; outline-offset: 3px; }
+.hoa-submitted-skip { position: fixed; top: -10rem; left: 1rem; z-index: 100; padding: .75rem; background: #fff; color: #153e50; }
+.hoa-submitted-skip:focus { top: 1rem; }
 .hoa-auth-brand { display: flex; flex-direction: column; align-items: center; gap: .65rem; margin-bottom: 2rem; color: var(--hoa-ink); text-align: center; }
 .hoa-auth-brand .hoa-brand-mark { width: 48px; height: 48px; color: var(--hoa-navy); background: #e3f5fc; border-color: transparent; }
 .hoa-auth-brand-title { font-size: 1rem; font-weight: 700; letter-spacing: -.02em; }

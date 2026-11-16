@@ -10,6 +10,7 @@ use App\Models\Homeowner;
 use App\Models\ServiceRequest;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Services\CertificateDuesEligibility;
 use App\Services\CertificateTemplates;
 use App\Services\CertificateTypeCatalog;
 use App\Services\CohabitationCertificateData;
@@ -101,6 +102,7 @@ final class IssueCertificate
 
         try {
             return DB::transaction(function () use ($request, $issuer, $purpose, $previewToken, $documentData, &$storedPath): Certificate {
+                app(CertificateDuesEligibility::class)->lockForResident($request->homeowner_id);
                 $request = ServiceRequest::query()->lockForUpdate()->findOrFail($request->getKey());
                 $resolvedPurpose = $purpose ?? Str::limit((string) $request->details, 255, '');
                 $preview = in_array($request->request_type, CertificateTypeCatalog::ALLOWED, true)
@@ -155,6 +157,7 @@ final class IssueCertificate
 
         try {
             return DB::transaction(function () use ($data, $issuer, $isCustom, &$storedPath): Certificate {
+                app(CertificateDuesEligibility::class)->lockForResident((int) $data['homeowner_id']);
                 $preview = in_array($data['type'], CertificateTypeCatalog::ALLOWED, true) ? app(ResidencyCertificatePreviews::class)->lockAndValidate($data['preview_token'] ?? null, $data, $issuer) : null;
                 if ($preview?->certificate_id) {
                     return Certificate::findOrFail($preview->certificate_id);
@@ -202,6 +205,7 @@ final class IssueCertificate
     /** @param array<string, mixed> $data */
     private function persist(array $data, User $issuer): Certificate
     {
+        app(CertificateDuesEligibility::class)->assertEligible(Homeowner::findOrFail($data['homeowner_id']), 'homeowner_id', true);
         // Keep signatory validation and its document snapshot consistent during configuration changes.
         $settings = SystemSetting::current();
         $settings = SystemSetting::query()->whereKey($settings->id)->lockForUpdate()->firstOrFail();
@@ -215,7 +219,7 @@ final class IssueCertificate
         if ($template?->renderer === OriginalCertificateRenderer::ID) {
             app(OriginalCertificateRenderer::class)->assertYear($template->layout, $issuedAt);
         }
-        $address = $data['address_snapshot'] ?? Arr::only($resident->getAttributes(), ['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix']);
+        $address = Arr::only($data['address_snapshot'] ?? $resident->getAttributes(), ['block', 'lot', 'phase', 'phase_suffix']);
         $snapshot = [
             'hoa_name' => $settings->hoa_name, 'hoa_address' => $settings->address,
             'resident_name' => $resident->user->full_name, 'address' => $address,

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\DuesSettings\Pages;
 
 use App\Actions\Dues\SaveDuesSetting;
+use App\Filament\Concerns\HasSpecificFeedback;
 use App\Filament\Resources\DuesSettings\DuesSettingResource;
 use App\Models\User;
 use App\Support\AuthenticatedActor;
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CreateDuesSetting extends CreateRecord
 {
+    use HasSpecificFeedback;
+
     protected static string $resource = DuesSettingResource::class;
 
     protected function getCreateFormAction(): Action
@@ -32,10 +35,5 @@ class CreateDuesSetting extends CreateRecord
         }
 
         return app(SaveDuesSetting::class)->create($data, $actor);
-    }
-
-    protected function getCreatedNotificationTitle(): ?string
-    {
-        return 'Dues schedule created successfully';
     }
 }

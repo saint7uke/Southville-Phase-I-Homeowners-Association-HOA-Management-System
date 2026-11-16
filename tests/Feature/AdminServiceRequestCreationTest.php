@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Actions\ServiceRequests\CreateServiceRequest as CreateServiceRequestAction;
 use App\Filament\Resources\ServiceRequests\Pages\CreateServiceRequest;
+use App\Models\EmailDelivery;
 use App\Models\Homeowner;
 use App\Models\ServiceRequest;
 use App\Models\SystemSetting;
@@ -18,6 +19,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
@@ -34,6 +36,7 @@ final class AdminServiceRequestCreationTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
         Storage::fake('local');
         Notification::fake();
+        Queue::fake();
     }
 
     public function test_admin_form_creates_a_pending_assigned_request_with_private_attachments(): void
@@ -55,7 +58,7 @@ final class AdminServiceRequestCreationTest extends TestCase
             ])
             ->call('create')
             ->assertHasNoFormErrors()
-            ->assertNotified('Service request created successfully');
+            ->assertNotified('Service Request Submitted Successfully!');
 
         $request = ServiceRequest::query()->sole();
         $this->assertSame($homeowner->id, $request->homeowner_id);
@@ -74,8 +77,13 @@ final class AdminServiceRequestCreationTest extends TestCase
             'action' => 'ServiceRequest.created',
             'auditable_id' => $request->id,
         ]);
-        Notification::assertSentTo($homeowner->user, WorkflowStatusChanged::class);
-        Notification::assertSentTo($staff, OperationalAlert::class);
+        // UI creation commits delivery intent, not transport acceptance. The resident
+        // is intentionally Inactive; the delivery job must suppress their notice.
+        $this->assertDatabaseHas('email_deliveries', ['user_id' => $homeowner->user_id, 'type' => 'WorkflowStatusChanged', 'status' => 'Queued']);
+        $this->assertDatabaseHas('email_deliveries', ['user_id' => $staff->id, 'type' => 'OperationalAlert', 'status' => 'Queued']);
+        $this->assertSame(1, EmailDelivery::where('user_id', $homeowner->user_id)->where('type', 'WorkflowStatusChanged')->count());
+        Notification::assertNotSentTo($homeowner->user, WorkflowStatusChanged::class);
+        Notification::assertNotSentTo($staff, OperationalAlert::class);
     }
 
     public function test_admin_form_shows_required_field_errors(): void

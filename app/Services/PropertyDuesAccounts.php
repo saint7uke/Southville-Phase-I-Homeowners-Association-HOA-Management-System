@@ -34,13 +34,17 @@ final class PropertyDuesAccounts
         }
     }
 
-    public function primaryForAddress(string $addressKey): ?Homeowner
+    public function primaryForAddress(string $addressKey, bool $lock = false): ?Homeowner
     {
-        return $this->activeOwners()
+        if ($lock && DB::transactionLevel() === 0) {
+            throw new \LogicException('Locking property liability requires a transaction.');
+        }
+
+        return $this->eligibleResidents(Homeowner::query(), $lock)->whereIn('ownership_type', ['Owner', 'Co-owner'])->whereNotNull('address_key')
             ->where(fn (Builder $query) => $query->where('property_key', $addressKey)->orWhere(fn (Builder $legacy) => $legacy->whereNull('property_key')->where('address_key', $addressKey)))
             ->orderByRaw("CASE WHEN ownership_type = 'Owner' THEN 0 ELSE 1 END")
             ->orderBy('id')
-            ->first();
+            ->when($lock, fn (Builder $query) => $query->lockForUpdate())->first();
     }
 
     public function payerIsEligible(Homeowner $payer, Homeowner $liable): bool

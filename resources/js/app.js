@@ -1,4 +1,6 @@
 import './bootstrap';
+import './resident-concerns';
+import './sms-enrollment';
 import { translate, translationKey } from './translations';
 
 const t = (key, parameters = {}) => translate(key, document.documentElement.lang, parameters);
@@ -6,30 +8,40 @@ const localizedText = (node, message) => {
     node.dataset.i18n = translationKey(message);
     node.textContent = t(message);
 };
-import Swal from 'sweetalert2';
+import { confirm, handleRequestError } from './alerts';
 
 document.querySelectorAll('[data-confirm-profile]').forEach((form) => {
     form.addEventListener('submit', async (event) => {
         if (form.dataset.confirmed === 'true') {
+            if (form.dataset.submitted === 'true') event.preventDefault();
+            form.dataset.submitted = 'true';
             return;
         }
 
         event.preventDefault();
 
-        const result = await Swal.fire({
-            title: t('Save profile changes?'),
-            text: t('Your contact and property details will be updated.'),
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: t('Save changes'),
-            cancelButtonText: t('Keep editing'),
-            reverseButtons: true,
-            focusCancel: true,
-        });
+        if (form.dataset.confirming === 'true') return;
+        form.dataset.confirming = 'true';
+        try {
+            const result = await confirm({
+                title: t('Save profile changes?'),
+                text: t('Your contact and property details will be updated.'),
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: t('Save changes'),
+                cancelButtonText: t('Keep editing'),
+                reverseButtons: true,
+                focusCancel: true,
+            });
 
-        if (result.isConfirmed) {
-            form.dataset.confirmed = 'true';
-            form.requestSubmit();
+            if (result.isConfirmed) {
+                form.dataset.confirmed = 'true';
+                form.requestSubmit();
+            }
+        } catch (error) {
+            void handleRequestError(error);
+        } finally {
+            delete form.dataset.confirming;
         }
     });
 });
@@ -68,12 +80,13 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
     const landlordName = form.querySelector('#landlord_name');
     const landlordToken = form.querySelector('#landlord_token');
     const landlordMessage = form.querySelector('#landlord-availability-message');
-    const addressFields = ['phase_suffix', 'street', 'block', 'lot']
+    const addressFields = ['phase_suffix', 'block', 'lot']
         .map((id) => form.querySelector(`#${id}`))
         .filter(Boolean);
     const leaseStart = form.querySelector('#lease_start_date');
     const leaseEnd = form.querySelector('#lease_end_date');
     const submit = form.querySelector('[type="submit"]');
+    const originalSubmitLabel = submit?.textContent;
     const requirements = {
         length: (value) => value.length >= 12,
         uppercase: (value) => /[A-Z]/.test(value),
@@ -98,6 +111,14 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
     let landlordCheckTimer = null;
     let landlordRequestSequence = 0;
     let registrationSubmissionPending = false;
+    window.addEventListener('pageshow', event => {
+        if (!event.persisted) return;
+        registrationSubmissionPending = false;
+        if (submit) {
+            submit.disabled = false;
+            submit.textContent = originalSubmitLabel;
+        }
+    });
 
     const updateEmailMessage = (message, state = 'neutral') => {
         if (!emailMessage || !email) {
@@ -199,18 +220,9 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
 
     const addressSignature = () => {
         const values = Object.fromEntries(addressFields.map((field) => [field.id, field.value]));
-        const suffixes = { ST: 'STREET', RD: 'ROAD', AVE: 'AVENUE', AV: 'AVENUE', DR: 'DRIVE', LN: 'LANE', CT: 'COURT', BLVD: 'BOULEVARD', HWY: 'HIGHWAY' };
-        let street = canonicalAddressPart(values.street || '');
-        const words = street.split(' ');
-        if (suffixes[words.at(-1)]) {
-            words[words.length - 1] = suffixes[words.at(-1)];
-            street = words.join(' ');
-        }
-
         return JSON.stringify([
             ownershipType?.value || '',
             (values.phase_suffix || '').trim().toUpperCase(),
-            street,
             canonicalAddressPart(values.block || '', ['BLOCK', 'BLK', 'B']),
             canonicalAddressPart(values.lot || '', ['LOT', 'L']),
         ]);
@@ -452,6 +464,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
     };
 
     addressFields.forEach((field) => {
+        field.addEventListener('change', () => { scheduleAddressCheck(); scheduleLandlordCheck(); });
         field.addEventListener('input', () => {
             scheduleAddressCheck();
             scheduleLandlordCheck();
@@ -578,6 +591,11 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         messageElement.hidden = message === '';
         field.classList.toggle('is-invalid', message !== '');
         field.setAttribute('aria-invalid', message !== '' ? 'true' : 'false');
+        if (field.id === 'verification_document') {
+            const describedBy = new Set((field.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+            describedBy.add(messageId);
+            field.setAttribute('aria-describedby', [...describedBy].join(' '));
+        }
     };
 
     const updateRealtimeFieldState = () => {
@@ -589,7 +607,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
                 return;
             }
 
-            const invalid = field.value !== '' && !/^09\d{9}$/.test(field.value);
+            const invalid = field.value !== '' && !/^09[0-9]{9}$/.test(field.value);
             setRealtimeFieldMessage(field, invalid ? 'Enter an 11-digit mobile number beginning with 09.' : '');
             valid = valid && !invalid;
         });
@@ -617,10 +635,13 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         });
 
         const document = form.querySelector('#verification_document');
-        if (document?.files?.length) {
+        if (document && !document.files?.length) {
+            setRealtimeFieldMessage(document, 'Upload a verification document to submit your application.');
+            valid = false;
+        } else if (document?.files?.length) {
             const file = document.files[0];
             const allowed = ['application/pdf', 'image/jpeg', 'image/png'];
-            const invalid = file.size > 10 * 1024 * 1024 || !allowed.includes(file.type);
+            const invalid = file.size > 10 * 1024 * 1024 || !allowed.includes(file.type) || !/\.(pdf|jpe?g|png)$/i.test(file.name);
             setRealtimeFieldMessage(document, invalid ? 'Upload a PDF, JPG, JPEG, or PNG file up to 10 MB.' : '');
             valid = valid && !invalid;
         }
@@ -629,6 +650,15 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
     };
 
     leaseStart?.addEventListener('input', updateLeaseDateState);
+    const verificationDocument = form.querySelector('#verification_document');
+    verificationDocument?.addEventListener('invalid', event => {
+        event.preventDefault();
+        updateRealtimeFieldState();
+        verificationDocument.focus();
+    });
+    if (verificationDocument?.getAttribute('aria-invalid') === 'true') {
+        requestAnimationFrame(() => verificationDocument.focus());
+    }
     leaseStart?.addEventListener('change', updateLeaseDateState);
     leaseEnd?.addEventListener('input', updateLeaseDateState);
     leaseEnd?.addEventListener('change', updateLeaseDateState);
@@ -642,6 +672,8 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
 
     form.addEventListener('submit', async (event) => {
         if (form.dataset.confirmed === 'true') {
+            if (form.dataset.submitted === 'true') { event.preventDefault(); return; }
+            form.dataset.submitted = 'true';
             submit?.setAttribute('disabled', 'disabled');
             if (submit) {
                 localizedText(submit, 'Submitting application…');
@@ -656,6 +688,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         }
 
         registrationSubmissionPending = true;
+        try {
         window.clearTimeout(emailCheckTimer);
         window.clearTimeout(addressCheckTimer);
         window.clearTimeout(landlordCheckTimer);
@@ -676,6 +709,8 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
                 addressFields[0]?.focus();
             } else if (!emailIsAvailable) {
                 email?.focus();
+            } else if (form.querySelector('#verification_document')?.getAttribute('aria-invalid') === 'true') {
+                form.querySelector('#verification_document').focus();
             } else {
                 (passwordMeetsRequirements ? confirmation : password)?.focus();
             }
@@ -683,7 +718,7 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         }
 
         const data = new FormData(form);
-        const result = await Swal.fire({
+        const result = await confirm({
             title: t('Review your application'),
             text: t(':name — Phase 1 - :phase, Block :block, Lot :lot. Submit this information for HOA review?', { name: `${data.get('first_name')} ${data.get('last_name')}`, phase: String(data.get('phase_suffix') || '').trim().toUpperCase(), block: data.get('block'), lot: data.get('lot') }),
             icon: 'question',
@@ -704,11 +739,18 @@ document.querySelectorAll('[data-review-registration]').forEach((form) => {
         } else {
             registrationSubmissionPending = false;
         }
+        } catch (error) {
+            void handleRequestError(error);
+        } finally {
+            if (form.dataset.submitted !== 'true') registrationSubmissionPending = false;
+        }
     });
 });
 
 document.querySelectorAll('[data-auth-submit]').forEach((form) => {
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', (event) => {
+        if (form.dataset.submitted === 'true') { event.preventDefault(); return; }
+        form.dataset.submitted = 'true';
         const button = form.querySelector('[type="submit"]');
         if (!button) {
             return;
@@ -717,5 +759,18 @@ document.querySelectorAll('[data-auth-submit]').forEach((form) => {
         button.disabled = true;
         button.dataset.originalLabel = button.textContent;
         localizedText(button, 'Signing in…');
+    });
+});
+
+window.addEventListener('pageshow', event => {
+    if (!event.persisted) return;
+    document.querySelectorAll('[data-auth-submit], [data-confirm-profile], [data-review-registration]').forEach(form => {
+        delete form.dataset.submitted;
+        delete form.dataset.confirmed;
+        delete form.dataset.confirming;
+        form.querySelectorAll('[type="submit"]').forEach(button => {
+            button.disabled = false;
+            if (button.dataset.originalLabel) button.textContent = button.dataset.originalLabel;
+        });
     });
 });

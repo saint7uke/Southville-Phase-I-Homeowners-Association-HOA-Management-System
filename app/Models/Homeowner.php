@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Services\PropertyAddressAvailability;
+use App\Support\CurrentPropertyAddress;
 use App\Support\PropertyAddress;
 use App\Support\PropertyIdentity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -87,6 +88,7 @@ final class Homeowner extends Model
                     || ! in_array($landlord->ownership_type, ['Owner', 'Co-owner'], true)
                     || ! PropertyIdentity::same($landlord, $homeowner)
                     || (($homeowner->isDirty('landlord_homeowner_id') || ! $homeowner->exists)
+                        && PropertyIdentity::confirmedKey($homeowner) === null
                         && ! PropertyAddress::sameStreet($landlord->street, $homeowner->street))) {
                     throw ValidationException::withMessages([
                         'landlord_homeowner_id' => __('The landlord must be an Owner or Co-owner registered at the same address.'),
@@ -166,7 +168,7 @@ final class Homeowner extends Model
 
     public function getFullAddressAttribute(): string
     {
-        return PropertyIdentity::address($this).', Brgy. Inocencio';
+        return CurrentPropertyAddress::display($this).', Brgy. Inocencio';
     }
 
     public function getLandlordRelationshipStatusAttribute(): string

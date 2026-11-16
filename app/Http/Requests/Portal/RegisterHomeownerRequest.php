@@ -7,7 +7,10 @@ namespace App\Http\Requests\Portal;
 use App\Services\LandlordMatcher;
 use App\Services\PropertyAddressAvailability;
 use App\Support\PersonName;
+use App\Support\PhilippineMobile;
 use App\Support\PropertyAddress;
+use App\Support\PropertyPhase;
+use App\Validation\RegistrationDocumentRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -32,7 +35,7 @@ final class RegisterHomeownerRequest extends FormRequest
             'suffix' => ['nullable', 'in:Jr.,Sr.,II,III,IV,N/A'],
             'sex' => ['required', 'in:Male,Female,Prefer not to say'],
             'date_of_birth' => ['required', 'date', 'before:today'],
-            'contact_number' => ['required', 'regex:/^09\d{9}$/'],
+            'contact_number' => PhilippineMobile::inputRules(),
             'email' => [
                 'required',
                 'email:rfc',
@@ -42,8 +45,7 @@ final class RegisterHomeownerRequest extends FormRequest
             ],
             'password' => ['required', 'confirmed', Password::default()],
             'house_number' => ['prohibited'],
-            'phase_suffix' => ['required', 'string', 'regex:/^[A-Z0-9]{1,10}$/D'],
-            'street' => ['required', 'string', 'max:100'],
+            'phase_suffix' => PropertyPhase::rules(),
             'block' => ['required', 'string', 'max:20'],
             'lot' => [
                 'required',
@@ -57,8 +59,13 @@ final class RegisterHomeownerRequest extends FormRequest
             'landlord_contact' => ['required_if:ownership_type,Tenant', 'nullable', 'regex:/^09\d{9}$/'],
             'lease_start_date' => ['required_if:ownership_type,Tenant', 'nullable', 'date'],
             'lease_end_date' => ['required_if:ownership_type,Tenant', 'nullable', 'date', 'after:lease_start_date'],
-            'verification_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'verification_document' => RegistrationDocumentRules::rules(),
             'privacy_consent' => ['accepted'],
+            'sms_transactional_opt_in' => ['prohibited'],
+            'sms_announcement_opt_in' => ['prohibited'],
+            'sms_verification_id' => ['prohibited'],
+            'sms_verified_at' => ['prohibited'],
+            'verified_phone_hash' => ['prohibited'],
         ];
     }
 
@@ -74,13 +81,13 @@ final class RegisterHomeownerRequest extends FormRequest
         ]);
         // Validate the original prohibited value, including forged arrays; never normalize it away.
         unset($address['house_number']);
+        $address['street'] = null;
 
         $this->merge([
             'first_name' => PersonName::normalize($this->string('first_name')->toString()),
             'middle_name' => PersonName::normalize($this->input('middle_name')),
             'last_name' => PersonName::normalize($this->string('last_name')->toString()),
             'email' => mb_strtolower(trim($this->string('email')->toString())),
-            'contact_number' => preg_replace('/\D/', '', $this->string('contact_number')->toString()),
             'landlord_name' => PersonName::normalize($this->input('landlord_name')),
             'landlord_contact' => preg_replace('/\D/', '', $this->string('landlord_contact')->toString()),
             ...$address,
@@ -90,8 +97,10 @@ final class RegisterHomeownerRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phase_suffix.required' => __('Enter the phase suffix using 1–10 letters or digits.'),
-            'phase_suffix.regex' => __('Enter 1–10 ASCII letters or digits for the phase suffix.'),
+            ...RegistrationDocumentRules::messages(),
+            'contact_number.regex' => __('Enter an 11-digit Philippine mobile number beginning with 09.'),
+            'phase_suffix.required' => __('Select A, B or Expansion.'),
+            'phase_suffix.in' => __('Select A, B or Expansion.'),
             'house_number.prohibited' => __('House Number is not accepted in new registrations. Leave this field out of the submission.'),
         ];
     }
@@ -99,7 +108,7 @@ final class RegisterHomeownerRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            if ($validator->errors()->hasAny(['house_number', 'phase_suffix', 'street', 'block', 'lot', 'ownership_type'])) {
+            if ($validator->errors()->hasAny(['house_number', 'phase_suffix', 'block', 'lot', 'ownership_type'])) {
                 return;
             }
 
@@ -109,7 +118,7 @@ final class RegisterHomeownerRequest extends FormRequest
             }
 
             if ($this->input('ownership_type') !== 'Tenant'
-                || $validator->errors()->hasAny(['landlord_name', 'phase_suffix', 'street', 'block', 'lot'])) {
+                || $validator->errors()->hasAny(['landlord_name', 'phase_suffix', 'block', 'lot'])) {
                 return;
             }
 

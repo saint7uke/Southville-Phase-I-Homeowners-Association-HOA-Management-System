@@ -5,9 +5,12 @@ namespace App\Filament\Resources\Payments\Pages;
 use App\Actions\Payments\ChangePaymentDeletionState;
 use App\Actions\Payments\ConfirmReceiptDetails;
 use App\Actions\Payments\UpdatePaymentMetadata;
+use App\Filament\Concerns\HasIconOnlyRecordActions;
+use App\Filament\Concerns\HasSpecificFeedback;
 use App\Filament\Concerns\MapsDomainValidation;
 use App\Filament\Resources\Payments\PaymentResource;
 use App\Models\User;
+use App\Support\ActionFeedback;
 use App\Support\AuthenticatedActor;
 use App\Support\OperationalAccess;
 use Filament\Actions\Action;
@@ -21,6 +24,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditPayment extends EditRecord
 {
+    use HasIconOnlyRecordActions;
+    use HasSpecificFeedback;
     use MapsDomainValidation;
 
     protected static string $resource = PaymentResource::class;
@@ -36,7 +41,7 @@ class EditPayment extends EditRecord
                 ->action(function (array $data): void {
                     $this->runValidatedDomainAction(fn () => app(ConfirmReceiptDetails::class)->handle($this->record, $data, app(AuthenticatedActor::class)->user()));
                     $this->record->refresh();
-                    Notification::make()->success()->title(__('Receipt details confirmed.'))->send();
+                    Notification::make()->success()->title(__('Payment Receipt Details Confirmed Successfully!'))->send();
                 }),
             Action::make('deletePayment')->label(__('Delete'))->color('danger')->requiresConfirmation()
                 ->visible(fn (): bool => ! $this->record->trashed() && Filament::getCurrentPanel()?->getId() === 'admin')
@@ -44,6 +49,7 @@ class EditPayment extends EditRecord
                     $actor = app(AuthenticatedActor::class)->user();
                     abort_unless($actor instanceof User, 403);
                     app(ChangePaymentDeletionState::class)->delete($this->record, $actor);
+                    ActionFeedback::success('Payment Record Archived Successfully!');
                     $this->redirect(PaymentResource::getUrl());
                 }),
             Action::make('restorePayment')->label(__('Restore'))->requiresConfirmation()
@@ -52,6 +58,8 @@ class EditPayment extends EditRecord
                     $actor = app(AuthenticatedActor::class)->user();
                     abort_unless($actor instanceof User, 403);
                     app(ChangePaymentDeletionState::class)->restore($this->record, $actor);
+                    $this->record->refresh();
+                    ActionFeedback::success('Payment Record Restored Successfully!');
                 }),
         ];
     }

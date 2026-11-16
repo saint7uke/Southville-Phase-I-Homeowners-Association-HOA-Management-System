@@ -56,7 +56,10 @@ final class ButawReceipts
                 // Same order as payment review: obligation before payment. Serializes different preview tokens.
                 $payment = Payment::findOrFail($paymentId);
                 $obligation = DuesObligation::whereKey($payment->dues_obligation_id)->lockForUpdate()->firstOrFail();
-                $payment = Payment::whereKey($paymentId)->lockForUpdate()->firstOrFail();
+                // Lock every installment in the same order before constructing a settlement snapshot.
+                $members = $obligation->payments()->orderBy('id')->lockForUpdate()->get();
+                $payment = $members->firstWhere('id', $paymentId);
+                abort_unless($payment, 404);
                 $payment->setRelation('duesObligation', $obligation->load('duesSetting'));
                 $preview = PaymentDocumentPreview::whereKey(hash('sha256', $token))->lockForUpdate()->first();
                 $this->assertPreview($preview, $actor);
@@ -69,7 +72,7 @@ final class ButawReceipts
                 }
                 $sourceChecksum = $snapshot['layout']['sha256'];
                 // A locking read bypasses MySQL REPEATABLE READ's pre-lock snapshot.
-                if ($existing = PaymentDocument::where('payment_id', $paymentId)->where('source_checksum', $sourceChecksum)->lockForUpdate()->first()) {
+                if ($existing = PaymentDocument::where('settlement_obligation_id', $obligation->id)->lockForUpdate()->first()) {
                     $this->assertDownload($existing, $actor);
 
                     return $existing;
@@ -80,7 +83,8 @@ final class ButawReceipts
                     throw ValidationException::withMessages(['payment_id' => __('The receipt could not be stored. Please try again.')]);
                 }
                 $document = PaymentDocument::create([
-                    'payment_id' => $paymentId, 'payment_document_source_id' => $snapshot['source_id'], 'source_checksum' => $sourceChecksum,
+                    'payment_id' => $snapshot['payment_id'], 'settlement_obligation_id' => $obligation->id,
+                    'payment_document_source_id' => $snapshot['source_id'], 'source_checksum' => $sourceChecksum,
                     'snapshot' => $snapshot, 'path' => $path, 'file_checksum' => hash('sha256', $bytes), 'generated_by' => $actor->id,
                 ]);
                 $preview->update(['payment_document_id' => $document->id]);
@@ -96,7 +100,7 @@ final class ButawReceipts
                 }
             }
             if ($exception instanceof UniqueConstraintViolationException && $sourceChecksum !== null
-                && ($existing = PaymentDocument::where('payment_id', $paymentId)->where('source_checksum', $sourceChecksum)->first())) {
+                && ($existing = PaymentDocument::where('settlement_obligation_id', Payment::find($paymentId)?->dues_obligation_id)->first())) {
                 $this->assertDownload($existing, $actor);
 
                 return $existing;
@@ -114,19 +118,24 @@ final class ButawReceipts
         }
         abort_unless($payment && ! $payment->trashed(), 404);
         // Revoked/deleted/reversed payments never retain access merely because a PDF exists.
-        app(ButawReceiptEligibility::class)->snapshot($payment);
+        if ($document->settlement_obligation_id !== null) {
+            app(ButawReceiptEligibility::class)->snapshot($payment);
+        } else {
+            app(ButawReceiptEligibility::class)->installmentSnapshot($payment);
+        }
         abort_unless(Storage::disk('local')->exists($document->path), 404);
         abort_unless(hash_equals($document->file_checksum, hash('sha256', Storage::disk('local')->get($document->path))), 409);
     }
 
     private function context(int $paymentId, ?Payment $payment = null, ?int $expectedHomeownerId = null): array
     {
+        $lock = $payment !== null;
         $source = app(ButawReceiptSource::class)->approved();
         $payment ??= Payment::find($paymentId);
         if (! $payment) {
             throw ValidationException::withMessages(['payment_id' => __('Select an eligible recorded payment before previewing the receipt.')]);
         }
-        $snapshot = app(ButawReceiptEligibility::class)->snapshot($payment, $expectedHomeownerId);
+        $snapshot = app(ButawReceiptEligibility::class)->snapshot($payment, $expectedHomeownerId, lock: $lock);
         $layout = $source->manifest;
         if (! hash_equals($layout['font_sha256'], app(ResidencyFont::class)->checksum('butaw'))) {
             throw ValidationException::withMessages(['type' => __('The original receipt font changed. Ask the HOA to review the source configuration.')]);

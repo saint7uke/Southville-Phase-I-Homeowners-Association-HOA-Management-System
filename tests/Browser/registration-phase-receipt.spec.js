@@ -14,9 +14,9 @@ for (const width of [320, 768, 1440]) {
         await page.locator('[data-role-card="Owner"]').click();
         await expect(page.locator('[name="house_number"]')).toHaveCount(0);
         await expect(page.locator('#phase-prefix')).toHaveText('Phase 1 -');
-        await page.locator('#phase_suffix').fill('a7');
+        await page.locator('#phase_suffix').selectOption('A');
         await page.locator('#phase_suffix').blur();
-        await expect(page.locator('#phase_suffix')).toHaveValue('A7');
+        await expect(page.locator('#phase_suffix')).toHaveValue('A');
         const labelColors = await page.locator('label[for="first_name"]').evaluate(label => ({
             label: getComputedStyle(label).color,
             text: getComputedStyle(label.querySelector('[data-i18n]')).color,
@@ -44,13 +44,13 @@ test('registration locale switching retains Phase, password and an unsaved uploa
     test.setTimeout(90_000);
     await page.goto('/homeowner/register');
     await page.locator('[data-role-card="Owner"]').click();
-    await page.locator('#phase_suffix').fill('a7');
+    await page.locator('#phase_suffix').selectOption('A');
     await page.locator('#first_name').fill('Unchanged');
     await page.locator('#password').fill('SyntheticPass!2026');
     await page.locator('#verification_document').setInputFiles({ name: 'synthetic-proof.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 synthetic unsaved fixture') });
     await page.locator('#hoa-locale').selectOption('fil');
     await expect(page.locator('html')).toHaveAttribute('lang', 'fil');
-    await expect(page.locator('#phase-help')).toContainText('Ilagay');
+    await expect(page.locator('#phase-help')).toContainText('Pumili');
     await expect(page.locator('#first_name')).toHaveValue('Unchanged');
     await expect(page.locator('#password')).toHaveValue('SyntheticPass!2026');
     expect(await page.locator('#verification_document').evaluate(input => input.files[0].name)).toBe('synthetic-proof.pdf');
@@ -63,15 +63,16 @@ test('registration submits successfully without House Number and preserves the P
     await page.goto('/homeowner/register');
     await page.locator('[data-role-card="Owner"]').click();
     const stamp = String(Date.now());
-    for (const [id, value] of Object.entries({ first_name: 'Synthetic', last_name: 'Applicant', phase_suffix: 'a7', street: 'Test Street', block: '77', lot: stamp,
+    for (const [id, value] of Object.entries({ first_name: 'Synthetic', last_name: 'Applicant', block: '77', lot: stamp,
         date_of_birth: '1990-01-01', contact_number: '09171234567', email: `registration-${stamp}@phase23.test`, password: 'SyntheticPass!2026', password_confirmation: 'SyntheticPass!2026', residency_date: '2020-01-01' })) {
         await page.locator(`#${id}`).fill(value);
     }
+    await page.locator('#phase_suffix').selectOption('A');
     await page.locator('#sex').selectOption('Male');
     await page.locator('#privacy_consent').check();
     await page.getByRole('button', { name: 'Submit application', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Review your application' });
-    await expect(dialog).toContainText('Phase 1 - A7', { timeout: 30_000 });
+    await expect(dialog).toContainText('Phase 1 - A', { timeout: 30_000 });
     await dialog.getByRole('button', { name: 'Submit application', exact: true }).click();
     await expect(page).toHaveURL(/\/homeowner\/register\/submitted\?/, { timeout: 60_000 });
     await expect(page.getByText('Your application is under review', { exact: true })).toBeVisible();
@@ -100,7 +101,7 @@ test('homeowner selection fills and generates the original Cash receipt inside C
     await expect(page.getByLabel('Amount paid', { exact: false })).toHaveValue('1.00');
     await expect(page.locator('input[wire\\:model="data.payment_method"]')).toHaveValue('Cash');
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expect(page.getByText('Payment recorded successfully', { exact: true })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText('Payment Record Created Successfully!', { exact: true })).toBeVisible({ timeout: 60_000 });
     await page.goto('/admin/certificates');
     await expect(page.getByRole('link', { name: 'New document', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Monthly receipts', exact: true })).toBeVisible();
@@ -120,7 +121,7 @@ test('homeowner selection fills and generates the original Cash receipt inside C
         await sourceDialog.getByRole('switch').click();
         await sourceDialog.getByLabel('Approval evidence / note').fill('Synthetic source review in an isolated browser fixture only; not a real HOA approval.');
         await sourceDialog.getByRole('button', { name: 'Confirm source', exact: true }).click();
-        await expect(page.getByText('Original receipt source confirmed.', { exact: true })).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByText('Original Receipt Source Confirmed Successfully!', { exact: true })).toBeVisible({ timeout: 30_000 });
     }
     await page.reload();
     await page.getByRole('button', { name: 'Document setup', exact: true }).click();
@@ -176,11 +177,12 @@ test('homeowner selection fills and generates the original Cash receipt inside C
     const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
     expect(accessibility.violations.filter(v => ['serious', 'critical'].includes(v.impact))).toEqual([]);
     await page.getByRole('button', { name: 'Generate monthly dues receipt', exact: true }).click();
-    await expect(page.getByRole('alertdialog')).toBeVisible();
+    await expect(page.locator('.swal2-popup')).toBeVisible();
     const modalAccessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
     expect(modalAccessibility.violations.filter(v => ['serious', 'critical'].includes(v.impact))).toEqual([]);
-    await page.getByRole('alertdialog').getByRole('button', { name: 'Confirm', exact: true }).click();
-    await expect(page.getByText('Monthly dues receipt is ready.', { exact: true })).toBeVisible({ timeout: 60_000 });
+    await page.locator('.swal2-popup').getByRole('button', { name: 'Confirm', exact: true }).click();
+    await expect(page.getByText('Monthly Dues Receipt Generated Successfully!', { exact: true })).toBeVisible({ timeout: 60_000 });
+    await page.locator('.swal2-popup').getByRole('button', { name: 'OK', exact: true }).click();
     const download = await page.request.get(await page.getByRole('link', { name: 'Download', exact: true }).getAttribute('href'));
     const printable = await page.request.get(await page.getByRole('link', { name: 'View / Print', exact: true }).getAttribute('href'));
     expect(download.ok()).toBeTruthy();

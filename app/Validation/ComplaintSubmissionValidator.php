@@ -23,6 +23,7 @@ final class ComplaintSubmissionValidator
             'subject' => ['required', 'string', 'max:160'],
             'description' => ['required', 'string', 'min:20', 'max:5000'],
             'category' => ['required', Rule::in(self::CATEGORIES)],
+            'category_other' => ['exclude_unless:category,Others', 'required', 'string', 'max:160'],
             'priority' => ['required', Rule::in(self::PRIORITIES)],
             'handled_by' => $allowAssignment
                 ? ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->whereNull('deleted_at')->where('account_status', 'Active'))]
@@ -50,10 +51,14 @@ final class ComplaintSubmissionValidator
     /** @param array<string, mixed> $data @return array<string, mixed> */
     public function normalize(array $data): array
     {
-        foreach (['subject', 'description', 'category', 'priority'] as $field) {
+        foreach (['subject', 'description', 'category', 'category_other', 'priority'] as $field) {
             if (array_key_exists($field, $data) && is_string($data[$field])) {
                 $data[$field] = trim($data[$field]);
             }
+        }
+
+        if (($data['category'] ?? null) !== 'Others') {
+            $data['category_other'] = null;
         }
 
         return $data;
@@ -67,6 +72,10 @@ final class ComplaintSubmissionValidator
     public function validate(Homeowner $homeowner, array $data, array $files, User $actor): array
     {
         $data = $this->normalize($data);
+        if ($actor->hasRole('homeowner') && ! $actor->hasAnyRole(['hoa_admin', 'hoa_staff'])) {
+            $data['subject'] = ($data['category'] ?? '') === 'Others' ? ($data['category_other'] ?? '') : ($data['category'] ?? '');
+            $data['priority'] = 'Medium';
+        }
         $data['attachments'] = $files;
 
         $validator = Validator::make($data, self::rules(false), self::messages());

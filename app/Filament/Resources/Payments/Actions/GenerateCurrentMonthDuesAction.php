@@ -27,8 +27,8 @@ final class GenerateCurrentMonthDuesAction
                 abort_unless($actor !== null, 403);
                 try {
                     $count = app(GenerateCurrentMonthDues::class)->handle($actor);
-                    Notification::make()->success()->title($count > 0 ? "Created {$count} dues obligations." : 'No new dues were needed.')
-                        ->body(__('Refresh the obligation list to see available unpaid dues.'))->send();
+                    Notification::make()->status($count > 0 ? 'success' : 'info')->title(__($count > 0 ? 'Dues Obligations Created Successfully!' : 'No New Dues Obligations Required'))
+                        ->body(__('Dues obligations created: :count', ['count' => $count]))->send();
                 } catch (ValidationException $exception) {
                     Notification::make()->warning()->title($exception->validator->errors()->first())->send();
                 } catch (AuthorizationException $exception) {

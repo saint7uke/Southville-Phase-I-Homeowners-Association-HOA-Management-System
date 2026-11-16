@@ -4,12 +4,16 @@
 
 - Keep Apache/PHP, MySQL, one queue worker, and the Laravel scheduler running.
 - Review failed jobs, application errors, disk usage, and the age of the most recent backup.
+- Review `php artisan queue:failed` and retry only after the underlying transport issue is corrected. Use `php artisan queue:retry <job-id>` for a reviewed job; never use bulk retry while the SMTP outage remains active.
+- Check the oldest row in the `jobs` table when mail appears delayed. On shared hosting, confirm the one-minute bounded worker cron is running and not overlapping.
 - The scheduler generates monthly obligations on day 1, marks overdue obligations daily, evaluates delinquent accounts after the overdue sweep, and removes expired private report files while retaining their metadata.
 - Admins can temporarily disable Staff or Homeowner access in System Settings. Admin access remains available for recovery.
 
 ## Monitoring thresholds
 
 Alert the system owner when `/up` fails twice, any failed job appears, the oldest queued job exceeds five minutes, disk usage exceeds 80%, error rate rises above baseline, a TLS certificate has fewer than 14 days remaining, or the newest backup is older than 26 hours. `/up` is a readiness check: it returns success only when Laravel boots and the configured database accepts a read query. Never place passwords, uploaded documents, or raw personal data in monitoring messages.
+
+Mail logs and incident reports may include only an exception class, a stable failure category, job identifier, and timestamps. Never record SMTP credentials, recipient addresses, message bodies, password-reset tokens, or reset URLs. Set `HOA_QUEUE_WORKER_VERIFIED=true` and `HOA_MAIL_DELIVERY_VERIFIED=true` only after retaining dated evidence that the worker drains jobs and controlled messages reach the designated mailbox.
 
 ## Backups
 

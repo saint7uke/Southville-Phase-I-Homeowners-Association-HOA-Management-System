@@ -55,7 +55,7 @@ final class SendContactMessageReply
                 'idempotency_token' => $validated['idempotency_token'],
                 'delivery_status' => 'Queued',
             ]);
-            SendContactMessageReplyJob::dispatch($activity->id)->afterCommit();
+            SendContactMessageReplyJob::dispatch($activity->id)->onConnection('sync')->afterCommit();
 
             return $activity;
         });

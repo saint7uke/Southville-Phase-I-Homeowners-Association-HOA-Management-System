@@ -1,0 +1,15 @@
+@import 'sweetalert2/dist/sweetalert2.css';
+
+.hoa-alert-container { z-index: 100000; }
+.hoa-alert.swal2-popup { font-family: inherit; border-radius: 1rem; padding: 1.5rem; max-width: calc(100vw - 2rem); }
+.hoa-alert .swal2-html-container { white-space: pre-line; overflow-wrap: anywhere; }
+.hoa-alert .swal2-title { font-size: 1.4rem; }
+.hoa-alert .swal2-actions { gap: .75rem; }
+.hoa-alert button { min-height: 44px; border-radius: .6rem; padding: .65rem 1.1rem; }
+.hoa-alert-confirm.swal2-styled { background: #0879ad; }
+.hoa-alert-cancel.swal2-styled { background: #526570; }
+.dark .hoa-alert { background: #122d38; color: #eef5f7; }
+.dark .hoa-alert .swal2-title, .dark .hoa-alert .swal2-html-container { color: #eef5f7; }
+.fi-modal-window .hoa-alert-container { position: fixed; }
+@media (max-width: 480px) { .hoa-alert .swal2-actions { width: 100%; } .hoa-alert .swal2-actions button { flex: 1; } }
+@media (prefers-reduced-motion: reduce) { .hoa-alert-container *, .hoa-alert-container *::before, .hoa-alert-container *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

@@ -20,9 +20,9 @@ final class PropertySnapshot
         $normalized = [...$attributes, ...$address];
 
         return [
-            ...$address,
+            ...array_diff_key($address, ['street' => true, 'house_number' => true]),
             'property_key' => PropertyIdentity::confirmedKey($normalized) ?? PropertyIdentity::key($normalized),
-            'display_address' => PropertyIdentity::address($normalized),
+            'display_address' => CurrentPropertyAddress::display($normalized),
         ];
     }
 

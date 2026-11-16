@@ -3,7 +3,6 @@ export const navigation = [
     ['About', '#about'],
     ['Services', '#services'],
     ['Announcements', '#announcements'],
-    ['Community', '#community'],
     ['Contact', '#contact'],
 ];
 

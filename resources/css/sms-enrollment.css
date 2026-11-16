@@ -1,0 +1,19 @@
+.hoa-sms { display: grid; gap: 1rem; margin-block: 1.25rem; padding: 1.25rem; border: 1px solid #b8cdd5; border-radius: 1rem; background: #f5fafc; color: #193f50; min-width: 0; font-size: 1rem; line-height: 1.5; }
+.hoa-sms h2, .hoa-sms p { margin: 0; }
+.hoa-sms h2 { font-size: 1.2rem; font-weight: 700; }
+.hoa-sms .hoa-sms-consent { display: flex; align-items: flex-start; gap: .75rem; margin: 0; font-weight: 400; }
+.hoa-sms .hoa-sms-consent input { flex: 0 0 auto; width: 1.2rem; height: 1.2rem; margin-top: .2rem; accent-color: #0879ad; }
+.hoa-sms .hoa-sms-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; }
+.hoa-sms .hoa-sms-code { display: grid; gap: .4rem; min-width: 0; font-weight: 600; }
+.hoa-sms .hoa-sms-code input { display: block; box-sizing: border-box; width: 100%; max-width: 16rem; min-height: 44px; padding: .6rem .8rem; border: 1px solid #667e89; border-radius: .5rem; background: #fff; color: #15333f; font: inherit; letter-spacing: .2em; }
+.hoa-sms button { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border: 1px solid #1769cc; background: #1769cc; color: #fff; min-height: 44px; padding: .65rem 1rem; border-radius: .7rem; font: inherit; font-weight: 600; cursor: pointer; }
+.hoa-sms button:hover:not(:disabled) { border-color: #125bb4; background: #125bb4; }
+.hoa-sms button:disabled { opacity: .55; cursor: not-allowed; }
+.hoa-sms a { color: #075e85; text-decoration: underline; margin-inline-start: .5rem; }
+.hoa-sms :is(button, input, a):focus-visible { outline: 3px solid #0879ad; outline-offset: 3px; }
+.hoa-sms [role="alert"] { color: #a22222; }
+.hoa-sms [data-sms-cooldown]:empty, .hoa-sms [data-sms-result]:empty { display: none; }
+.dark .hoa-sms { background: #142e39; color: #ecf6fa; border-color: #526e7b; }
+.dark .hoa-sms a { color: #89d8fa; }
+.dark .hoa-sms [role="alert"] { color: #ffb6b6; }
+@media (max-width: 640px) { .hoa-sms { padding: 1rem; } .hoa-sms .hoa-sms-actions { flex-direction: column; align-items: stretch; } .hoa-sms .hoa-sms-code input { max-width: none; } }

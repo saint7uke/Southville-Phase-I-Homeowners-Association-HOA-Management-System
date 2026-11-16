@@ -33,14 +33,14 @@ final class UpdateComplaint
 
             $administrator = $actor->hasRole('hoa_admin');
             if (! $administrator) {
-                foreach (['homeowner_id', 'subject', 'category', 'description', 'handled_by'] as $field) {
+                foreach (['homeowner_id', 'subject', 'category', 'category_other', 'description', 'handled_by'] as $field) {
                     if (array_key_exists($field, $data) && (string) $data[$field] !== (string) $locked->getAttribute($field)) {
                         throw ValidationException::withMessages([$field => __('Assigned staff cannot change the resident\'s original complaint or assignment.')]);
                     }
                 }
             }
 
-            foreach (['subject', 'description', 'admin_remarks'] as $field) {
+            foreach (['subject', 'description', 'category_other', 'admin_remarks'] as $field) {
                 if (isset($data[$field]) && is_string($data[$field])) {
                     $data[$field] = trim($data[$field]);
                 }
@@ -55,6 +55,9 @@ final class UpdateComplaint
                 'homeowner_id' => [$administrator ? 'required' : 'sometimes', 'integer'],
                 'subject' => [$administrator ? 'required' : 'sometimes', 'string', 'max:160'],
                 'category' => [$administrator ? 'required' : 'sometimes', Rule::in(ComplaintSubmissionValidator::CATEGORIES)],
+                'category_other' => $administrator
+                    ? ['exclude_unless:category,Others', 'required', 'string', 'max:160']
+                    : ['nullable', 'string', 'max:160'],
                 'description' => [$administrator ? 'required' : 'sometimes', 'string', 'min:20', 'max:5000'],
                 'handled_by' => ['nullable', 'integer'],
                 'ticket_number' => ['prohibited'], 'resolved_at' => ['prohibited'],
@@ -75,8 +78,11 @@ final class UpdateComplaint
                 }
             }
             $fields = $administrator
-                ? ['homeowner_id', 'subject', 'category', 'description', 'handled_by', 'priority', 'status', 'admin_remarks']
+                ? ['homeowner_id', 'subject', 'category', 'category_other', 'description', 'handled_by', 'priority', 'status', 'admin_remarks']
                 : ['priority', 'status', 'admin_remarks'];
+            if ($administrator && $validated['category'] !== 'Others') {
+                $validated['category_other'] = null;
+            }
             $locked->update(Arr::only($validated, $fields));
 
             return $locked->refresh();

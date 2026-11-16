@@ -6,6 +6,8 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\Pages\Login;
 use App\Filament\Auth\Pages\RequestPasswordReset;
+use App\Filament\Homeowner\Pages\AnnualDues;
+use App\Filament\Homeowner\Pages\MyConcerns;
 use App\Filament\Homeowner\Pages\MyHousehold;
 use App\Filament\Homeowner\Pages\MyProfile;
 use App\Filament\Homeowner\Resources\Announcements\AnnouncementResource;
@@ -18,7 +20,6 @@ use App\Filament\Homeowner\Widgets\HomeownerOverview;
 use App\Filament\Homeowner\Widgets\HomeownerWelcome;
 use App\Filament\Homeowner\Widgets\LatestAnnouncements;
 use App\Filament\Homeowner\Widgets\RecentPayments;
-use App\Filament\Widgets\DashboardAccount;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\EnsurePanelIsEnabled;
 use App\Http\Middleware\MigrateLegacyPanelSession;
@@ -70,6 +71,8 @@ final class HomeownerPanelProvider extends PanelProvider
                 Dashboard::class,
                 MyProfile::class,
                 MyHousehold::class,
+                MyConcerns::class,
+                AnnualDues::class,
             ])
             ->resources([
                 DuesObligationResource::class,
@@ -84,7 +87,6 @@ final class HomeownerPanelProvider extends PanelProvider
                 HomeownerOverview::class,
                 RecentPayments::class,
                 LatestAnnouncements::class,
-                DashboardAccount::class,
             ])
             ->middleware([
                 EncryptCookies::class,

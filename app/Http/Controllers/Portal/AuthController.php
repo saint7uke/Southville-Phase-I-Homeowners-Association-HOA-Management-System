@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Portal;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Portal\LoginRequest;
 use App\Services\UnifiedAuthentication;
+use App\Support\ActionFeedback;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 
@@ -25,6 +26,6 @@ final class AuthController extends Controller
         request()->session()->invalidate();
         request()->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route('login')->with('action_feedback', ActionFeedback::flash('success', 'Logged Out Successfully!', ''));
     }
 }

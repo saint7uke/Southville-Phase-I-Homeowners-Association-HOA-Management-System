@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Actions\Homeowners\ConfirmPropertyPhase;
 use App\Actions\Households\ManageHousehold;
 use App\Actions\Projects\ManageProject;
 use App\Filament\Pages\Households;
@@ -204,11 +205,12 @@ final class PhaseThreeTest extends TestCase
     public function test_household_conflicts_remain_visible_in_the_modal(): void
     {
         $resident = $this->resident();
+        app(ConfirmPropertyPhase::class)->handle($resident->homeowner, 'A', $this->admin());
         $household = Household::first();
         $this->actingAs($this->admin(), 'admin');
         Filament::setCurrentPanel('admin');
-        Livewire::test(Households::class)->callAction('createHousehold', data: $household->only(['house_number', 'street', 'block', 'lot', 'phase']))
-            ->assertNotified('Please review the form')->assertHasActionErrors(['house_number']);
+        Livewire::test(Households::class)->callAction('createHousehold', data: [...$household->only(['block', 'lot', 'phase']), 'phase_suffix' => 'A'])
+            ->assertHasActionErrors(['block'])->assertNotified('Please review the form');
         $this->assertDatabaseCount('households', 1);
     }
 }

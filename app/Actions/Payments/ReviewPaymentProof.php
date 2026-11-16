@@ -9,6 +9,8 @@ use App\Models\Payment;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Notifications\PaymentReviewCompleted;
+use App\Services\Sms\SmsEvents;
+use App\Services\WorkflowMail;
 use App\Support\Money;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -56,10 +58,11 @@ final class ReviewPaymentProof
                 'reviewed_by' => $reviewer->id,
             ]);
 
+            $this->notifyParties($lockedPayment->refresh());
+            app(SmsEvents::class)->payment($lockedPayment);
+
             return $lockedPayment->refresh();
         });
-
-        $this->notifyParties($reviewed);
 
         return $reviewed;
     }
@@ -93,10 +96,10 @@ final class ReviewPaymentProof
                 'reviewed_by' => $reviewer->id,
             ]);
 
+            $this->notifyParties($locked->refresh());
+
             return $locked->refresh();
         });
-
-        $this->notifyParties($reviewed);
 
         return $reviewed;
     }
@@ -111,6 +114,6 @@ final class ReviewPaymentProof
         collect([$payment->payer?->user, $payment->homeowner?->user])
             ->filter()
             ->unique('id')
-            ->each(fn (User $user) => $user->notify(new PaymentReviewCompleted($payment)));
+            ->each(fn (User $user) => app(WorkflowMail::class)->queue($user, new PaymentReviewCompleted($payment), 'payment-review:'.$payment->id.':'.$payment->review_status));
     }
 }

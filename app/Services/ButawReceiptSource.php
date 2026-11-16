@@ -22,7 +22,8 @@ final class ButawReceiptSource
     public function schemaReady(): bool
     {
         return Schema::hasTable('payment_documents') && Schema::hasTable('payment_document_sources')
-            && Schema::hasTable('payment_document_previews') && Schema::hasColumn('payments', 'property_snapshot');
+            && Schema::hasTable('payment_document_previews') && Schema::hasColumn('payments', 'property_snapshot')
+            && Schema::hasColumn('payment_documents', 'settlement_obligation_id');
     }
 
     public function manifest(): array

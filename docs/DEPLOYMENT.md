@@ -26,7 +26,7 @@ php artisan optimize
 php artisan queue:restart
 ```
 
-Required production settings include `APP_ENV=production`, `APP_DEBUG=false`, HTTPS `APP_URL`, `APP_TIMEZONE=Asia/Manila`, `SESSION_SECURE_COOKIE=true`, MySQL 8 credentials, `QUEUE_CONNECTION=database` or Redis, and valid SMTP credentials. Do not copy demonstration accounts or test email addresses into production.
+Required production settings include `APP_ENV=production`, `APP_DEBUG=false`, HTTPS `APP_URL`, `APP_TIMEZONE=Asia/Manila`, `SESSION_SECURE_COOKIE=true`, MySQL 8 credentials, `QUEUE_CONNECTION=database` or Redis, and valid SMTP credentials. Gmail production mail uses `MAIL_MAILER=smtp`, `MAIL_SCHEME=smtp`, `MAIL_HOST=smtp.gmail.com`, port `587`, an app password, and a From address authorized by that Gmail account. Laravel 12 does not read the legacy `MAIL_ENCRYPTION` key. Do not copy demonstration accounts or test email addresses into production.
 
 For a fresh production database, populate every `HOA_INITIAL_ADMIN_*` value in `.env` immediately before running `AdminUserSeeder`. The password and confirmation must match and satisfy the application password policy. The seeder creates an Admin only when that email is unused, is safe to repeat without rotating an existing Admin's credentials, and refuses to elevate an existing non-Admin account. After the first successful login, remove both password values from `.env`, run `php artisan config:clear`, and rebuild the configuration cache. Never run the general `DatabaseSeeder` in production because it contains demonstration identities.
 
@@ -38,13 +38,13 @@ Run one scheduler entry every minute:
 * * * * * cd /path/to/hoa-system && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-Supervise the queue worker (Supervisor/systemd on a VPS). On shared hosting, run `queue:work --stop-when-empty --tries=3` from a one-minute cron while monitoring for overlap. Restart workers after every deployment.
+Supervise the queue worker (Supervisor/systemd on a VPS). On shared hosting, run `php artisan queue:work --stop-when-empty --tries=3 --timeout=600` from a one-minute cron while monitoring for overlap. Restart workers after every deployment. Password-reset, explicit announcement-blast, and contact-reply mail are synchronous and do not require this worker; other workflow mail remains queued.
 
 ## Release checks
 
 Run `php artisan hoa:release-check` first. It fails unless production configuration is safe and operations has explicitly attested queue-worker, scheduler, backup/restore, mail, private-storage and SEC-01 recovery evidence. Set the corresponding `HOA_*_VERIFIED` values only after retaining dated evidence; never set them merely to bypass the gate.
 
-Run `composer qa`, `npm run build`, `php artisan route:cache`, `php artisan view:cache`, `php artisan schedule:list`, `php artisan hoa:audit-data`, and `composer audit`. Verify `/up` returns success with the production database available and fails in a controlled dependency-outage check, then verify all three panel logins, a queued test email, an authorized private download, and a database backup before switching traffic.
+Run `composer qa`, `npm run build`, `php artisan route:cache`, `php artisan view:cache`, `php artisan schedule:list`, `php artisan hoa:audit-data`, and `composer audit`. After changing mail values, run `php artisan config:clear` followed by `php artisan config:cache`. Verify effective mail settings without printing usernames, passwords, From addresses, reset URLs, or message bodies. Send one password reset to a designated test account and one queued notification to a designated test mailbox; confirm inbox delivery rather than treating a queued job as delivery. Verify `/up` returns success with the production database available and fails in a controlled dependency-outage check, then verify all three panel logins, an authorized private download, and a database backup before switching traffic.
 
 The checked-in `quality` GitHub Actions workflow includes an exact MySQL 8.4 job and runs on push, pull request, or approved manual dispatch. Release candidate `d1ed44814913e61ed0c30b92e8a1335b67a52da2` passed `sqlite-test`, `mysql-test`, and the Chromium, Firefox, and WebKit `browser-matrix` jobs on pinned Ubuntu 24.04 in [run 36307753852](https://github.com/saint7uke/Southville-Phase-I-Homeowners-Association-HOA-Management-System/actions/runs/36307753852). Require those five jobs on the protected release branch before merge or deployment, and retain the exact candidate's successful run URL in the UAT record. A local MariaDB pass remains useful compatibility evidence but does not replace the native MySQL 8.4 job.
 

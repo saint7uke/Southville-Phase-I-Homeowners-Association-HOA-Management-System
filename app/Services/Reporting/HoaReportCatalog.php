@@ -196,7 +196,7 @@ final class HoaReportCatalog
             'delinquency' => [$record->homeowner?->user?->full_name ?? 'Archived resident', $record->property_address, $record->duesSetting?->name, sprintf('%04d-%02d', $record->billing_year, $record->billing_month), $record->due_date?->toDateString(), $record->amount_due, $record->penalty_amount, $record->amount_paid, Money::fromMinor(Money::toMinor((string) $record->amount_due) + Money::toMinor((string) $record->penalty_amount) - Money::toMinor((string) $record->amount_paid))],
             'payment-history' => [$record->or_number, $record->homeowner?->user?->full_name ?? 'Archived resident', $record->payer?->user?->full_name ?? $record->homeowner?->user?->full_name, $record->property_address, $record->duesSetting?->name, $record->amount_paid, $record->penalty, $record->covered_period, $record->payment_method, $record->transaction_reference, $record->status, $record->review_status, $record->payment_date?->toDateString(), $record->recorder?->full_name ?? 'Archived recorder', $scope],
             'payment-review' => [$record->or_number, $record->homeowner?->user?->full_name ?? 'Archived resident', $record->payer?->user?->full_name ?? $record->homeowner?->user?->full_name ?? 'Archived payer', $record->property_address, $record->duesSetting?->name, $record->amount_paid, $record->review_status === 'Pending' ? $record->amount_paid : '0.00', $record->payment_method, $record->transaction_reference, $record->review_status, $record->review_notes, $record->created_at?->toDateTimeString(), $record->reviewer?->full_name, $scope],
-            'complaints' => [$record->ticket_number, $record->homeowner?->user?->full_name ?? 'Archived resident', $record->subject, $record->category, $record->priority, $record->status, $record->handler?->full_name, $record->created_at?->toDateTimeString(), $record->resolved_at?->toDateTimeString(), $scope],
+            'complaints' => [$record->ticket_number, $record->homeowner?->user?->full_name ?? 'Archived resident', $record->subject, ($record->category === 'Others' && filled($record->category_other) ? 'Others: '.$record->category_other : $record->category), $record->priority, $record->status, $record->handler?->full_name, $record->created_at?->toDateTimeString(), $record->resolved_at?->toDateTimeString(), $scope],
             'requests' => [$record->ticket_number, $record->homeowner?->user?->full_name ?? 'Archived resident', $record->request_type, $record->subject, $record->status, $record->handler?->full_name, $record->completed_at?->toDateTimeString(), $record->created_at?->toDateTimeString(), $scope],
             'certificates' => [$record->certificate_number, $record->homeowner?->user?->full_name ?? 'Archived resident', $record->type, $record->purpose, $record->status, $record->issued_at?->toDateTimeString(), $record->issuer?->full_name ?? 'Archived issuer', $record->expires_at?->toDateTimeString(), $scope],
             'announcements' => [$record->title, $record->category, $record->audience, $record->status, $record->published_at?->toDateTimeString(), $record->expires_at?->toDateTimeString(), $record->creator?->full_name ?? 'Archived creator', $record->readers_count, $this->residentReach($record->active_resident_readers_count), $scope],
@@ -288,9 +288,7 @@ final class HoaReportCatalog
         }
         $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search).'%';
         $resident = fn (Builder $query) => $query->whereHas('homeowner', fn (Builder $query) => $query
-            ->where('house_number', 'like', $like)
-            ->orWhere('street', 'like', $like)
-            ->orWhere('block', 'like', $like)
+            ->where('block', 'like', $like)
             ->orWhere('lot', 'like', $like)
             ->orWhere('phase', 'like', $like)
             ->orWhereHas('user', fn (Builder $query) => $query->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)));
@@ -304,7 +302,7 @@ final class HoaReportCatalog
                 'certificates' => $query->where('certificate_number', 'like', $like)->orWhere('type', 'like', $like)->orWhere($resident),
                 'announcements' => $query->where('title', 'like', $like)->orWhere('category', 'like', $like),
                 'contacts' => $query->where('reference', 'like', $like)->orWhere('name', 'like', $like)->orWhere('email', 'like', $like)->orWhere('subject', 'like', $like),
-                'homeowners' => $query->where('house_number', 'like', $like)->orWhere('street', 'like', $like)->orWhere('block', 'like', $like)->orWhere('lot', 'like', $like)->orWhere('phase', 'like', $like)->orWhereHas('user', fn (Builder $query) => $query->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('email', 'like', $like)),
+                'homeowners' => $query->where('block', 'like', $like)->orWhere('lot', 'like', $like)->orWhere('phase', 'like', $like)->orWhereHas('user', fn (Builder $query) => $query->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('email', 'like', $like)),
                 'audit-activity' => $query->where('action', 'like', $like)->orWhereHas('user', fn (Builder $query) => $query->where('first_name', 'like', $like)->orWhere('last_name', 'like', $like)),
                 default => null,
             };

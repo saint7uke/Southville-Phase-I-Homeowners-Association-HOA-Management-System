@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Support\ActionFeedback;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -54,6 +55,8 @@ final class UnifiedAuthentication
         }
         Auth::shouldUse($target);
         request()->session()->regenerate();
+
+        request()->session()->flash('action_feedback', ActionFeedback::flash('success', 'Login Successful!', ''));
 
         return route("filament.{$target}.pages.dashboard");
     }

@@ -9,7 +9,6 @@ use App\Filament\Widgets\DashboardAccount;
 use App\Filament\Widgets\HoaOverview;
 use App\Filament\Widgets\MonthlyRevenueChart;
 use App\Filament\Widgets\OverdueAccounts;
-use App\Filament\Widgets\PortalWelcome;
 use App\Filament\Widgets\RecentPayments;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\MigrateLegacyPanelSession;
@@ -65,7 +64,6 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                PortalWelcome::class,
                 HoaOverview::class,
                 MonthlyRevenueChart::class,
                 OverdueAccounts::class,

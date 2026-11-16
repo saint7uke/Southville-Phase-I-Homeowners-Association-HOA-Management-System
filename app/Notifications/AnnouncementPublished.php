@@ -4,19 +4,15 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Models\Announcement;
+use App\Models\SystemSetting;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Str;
 
-final class AnnouncementPublished extends Notification implements ShouldQueue
+final class AnnouncementPublished extends Notification
 {
-    use Queueable;
-
-    public function __construct(private readonly string $title)
-    {
-        $this->afterCommit();
-    }
+    public function __construct(private readonly Announcement $announcement) {}
 
     public function via(object $notifiable): array
     {
@@ -25,10 +21,17 @@ final class AnnouncementPublished extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
+        $announcement = $this->announcement->loadMissing('creator');
+        $hoaName = SystemSetting::current()->hoa_name ?: config('app.name');
+        $sender = $announcement->creator?->full_name ?: $hoaName;
+        $content = Str::limit(Str::squish(strip_tags(html_entity_decode($announcement->content))), 600);
+
         return (new MailMessage)
-            ->subject(__('New HOA announcement'))
+            ->subject(__('New HOA announcement: :title', ['title' => $announcement->title]))
             ->greeting(__('Hello :name.', ['name' => $notifiable->full_name]))
-            ->line($this->title)
-            ->action(__('Read announcements'), url('/homeowner/announcements'));
+            ->line($announcement->title)
+            ->line($content)
+            ->line(__('Published by :sender on behalf of :hoa.', ['sender' => $sender, 'hoa' => $hoaName]))
+            ->action(__('Read announcement'), url('/homeowner/announcements/'.$announcement->getKey()));
     }
 }

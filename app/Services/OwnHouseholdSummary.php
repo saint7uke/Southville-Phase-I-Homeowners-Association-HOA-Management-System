@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Actions\Households\ManageHouseholdHead;
 use App\Models\Household;
 use App\Models\HouseholdMember;
 use App\Models\User;
@@ -20,6 +21,7 @@ final class OwnHouseholdSummary
         }
 
         return ['id' => $household->id, 'identifier' => $household->identifier, 'address' => $household->full_address, 'needs_review' => $household->needs_review,
+            ...app(ManageHouseholdHead::class)->status($household),
             'members' => $this->membersQuery($household)->get()->map(fn ($record) => $record->only(['full_name', 'relationship', 'residency_status']))->all()];
     }
 

@@ -26,10 +26,10 @@ final class ProfileController extends Controller
         $updateProfile->handle($request->user(), $request->validated());
 
         if ($emailChanged) {
-            return redirect()->route('portal.status')->with('success', __('Profile updated. Verify your new email address before continuing.'));
+            return redirect()->route('portal.status')->with('success_title', __('Homeowner Profile Updated Successfully!'))->with('success', __('Profile updated. Verify your new email address before continuing.'));
         }
 
-        return back()->with('success', __('Profile updated.'));
+        return back()->with('success_title', __('Homeowner Profile Updated Successfully!'))->with('success', __('Profile updated.'));
     }
 
     public function changePassword(ChangePasswordRequest $request, ChangeOwnPassword $changePassword): RedirectResponse
@@ -40,6 +40,6 @@ final class ProfileController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('portal.login')->with('success', __('Password changed. Sign in again with your new password.'));
+        return redirect()->route('login')->with('success_title', __('Password Changed Successfully!'))->with('success', __('Password changed. Sign in again with your new password.'));
     }
 }

@@ -78,7 +78,8 @@ final class CohabitationCertificateData
         if ($defaults['cohabitant_one_birth_date'] && $validated['cohabitant_one_birth_date'] !== $defaults['cohabitant_one_birth_date']) {
             $this->error('cohabitant_one_birth_date', __('Use the registered birth date. Correct the account before issuing this certificate.'));
         }
-        $address = Arr::only($request?->address_snapshot ?? $owner->getAttributes(), ['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix']);
+        // New preparation excludes retired address fields. Historical values() is unchanged.
+        $address = Arr::only($request?->address_snapshot ?? $owner->getAttributes(), ['block', 'lot', 'phase', 'phase_suffix']);
         if (PropertyIdentity::confirmedKey($address) === null || PropertyIdentity::confirmedKey($owner) !== PropertyIdentity::confirmedKey($address)) {
             $this->error('homeowner_id', __('Confirm the current registered phase, block and lot before preparing this certificate.'));
         }

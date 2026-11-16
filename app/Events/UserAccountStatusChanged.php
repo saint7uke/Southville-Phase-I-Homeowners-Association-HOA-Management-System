@@ -9,15 +9,20 @@ use App\Models\User;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 
 final class UserAccountStatusChanged implements ShouldDispatchAfterCommit
 {
     use Dispatchable, SerializesModels;
+
+    public readonly string $eventId;
 
     public function __construct(
         public readonly User $user,
         public readonly UserAccountStatus $from,
         public readonly UserAccountStatus $to,
         public readonly ?string $reason,
-    ) {}
+    ) {
+        $this->eventId = (string) Str::uuid();
+    }
 }

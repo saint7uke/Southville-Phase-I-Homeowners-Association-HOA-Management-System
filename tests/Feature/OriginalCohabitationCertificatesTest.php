@@ -302,7 +302,7 @@ final class OriginalCohabitationCertificatesTest extends TestCase
         $data = app(CohabitationCertificateData::class)->validate([...$this->data, 'cohabitant_one' => $request->cohabitant_one, 'years_together' => 0], $this->owner, $request);
         $this->assertSame(0, $data['years_together']);
         $this->assertSame('1990-01-02', $this->owner->user->fresh()->date_of_birth->toDateString());
-        $this->assertEqualsCanonicalizing(['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix'], array_keys($data['address']));
+        $this->assertEqualsCanonicalizing(['block', 'lot', 'phase', 'phase_suffix'], array_keys($data['address']));
         $this->assertDatabaseCount('users', 2);
     }
 

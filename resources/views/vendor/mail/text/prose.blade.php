@@ -1,0 +1,2 @@
+@props(['text'])
+{{ (string) $text }}

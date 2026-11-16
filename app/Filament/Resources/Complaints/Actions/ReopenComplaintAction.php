@@ -47,6 +47,6 @@ final class ReopenComplaintAction
 
                 app(ReopenComplaint::class)->handle($record, $actor, (string) ($data['reason'] ?? ''));
             })
-            ->successNotificationTitle(__('Complaint reopened'));
+            ->successNotificationTitle(__('Complaint Reopened Successfully!'));
     }
 }

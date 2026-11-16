@@ -7,6 +7,7 @@ namespace App\Filament\Resources\ServiceRequests\Schemas;
 use App\Models\Homeowner;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Services\CertificateDuesEligibility;
 use App\Services\CertificateTypeCatalog;
 use App\Services\ServiceRequestWorkflow;
 use App\Validation\CaseAttachmentRules;
@@ -30,12 +31,17 @@ final class ServiceRequestForm
                     ->with('user:id,first_name,middle_name,last_name,suffix'))
                 ->getOptionLabelFromRecordUsing(fn (Homeowner $record): string => $record->user->full_name.' | '.$record->full_address)
                 ->searchable()
-                ->preload()
+                ->preload()->live()
                 ->disabled(fn (string $operation): bool => $operation === 'edit')->dehydrated(fn (string $operation): bool => $operation === 'create')
                 ->required(),
             Select::make('request_type')->options(fn (?ServiceRequest $record): array => $record
                 ? [$record->request_type => $record->request_type] : app(CertificateTypeCatalog::class)->requestOptions())->live()->required()
                 ->disabled(fn (string $operation): bool => $operation !== 'create')->dehydrated(fn (string $operation): bool => $operation === 'create'),
+            Placeholder::make('dues_eligibility')->label('')->content(function (Get $get, ?ServiceRequest $record) {
+                $resident = $record?->homeowner ?? Homeowner::find($get('homeowner_id'));
+
+                return view('filament.certificate-dues-notice', ['result' => $resident ? app(CertificateDuesEligibility::class)->inspect($resident) : null]);
+            })->columnSpanFull(),
             TextInput::make('cohabitant_one')->label(__('First resident full name'))->maxLength(160)->required(fn (Get $get): bool => $get('request_type') === 'Certificate of Cohabitation')->visible(fn (Get $get): bool => $get('request_type') === 'Certificate of Cohabitation')->disabled(fn (string $operation): bool => $operation !== 'create')->dehydrated(fn (string $operation): bool => $operation === 'create'),
             TextInput::make('cohabitant_two')->label(__('Second resident full name'))->maxLength(160)->required(fn (Get $get): bool => $get('request_type') === 'Certificate of Cohabitation')->visible(fn (Get $get): bool => $get('request_type') === 'Certificate of Cohabitation')->disabled(fn (string $operation): bool => $operation !== 'create')->dehydrated(fn (string $operation): bool => $operation === 'create'),
             TextInput::make('subject')->required()->maxLength(160),

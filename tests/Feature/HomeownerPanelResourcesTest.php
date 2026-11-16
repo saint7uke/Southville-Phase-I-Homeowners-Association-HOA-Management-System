@@ -15,6 +15,7 @@ use App\Models\ServiceRequest;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 final class HomeownerPanelResourcesTest extends TestCase
@@ -31,9 +32,10 @@ final class HomeownerPanelResourcesTest extends TestCase
     {
         $homeowner = $this->homeowner();
 
-        foreach (['/homeowner/dues/dues-obligations', '/homeowner/payments', '/homeowner/complaints', '/homeowner/service-requests', '/homeowner/certificates', '/homeowner/announcements'] as $path) {
+        foreach (['/homeowner/dues/dues-obligations', '/homeowner/payments', '/homeowner/complaints', '/homeowner/service-requests', '/homeowner/my-concerns', '/homeowner/annual-dues', '/homeowner/announcements'] as $path) {
             $this->actingAs($homeowner->user, 'homeowner')->get($path)->assertOk();
         }
+        $this->get('/homeowner/certificates')->assertRedirect('/homeowner/service-requests');
     }
 
     public function test_homeowner_record_routes_cannot_resolve_another_owners_records(): void
@@ -72,7 +74,8 @@ final class HomeownerPanelResourcesTest extends TestCase
         Announcement::query()->create(['title' => 'Residents only', 'content' => 'Visible to signed-in residents.', 'category' => 'General', 'audience' => 'Residents', 'status' => 'Published', 'published_at' => now(), 'created_by' => $admin->id]);
 
         $this->actingAs($owner->user, 'homeowner')->get('/homeowner/payments')->assertOk()->assertDontSee($payment->or_number);
-        $this->actingAs($owner->user, 'homeowner')->get('/homeowner/certificates')->assertOk()->assertDontSee('CERT-2026-OTHER');
+        $this->actingAs($owner->user, 'homeowner')->get('/homeowner/certificates')->assertRedirect('/homeowner/service-requests');
+        $this->get('/homeowner/service-requests')->assertOk()->assertDontSee('CERT-2026-OTHER');
         $this->actingAs($owner->user, 'homeowner')->get('/homeowner/announcements')->assertOk()->assertSee('Residents only');
     }
 
@@ -105,7 +108,7 @@ final class HomeownerPanelResourcesTest extends TestCase
         ]);
     }
 
-    public function test_homeowner_case_views_show_outcomes_and_linked_certificate(): void
+    public function test_homeowner_case_views_show_outcomes_without_certificate_file_access(): void
     {
         $owner = $this->homeowner();
         $staff = User::factory()->create(['account_status' => 'Active']);
@@ -151,7 +154,13 @@ final class HomeownerPanelResourcesTest extends TestCase
             ->get('/homeowner/service-requests/'.$request->id)
             ->assertOk()
             ->assertSee('Approved after resident record verification.')
-            ->assertSee('Download certificate');
+            ->assertDontSee('Download certificate')
+            ->assertDontSee('Preview draft PDF');
+
+        $this->get('/homeowner/service-requests')->assertOk()
+            ->assertSee('Certificates must be collected at the HOA office');
+        $this->get(URL::temporarySignedRoute('certificates.download', now()->addMinutes(5), ['certificate' => $certificate->id]))
+            ->assertForbidden();
 
         $this->assertTrue($request->certificate->is($certificate));
     }

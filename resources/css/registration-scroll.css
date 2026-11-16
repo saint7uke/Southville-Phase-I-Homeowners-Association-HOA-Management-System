@@ -1,0 +1,64 @@
+/* Registration only. Other authentication pages keep their existing layout. */
+.hoa-registration-page { margin: 0; box-sizing: border-box; }
+.hoa-registration-page .hoa-registration-shell,
+.hoa-registration-page .hoa-registration-shell > * { min-width: 0; }
+
+@media (min-width: 721px) and (min-height: 641px) {
+    .hoa-registration-page {
+        height: 100vh;
+        height: 100dvh;
+        padding: 1rem;
+        overflow: hidden;
+    }
+    .hoa-registration-page .hoa-registration-shell.hoa-portal-auth {
+        height: 100%;
+        min-height: 0;
+        grid-template-rows: minmax(0, 1fr);
+        margin: 0 auto;
+    }
+    .hoa-registration-page .hoa-registration-shell .hoa-portal-auth-intro {
+        min-height: 0;
+        justify-content: center;
+    }
+    .hoa-registration-page .hoa-registration-shell .hoa-portal-auth-form {
+        min-height: 0;
+        height: 100%;
+        margin: 0;
+        justify-content: flex-start;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        scrollbar-gutter: stable;
+    }
+    .hoa-registration-page .hoa-portal-auth-form > * { flex-shrink: 0; }
+}
+
+@media (max-width: 720px), (max-height: 640px) {
+    .hoa-registration-page {
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding: 0;
+        overflow-y: visible;
+    }
+    .hoa-registration-page .hoa-registration-shell.hoa-portal-auth {
+        height: auto;
+        min-height: 0;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+        margin: 0 auto;
+    }
+    .hoa-registration-page .hoa-registration-shell .hoa-portal-auth-intro { padding: 1.5rem; }
+    .hoa-registration-page .hoa-portal-auth-brand { margin-bottom: 2rem; }
+    .hoa-registration-page .hoa-portal-auth-intro h1 { max-width: 30rem; font-size: 1.5rem; }
+    .hoa-registration-page .hoa-portal-auth-support { display: block; }
+    .hoa-registration-page .hoa-registration-shell .hoa-portal-auth-form {
+        height: auto;
+        max-height: none;
+        min-height: 0;
+        margin: 0;
+        padding: 1.5rem;
+        justify-content: flex-start;
+        overflow: visible;
+        scrollbar-gutter: auto;
+    }
+}

@@ -38,6 +38,8 @@ final class Reports extends Page
 
     public string $catalogSearch = '';
 
+    public string $selectedReport = '';
+
     /** @var array<string, array<string, mixed>> */
     public array $filters = [];
 
@@ -88,11 +90,20 @@ final class Reports extends Page
         $search = mb_strtolower(trim($this->catalogSearch));
 
         return collect($this->availableDefinitions())
+            ->filter(fn (array $definition, string $slug) => $slug === $this->selectedReport)
             ->filter(fn (array $definition) => $category === 'all' || $definition['category'] === $category)
             ->filter(fn (array $definition) => $search === '' || str_contains(mb_strtolower($definition['title'].' '.$definition['description']), $search))
             ->map(fn (array $definition, string $slug): array => ['slug' => $slug, ...$definition])
             ->sortBy(in_array($this->sortColumn, ['title', 'category', 'description'], true) ? $this->sortColumn : 'title', SORT_REGULAR, $this->sortDirection === 'desc')
             ->values();
+    }
+
+    public function updatedSelectedReport(): void
+    {
+        $this->selectedCategory = 'all';
+        $this->catalogSearch = '';
+        $this->previewSlug = null;
+        $this->resetPage();
     }
 
     public function getPaginatedReports(): Collection
@@ -189,7 +200,7 @@ final class Reports extends Page
             'ip_address' => request()->ip(),
             'user_agent' => mb_substr((string) request()->userAgent(), 0, 500),
         ]);
-        Notification::make()->success()->title(strtoupper($format).' export queued')->body(__('The private export will appear under My queued exports when complete.'))->send();
+        Notification::make()->success()->title(__('Report Export Queued Successfully!'))->body(__('The private export will appear under My queued exports when complete.'))->send();
     }
 
     /** @param array<string, mixed>|null $filters */
@@ -305,6 +316,7 @@ final class Reports extends Page
             'panel' => $context['panel'],
             'categories' => $this->getCategories(),
             'allReports' => $reports,
+            'reportOptions' => collect($this->availableDefinitions())->mapWithKeys(fn ($definition, $slug) => [$slug => $definition['title']])->all(),
             'selectedCategory' => $this->selectedCategory,
             'sortColumn' => $this->sortColumn,
             'sortDirection' => $this->sortDirection,

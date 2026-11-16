@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Users\Pages;
 
 use App\Actions\Users\CreatePendingUser;
 use App\Actions\Users\InviteManagedUser;
+use App\Filament\Concerns\HasSpecificFeedback;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
 use App\Support\AuthenticatedActor;
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CreateUser extends CreateRecord
 {
+    use HasSpecificFeedback;
+
     protected static string $resource = UserResource::class;
 
     /** @param array<string, mixed> $data */

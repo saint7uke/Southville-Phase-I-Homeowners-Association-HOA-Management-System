@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Certificate;
+use App\Support\OperationalAccess;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -14,6 +15,8 @@ final class CertificateDownloadController extends Controller
     public function __invoke(Certificate $certificate): StreamedResponse
     {
         Gate::forUser(request()->user())->authorize('view', $certificate);
+        abort_unless(OperationalAccess::allows(request()->user(), 'manage_requests'), 403,
+            __('Certificates must be collected at the HOA office with the required signature and dry seal.'));
         abort_unless($certificate->status === 'Issued' && ($certificate->expires_at === null || $certificate->expires_at->isFuture()), 404);
 
         abort_unless(is_string($certificate->file_path) && Storage::disk('local')->exists($certificate->file_path), 404);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -44,12 +45,19 @@ final class OperationalAlert extends Notification implements ShouldQueue
         }
         $recipient = User::query()->find($notifiable->getKey());
 
-        return $recipient !== null && $recipient->account_status === 'Active'
+        return (bool) match ($permission) {
+            'manage_complaints' => SystemSetting::current()->complaint_notifications,
+            'manage_requests' => SystemSetting::current()->request_notifications,
+            'manage_contact_messages' => SystemSetting::current()->contact_notifications,
+            default => false,
+        } && $recipient !== null && $recipient->account_status === 'Active'
             && $recipient->hasRole('hoa_staff') && $recipient->can($permission);
     }
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)->subject(__($this->subject))->line(__($this->message, $this->parameters ?? []))->action(__('Open staff panel'), $this->url);
+        return (new MailMessage)->subject(__($this->subject))
+            ->greeting(__('Hello :name,', ['name' => $notifiable->full_name]))
+            ->line(__($this->message, $this->parameters ?? []))->action(__('Open staff panel'), $this->url);
     }
 }

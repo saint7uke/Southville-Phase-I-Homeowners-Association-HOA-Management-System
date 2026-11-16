@@ -8,8 +8,11 @@ use App\Models\DuesObligation;
 use App\Models\Homeowner;
 use App\Models\SystemSetting;
 use App\Notifications\HomeownerDelinquencyNotice;
+use App\Services\WorkflowMail;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class FlagDelinquentHomeowners
 {
@@ -36,12 +39,18 @@ final class FlagDelinquentHomeowners
         $changed = 0;
         Homeowner::query()->with('user')->whereIn('id', $homeownerIds)->where('status', 'Active')->chunkById(100, function ($homeowners) use (&$changed, $settings, $threshold): void {
             foreach ($homeowners as $homeowner) {
-                $homeowner->update(['status' => 'Delinquent']);
-                $changed++;
+                DB::transaction(function () use ($homeowner, &$changed, $settings, $threshold): void {
+                    $homeowner = Homeowner::query()->lockForUpdate()->findOrFail($homeowner->id);
+                    if ($homeowner->status !== 'Active') {
+                        return;
+                    }
+                    $homeowner->update(['status' => 'Delinquent']);
+                    $changed++;
 
-                if ($settings->delinquency_notifications) {
-                    $homeowner->user->notify(new HomeownerDelinquencyNotice($threshold));
-                }
+                    if ($settings->delinquency_notifications) {
+                        app(WorkflowMail::class)->queue($homeowner->user, new HomeownerDelinquencyNotice($threshold), 'delinquent:'.$homeowner->id.':'.Str::uuid());
+                    }
+                });
             }
         });
 

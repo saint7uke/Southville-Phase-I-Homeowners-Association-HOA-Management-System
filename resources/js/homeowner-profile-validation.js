@@ -1,4 +1,5 @@
 import { translate, translationKey } from './translations';
+import { notify } from './alerts';
 
 const PROFILE_FIELDS = [
     'first_name', 'middle_name', 'last_name', 'suffix', 'sex', 'date_of_birth',
@@ -65,6 +66,7 @@ const setStatus = (wrapper, field, message = '', state = 'neutral') => {
 };
 
 const showClientSummary = (form, messages, kind) => {
+    if (messages.length) void notify({ level: 'error', title: 'Please review the form', message: [...new Set(messages)].join('\n') });
     let summary = form.querySelector(`[data-client-validation-summary="${kind}"]`);
     if (messages.length === 0) {
         summary?.remove();
@@ -115,7 +117,7 @@ const validateProfileField = (fields, field) => {
     if (['first_name', 'middle_name', 'last_name', 'emergency_contact_name'].includes(field) && value.length > 100) {
         return 'Use no more than 100 characters.';
     }
-    if (PHONE_FIELDS.includes(field) && !PHONE_PATTERN.test(canonicalPhone(value))) {
+    if (PHONE_FIELDS.includes(field) && !PHONE_PATTERN.test(field === 'contact_number' ? value : canonicalPhone(value))) {
         return 'Enter an 11-digit Philippine mobile number beginning with 09.';
     }
     if (field === 'email' && (!EMAIL_PATTERN.test(value) || value.length > 255)) {
@@ -182,7 +184,7 @@ const normalizeOnBlur = (field, input) => {
     if (NAME_FIELDS.includes(field)) {
         input.value = canonicalText(original);
     } else if (PHONE_FIELDS.includes(field)) {
-        input.value = canonicalPhone(original);
+        input.value = field === 'contact_number' ? original : canonicalPhone(original);
     } else if (field === 'email') {
         input.value = canonicalEmail(original);
     }

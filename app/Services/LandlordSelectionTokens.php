@@ -63,7 +63,7 @@ final class LandlordSelectionTokens
             ->first();
 
         if (! $homeowner instanceof Homeowner || ! PropertyIdentity::same($homeowner, $address)
-            || ! PropertyAddress::sameStreet($homeowner->street, $address['street'] ?? null)) {
+            || (PropertyIdentity::confirmedKey($address) === null && ! PropertyAddress::sameStreet($homeowner->street, $address['street'] ?? null))) {
             throw $this->invalid();
         }
 

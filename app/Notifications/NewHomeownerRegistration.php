@@ -14,7 +14,15 @@ final class NewHomeownerRegistration extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(private readonly User $resident) {}
+    private readonly string $residentName;
+
+    // Compatibility with older queued notifications; new payloads retain no User model.
+    private ?User $resident = null;
+
+    public function __construct(User $resident)
+    {
+        $this->residentName = $resident->full_name;
+    }
 
     public function via(object $notifiable): array
     {
@@ -23,6 +31,6 @@ final class NewHomeownerRegistration extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)->subject(__('New resident application'))->greeting(__('Hello :name,', ['name' => $notifiable->first_name]))->line(__(':name submitted a Southville Phase I resident application.', ['name' => $this->resident->full_name]))->action(__('Review application'), url('/admin/users'))->line(__('Review the resident details before activating the account.'));
+        return (new MailMessage)->subject(__('New resident application'))->greeting(__('Hello :name,', ['name' => $notifiable->first_name]))->line(__(':name submitted a Southville Phase I resident application.', ['name' => $this->residentName ?? $this->resident?->full_name]))->action(__('Review application'), url('/admin/users'))->line(__('Review the resident details before activating the account.'));
     }
 }

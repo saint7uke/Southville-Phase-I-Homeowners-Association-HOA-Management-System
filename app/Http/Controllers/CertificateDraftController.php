@@ -4,20 +4,24 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\CertificateDuesBlocked;
 use App\Filament\Homeowner\Resources\ServiceRequests\ServiceRequestResource as HomeownerServiceRequestResource;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Filament\Resources\ServiceRequests\ServiceRequestResource;
 use App\Models\CertificateTemplate;
 use App\Models\ServiceRequest;
+use App\Services\CertificateDuesEligibility;
 use App\Services\CertificateTemplates;
 use App\Services\CertificateTypeCatalog;
 use App\Services\CohabitationCertificateData;
 use App\Services\CohabitationCertificateSource;
 use App\Services\OriginalCertificateRenderer;
 use App\Services\ResidencyCertificatePreviews;
+use App\Support\CurrentPropertyAddress;
 use App\Support\OperationalAccess;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -26,11 +30,18 @@ final class CertificateDraftController extends Controller
 {
     public function prepared(string $token)
     {
+        OperationalAccess::authorize(request()->user(), 'manage_requests');
         try {
             $preview = app(ResidencyCertificatePreviews::class)->read($token, request()->user());
+            if ($requestId = $preview->payload['service_request_id'] ?? null) {
+                abort_unless(ServiceRequest::query()->whereKey($requestId)->where('status', 'Approved')->exists(), 403,
+                    __('Draft PDF previews are available only for approved service requests.'));
+            }
             $snapshot = $preview->snapshot;
 
             return $this->originalResponse(app(OriginalCertificateRenderer::class)->render($snapshot['layout'], app(OriginalCertificateRenderer::class)->values($snapshot, Carbon::parse($snapshot['issuance_date'])), true));
+        } catch (CertificateDuesBlocked $exception) {
+            abort(403, collect($exception->errors())->flatten()->first());
         } catch (ValidationException) {
             abort(410, __('The preview expired or its information changed. Generate a fresh preview before issuing.'));
         }
@@ -80,6 +91,7 @@ final class CertificateDraftController extends Controller
         Gate::authorize('view', $serviceRequest);
         $actor = request()->user();
         $manager = OperationalAccess::allows($actor, 'manage_requests');
+        abort_unless($manager, 403, __('Certificates must be collected at the HOA office with the required signature and dry seal.'));
         if (! $manager) {
             abort_unless($actor?->hasRole('homeowner') && $actor->hasVerifiedEmail() && $actor->homeowner()->whereKey($serviceRequest->homeowner_id)->exists(), 403);
         }
@@ -91,6 +103,12 @@ final class CertificateDraftController extends Controller
                 $guard = Auth::getDefaultDriver();
                 $panel = in_array($guard, ['admin', 'staff'], true) ? $guard : ($actor->hasRole('hoa_admin') ? 'admin' : 'staff');
                 if ($serviceRequest->status === 'Approved') {
+                    try {
+                        app(CertificateDuesEligibility::class)->assertEligible($serviceRequest->homeowner);
+                    } catch (CertificateDuesBlocked $exception) {
+                        abort(403, collect($exception->errors())->flatten()->first());
+                    }
+
                     return redirect(CertificateResource::getUrl('create', ['request' => $serviceRequest->id], panel: $panel))
                         ->header('Cache-Control', 'private, no-store');
                 }
@@ -102,6 +120,12 @@ final class CertificateDraftController extends Controller
             return response()->view('certificates.request-guidance', compact('serviceRequest', 'returnUrl'))
                 ->header('Cache-Control', 'private, no-store')
                 ->header('X-Content-Type-Options', 'nosniff');
+        }
+        abort_unless($serviceRequest->status === 'Approved', 403, __('Draft PDF previews are available only for approved service requests.'));
+        try {
+            app(CertificateDuesEligibility::class)->assertEligible($serviceRequest->homeowner);
+        } catch (CertificateDuesBlocked $exception) {
+            abort(403, collect($exception->errors())->flatten()->first());
         }
         if ($serviceRequest->request_type === 'Certificate of Residency') {
             try {
@@ -115,7 +139,7 @@ final class CertificateDraftController extends Controller
         if ($template?->renderer === OriginalCertificateRenderer::ID) {
             $renderer = app(OriginalCertificateRenderer::class);
             $snapshot = ['resident_name' => $serviceRequest->homeowner->user->full_name,
-                'address' => $serviceRequest->address_snapshot ?? $serviceRequest->homeowner->getAttributes(),
+                'address' => Arr::only($serviceRequest->address_snapshot ?? $serviceRequest->homeowner->getAttributes(), ['block', 'lot', 'phase', 'phase_suffix']),
                 'purpose' => $serviceRequest->details];
 
             return $this->originalResponse($renderer->render($template->layout, $renderer->values($snapshot, now()), true));
@@ -123,7 +147,7 @@ final class CertificateDraftController extends Controller
         $body = $template?->body ?? 'Draft wording has not yet been prepared by the HOA.';
         $body = app(CertificateTemplates::class)->render($body, [
             'resident_name' => $serviceRequest->homeowner->user->full_name,
-            'address' => implode(', ', array_filter($serviceRequest->address_snapshot ?? [])),
+            'address' => CurrentPropertyAddress::display($serviceRequest->address_snapshot ?? $serviceRequest->homeowner),
             'purpose' => $serviceRequest->details, 'issuance_date' => 'DRAFT — not issued',
             'cohabitant_one' => $serviceRequest->cohabitant_one, 'cohabitant_two' => $serviceRequest->cohabitant_two,
         ]);

@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\ServiceRequests\Pages;
 
 use App\Actions\ServiceRequests\CreateServiceRequest as CreateServiceRequestAction;
+use App\Filament\Concerns\HasSpecificFeedback;
+use App\Filament\Concerns\MapsDomainValidation;
 use App\Filament\Resources\ServiceRequests\ServiceRequestResource;
 use App\Models\Homeowner;
 use App\Models\User;
@@ -17,6 +19,9 @@ use Throwable;
 
 class CreateServiceRequest extends CreateRecord
 {
+    use HasSpecificFeedback;
+    use MapsDomainValidation;
+
     protected static string $resource = ServiceRequestResource::class;
 
     protected function getCreateFormAction(): Action
@@ -44,7 +49,7 @@ class CreateServiceRequest extends CreateRecord
         unset($data['homeowner_id'], $data['attachments'], $data['initial_status']);
 
         try {
-            return app(CreateServiceRequestAction::class)->handle($homeowner, $data, $attachments, $actor);
+            return $this->runValidatedDomainAction(fn () => app(CreateServiceRequestAction::class)->handle($homeowner, $data, $attachments, $actor), 'data');
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (Throwable $exception) {
@@ -56,10 +61,5 @@ class CreateServiceRequest extends CreateRecord
                 ->send();
             $this->halt(shouldRollbackDatabaseTransaction: true);
         }
-    }
-
-    protected function getCreatedNotificationTitle(): ?string
-    {
-        return 'Service request created successfully';
     }
 }

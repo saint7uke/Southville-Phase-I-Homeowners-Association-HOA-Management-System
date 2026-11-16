@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\PaymentSettlementProtection;
 use App\Support\AuthenticatedActor;
 use App\Support\Money;
 use App\Support\PropertySnapshot;
@@ -68,6 +69,13 @@ final class Payment extends Model
 
     protected static function booted(): void
     {
+        self::updating(function (Payment $payment): void {
+            if ($payment->isDirty(['homeowner_id', 'payer_homeowner_id', 'dues_setting_id', 'dues_obligation_id', 'or_number',
+                'amount_paid', 'penalty', 'balance', 'payment_date', 'payment_method', 'transaction_reference',
+                'review_status', 'status', 'reviewed_at', 'reviewed_by', 'recorded_by', 'property_snapshot'])) {
+                app(PaymentSettlementProtection::class)->assertMutable($payment);
+            }
+        });
         self::creating(function (Payment $payment): void {
             $payment->or_number ??= 'OR-'.now()->format('Ymd').'-'.Str::upper(Str::random(6));
             $payment->recorded_by ??= app(AuthenticatedActor::class)->id();
@@ -85,12 +93,14 @@ final class Payment extends Model
         });
 
         self::deleting(function (Payment $payment): void {
+            app(PaymentSettlementProtection::class)->assertMutable($payment);
             if (! $payment->isForceDeleting() && in_array($payment->review_status, ['Approved', 'Recorded'], true)) {
                 self::reconcileObligation($payment, false);
             }
         });
 
         self::restoring(function (Payment $payment): void {
+            app(PaymentSettlementProtection::class)->assertMutable($payment);
             if (in_array($payment->review_status, ['Approved', 'Recorded'], true)) {
                 self::reconcileObligation($payment, true);
             }

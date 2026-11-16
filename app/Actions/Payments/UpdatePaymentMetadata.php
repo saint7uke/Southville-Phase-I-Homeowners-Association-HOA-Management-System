@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Payments;
 
+use App\Models\DuesObligation;
 use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,9 @@ final class UpdatePaymentMetadata
         ])->validate();
 
         return DB::transaction(function () use ($payment, $validated, $actor): Payment {
+            if ($payment->dues_obligation_id) {
+                DuesObligation::whereKey($payment->dues_obligation_id)->lockForUpdate()->firstOrFail();
+            }
             $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             Gate::forUser($actor)->authorize('update', $locked);
             foreach (['payment_method', 'transaction_reference'] as $field) {

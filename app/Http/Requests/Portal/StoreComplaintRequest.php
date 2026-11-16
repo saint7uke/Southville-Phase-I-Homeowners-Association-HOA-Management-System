@@ -27,5 +27,6 @@ final class StoreComplaintRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge(app(ComplaintSubmissionValidator::class)->normalize($this->all()));
+        $this->merge(['subject' => $this->input('category') === 'Others' ? $this->input('category_other') : $this->input('category'), 'priority' => 'Medium']);
     }
 }

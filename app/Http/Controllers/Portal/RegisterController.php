@@ -25,7 +25,7 @@ final class RegisterController extends Controller
 
         if ($request->routeIs('portal.register.store')) {
             return redirect()->route('portal.login')
-                ->with('success', __('Your application was submitted for HOA Admin review.'))
+                ->with('success_title', __('Homeowner Application Submitted Successfully!'))->with('success', __('Your application was submitted for HOA Admin review.'))
                 ->with('registered_email', $user->email);
         }
 
@@ -43,7 +43,7 @@ final class RegisterController extends Controller
         }
 
         return redirect()->to($statusUrl)
-            ->with('success', __('Your application was submitted for HOA Admin review.'))
+            ->with('success_title', __('Homeowner Application Submitted Successfully!'))->with('success', __('Your application was submitted for HOA Admin review.'))
             ->with('registered_email', $user->email);
     }
 

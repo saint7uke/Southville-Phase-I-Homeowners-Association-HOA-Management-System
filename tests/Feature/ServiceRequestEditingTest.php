@@ -99,7 +99,7 @@ final class ServiceRequestEditingTest extends TestCase
         $this->login($this->staff, 'staff');
         $page = Livewire::test(EditServiceRequest::class, ['record' => $record->id])
             ->fillForm(['status' => 'Processing', 'admin_remarks' => 'Review started.'])->call('save', false)
-            ->assertHasNoFormErrors()->assertNotified('Saved')
+            ->assertHasNoFormErrors()->assertNotified('Service Request Updated Successfully!')
             ->assertFormFieldExists('status', fn (Select $field): bool => array_keys($field->getOptions()) === ['Processing', 'Approved', 'Rejected']);
         $this->assertSame('Processing', $record->fresh()->status);
         $this->assertSame($this->staff->id, $record->fresh()->processed_by);

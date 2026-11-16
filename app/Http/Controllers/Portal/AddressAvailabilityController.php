@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Services\PropertyAddressAvailability;
 use App\Support\PropertyAddress;
 use App\Support\PropertyIdentity;
+use App\Support\PropertyPhase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -19,8 +20,7 @@ final class AddressAvailabilityController extends Controller
         $request->merge(['phase_suffix' => PropertyIdentity::suffix($request->input('phase_suffix'))]);
         $validated = $request->validate([
             'house_number' => ['prohibited'],
-            'phase_suffix' => ['required', 'string', 'regex:/^[A-Z0-9]{1,10}$/D'],
-            'street' => ['required', 'string', 'max:100'],
+            'phase_suffix' => PropertyPhase::rules(),
             'block' => ['required', 'string', 'max:20'],
             'lot' => ['required', 'string', 'max:20'],
             'ownership_type' => ['required', Rule::in(['Owner', 'Tenant', 'Co-owner'])],

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\CaseAttachment;
+use App\Models\Complaint;
 use App\Models\Homeowner;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -62,6 +63,58 @@ final class CaseAttachmentTest extends TestCase
 
         $this->assertDatabaseCount('service_requests', 0);
         $this->assertDatabaseCount('case_attachments', 0);
+    }
+
+    public function test_private_jpeg_and_png_previews_are_inline_and_not_cacheable(): void
+    {
+        $owner = $this->homeowner();
+        $complaint = Complaint::create(['homeowner_id' => $owner->id, 'subject' => 'Pictures', 'description' => 'Synthetic image evidence.', 'category' => 'Others', 'status' => 'Pending', 'priority' => 'Medium']);
+        foreach (['jpg' => 'image/jpeg', 'png' => 'image/png'] as $extension => $mime) {
+            $file = UploadedFile::fake()->image('proof.'.$extension, 40, 80);
+            Storage::disk('local')->put('proof.'.$extension, file_get_contents($file->getRealPath()));
+            $attachment = $complaint->caseAttachments()->create(['disk' => 'local', 'path' => 'proof.'.$extension, 'original_name' => 'proof.'.$extension, 'mime_type' => $mime, 'size_bytes' => $file->getSize()]);
+            $before = $attachment->fresh()->getAttributes();
+            $response = $this->actingAs($owner->user, 'homeowner')->get(route('case-attachments.preview', $attachment));
+            $response->assertOk()->assertHeader('Content-Type', $mime)->assertHeader('Content-Disposition', 'inline')->assertHeader('X-Content-Type-Options', 'nosniff');
+            $this->assertStringContainsString('private', $response->headers->get('Cache-Control'));
+            $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+            $this->assertSame(file_get_contents($file->getRealPath()), $response->streamedContent());
+            $this->assertSame($before, $attachment->fresh()->getAttributes());
+            $this->actingAs($this->homeowner()->user, 'homeowner')->get(route('case-attachments.preview', $attachment))->assertNotFound();
+        }
+        Notification::assertNothingSent();
+    }
+
+    public function test_image_preview_rejects_non_images_false_mime_missing_and_archived_records(): void
+    {
+        $owner = $this->homeowner();
+        $this->actingAs($owner->user, 'homeowner');
+        $complaint = Complaint::create(['homeowner_id' => $owner->id, 'subject' => 'Pictures', 'description' => 'Synthetic evidence.', 'category' => 'Others', 'status' => 'Pending', 'priority' => 'Medium']);
+        foreach (['application/pdf', 'application/msword', 'image/jpeg', 'image/png', 'image/svg+xml'] as $mime) {
+            $path = 'not-an-image-'.md5($mime);
+            Storage::disk('local')->put($path, '<html>Not an image</html>');
+            $attachment = $complaint->caseAttachments()->create(['disk' => 'local', 'path' => $path, 'original_name' => 'fake.jpg', 'mime_type' => $mime, 'size_bytes' => 24]);
+            $this->get(route('case-attachments.preview', $attachment))->assertNotFound();
+        }
+        $file = UploadedFile::fake()->image('real.png');
+        Storage::disk('local')->put('real.png', file_get_contents($file->getRealPath()));
+        $attachment->update(['path' => 'real.png', 'mime_type' => 'image/jpeg']);
+        $this->get(route('case-attachments.preview', $attachment))->assertNotFound();
+        $attachment->update(['path' => 'missing.png', 'mime_type' => 'image/png']);
+        $this->get(route('case-attachments.preview', $attachment))->assertNotFound();
+        $attachment->update(['path' => 'real.png']);
+        $this->get(route('case-attachments.preview', $attachment))->assertOk();
+        $complaint->delete();
+        $this->get(route('case-attachments.preview', $attachment))->assertNotFound();
+        $this->get('/case-attachments/999999/preview')->assertNotFound();
+    }
+
+    public function test_guests_are_not_served_private_image_previews(): void
+    {
+        $owner = $this->homeowner();
+        $complaint = Complaint::create(['homeowner_id' => $owner->id, 'subject' => 'Private', 'description' => 'Private evidence.', 'category' => 'Others', 'status' => 'Pending', 'priority' => 'Medium']);
+        $attachment = $complaint->caseAttachments()->create(['disk' => 'local', 'path' => 'private.jpg', 'original_name' => 'private.jpg', 'mime_type' => 'image/jpeg', 'size_bytes' => 100]);
+        $this->get(route('case-attachments.preview', $attachment))->assertRedirect();
     }
 
     private function homeowner(): Homeowner

@@ -3,10 +3,12 @@
 namespace App\Filament\Resources\ServiceRequests\Tables;
 
 use App\Actions\Certificates\IssueCertificate;
+use App\Actions\ServiceRequests\UpdateServiceRequest;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use App\Services\CertificateTypeCatalog;
+use App\Support\ActionFeedback;
 use App\Support\AuthenticatedActor;
 use App\Support\OperationalAccess;
 use Filament\Actions\Action;
@@ -16,6 +18,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Textarea;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -43,10 +46,10 @@ class ServiceRequestsTable
                     ->badge(),
                 TextColumn::make('handler.full_name')
                     ->label(__('Assigned staff'))
-                    ->sortable(),
+                    ->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('completed_at')
-                    ->dateTime()
-                    ->sortable(),
+                    ->dateTime('M d, Y g:i A')
+                    ->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
@@ -72,8 +75,16 @@ class ServiceRequestsTable
                 TrashedFilter::make()->visible(fn (): bool => Filament::auth()->user()?->hasRole('hoa_admin') ?? false),
             ])
             ->recordActions([
+                Action::make('approve')->label(__('Approve'))->icon('heroicon-o-check')->button()->tooltip(__('Approve'))->color('success')->requiresConfirmation()
+                    ->visible(fn (ServiceRequest $record): bool => $record->status === 'Processing' && (Filament::auth()->user()?->can('update', $record) ?? false))
+                    ->action(fn (ServiceRequest $record) => ActionFeedback::after('Service Request Approved Successfully!', fn () => app(UpdateServiceRequest::class)->handle($record, [...$record->only(['subject', 'details', 'handled_by', 'admin_remarks']), 'status' => 'Approved'], app(AuthenticatedActor::class)->user()))),
+                Action::make('reject')->label(__('Reject'))->icon('heroicon-o-x-mark')->button()->tooltip(__('Reject'))->color('danger')->requiresConfirmation()
+                    ->schema([Textarea::make('admin_remarks')->label(__('Rejection reason'))->required()->maxLength(3000)])
+                    ->visible(fn (ServiceRequest $record): bool => in_array($record->status, ['Pending', 'Processing'], true) && (Filament::auth()->user()?->can('update', $record) ?? false))
+                    ->action(fn (ServiceRequest $record, array $data) => ActionFeedback::after('Service Request Rejected Successfully!', fn () => app(UpdateServiceRequest::class)->handle($record, [...$record->only(['subject', 'details', 'handled_by']), 'admin_remarks' => $data['admin_remarks'], 'status' => 'Rejected'], app(AuthenticatedActor::class)->user()))),
                 Action::make('draftPreview')->label(__('Preview draft PDF'))->url(fn (ServiceRequest $record): string => route('service-requests.draft', $record))->openUrlInNewTab()
-                    ->visible(fn (ServiceRequest $record): bool => $record->request_type === 'Certificate of Residency'),
+                    ->visible(fn (ServiceRequest $record): bool => ! $record->trashed()
+                        && $record->request_type === 'Certificate of Residency' && $record->status === 'Approved'),
                 Action::make('issueCertificate')
                     ->label(fn (ServiceRequest $record): string => in_array($record->request_type, CertificateTypeCatalog::ALLOWED, true) ? __('Prepare certificate') : __('Issue certificate'))
                     ->icon('heroicon-o-document-check')
@@ -88,6 +99,7 @@ class ServiceRequestsTable
                         $actor = app(AuthenticatedActor::class)->user();
                         abort_unless($actor instanceof User, 403);
                         app(IssueCertificate::class)->fromApprovedRequest($record, $actor);
+                        ActionFeedback::success('Certificate Issued Successfully!');
                     }),
                 EditAction::make(),
             ])

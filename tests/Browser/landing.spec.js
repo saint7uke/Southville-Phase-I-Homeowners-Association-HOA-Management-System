@@ -9,10 +9,10 @@ test('landing page has no serious automated accessibility violations', async ({ 
     await expect(brandLogo).toHaveAttribute('src', /images\/HOA\.png$/);
     await expect.poll(() => brandLogo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
     await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /images\/HOA\.png$/);
-    await expect(page.locator('#how-it-works')).toContainText('Register');
-    await expect(page.locator('#how-it-works')).toContainText('Verify');
-    await expect(page.locator('#how-it-works')).toContainText('Access your panel');
-    await expect(page.locator('#how-it-works')).toContainText('Manage everything');
+    await expect(page.locator('#how-it-works')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Ready to access your resident services?' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Registration steps' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'We are here for the community.' })).toBeVisible();
     await expect.poll(() => page.locator('[data-hero-reveal]').last().evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
 
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();

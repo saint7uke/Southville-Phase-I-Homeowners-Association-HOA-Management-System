@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Notifications\HomeownerPasswordReset;
+use App\Notifications\AccountPasswordReset;
 use Database\Factories\UserFactory;
+use Filament\Facades\Filament;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
@@ -106,7 +107,14 @@ final class User extends Authenticatable implements FilamentUser, HasLocalePrefe
 
     public function sendPasswordResetNotification($token): void
     {
-        $this->notify(new HomeownerPasswordReset($token));
+        $panel = match (true) {
+            $this->hasRole('hoa_admin') => 'admin',
+            $this->hasRole('hoa_staff') => 'staff',
+            default => 'homeowner',
+        };
+        $url = Filament::getPanel($panel)->getResetPasswordUrl($token, $this);
+
+        $this->notifyNow(new AccountPasswordReset($url));
     }
 
     protected static function booted(): void

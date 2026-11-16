@@ -1,0 +1,25 @@
+# Deployed over SSH on 2026-11-09; see sms-input-ui-2026-11-09.md.
+# Deploy these reviewed sources WITH the complete matching public/build directory.
+# No migrations, production .env, credentials, .htaccess, fonts or queue changes.
+bootstrap/app.php
+app/Support/PhilippineMobile.php
+app/Actions/Homeowners/RegisterHomeowner.php
+app/Actions/Homeowners/UpdateOwnProfile.php
+app/Http/Requests/Portal/RegisterHomeownerRequest.php
+app/Validation/HomeownerProfileValidator.php
+app/Http/Controllers/SmsVerificationController.php
+app/Services/Sms/SmsEnrollment.php
+app/Services/Sms/SmsManagement.php
+app/Filament/Homeowner/Pages/MyProfile.php
+app/Filament/Pages/SmsNotifications.php
+resources/views/portal/auth/register.blade.php
+resources/views/portal/profile/edit.blade.php
+resources/views/components/sms-enrollment.blade.php
+resources/css/alerts.css
+resources/css/sms-enrollment.css
+resources/js/app.js
+resources/js/homeowner-profile-validation.js
+resources/js/sms-policy.js
+resources/js/sms-enrollment.js
+lang/en.json
+lang/fil.json

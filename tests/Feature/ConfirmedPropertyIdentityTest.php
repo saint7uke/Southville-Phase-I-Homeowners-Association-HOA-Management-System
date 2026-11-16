@@ -18,7 +18,9 @@ use App\Support\PropertyIdentity;
 use Carbon\CarbonImmutable;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -31,6 +33,7 @@ final class ConfirmedPropertyIdentityTest extends TestCase
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
         Notification::fake();
+        Storage::fake('local');
     }
 
     public function test_identity_ignores_house_and_street_but_not_suffix(): void
@@ -66,6 +69,7 @@ final class ConfirmedPropertyIdentityTest extends TestCase
     public function test_registration_without_house_number_persists_uppercase_suffix(): void
     {
         $user = app(RegisterHomeowner::class)->handle([
+            'verification_document' => UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'),
             ...$this->address(), 'phase_suffix' => ' a ', 'first_name' => 'Test', 'last_name' => 'Resident',
             'sex' => 'Male', 'date_of_birth' => '1990-01-01', 'contact_number' => '09171234567',
             'email' => 'phase-new@example.test', 'password' => 'ResidentPass!2026', 'ownership_type' => 'Owner', 'residency_date' => '2020-01-01',

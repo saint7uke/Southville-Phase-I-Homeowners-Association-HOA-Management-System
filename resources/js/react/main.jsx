@@ -1,4 +1,5 @@
 import React, { lazy, Suspense } from 'react';
+import '../alerts';
 import { createRoot } from 'react-dom/client';
 import { LocaleProvider } from './LocaleContext';
 import '@fontsource/poppins/latin-400.css';

@@ -36,7 +36,7 @@ final class ComplaintController extends Controller
         }
         $complaint = $action->handle($request->user()->homeowner, $request->safe()->except(['attachment', 'attachments']), $files, $request->user());
 
-        return redirect()->route('portal.complaints.show', $complaint)->with('success', __('Complaint submitted successfully.'));
+        return redirect()->route('portal.complaints.show', $complaint)->with('success_title', __('Complaint Submitted Successfully!'))->with('success', __('Complaint submitted successfully.'));
     }
 
     public function show(Complaint $complaint): View

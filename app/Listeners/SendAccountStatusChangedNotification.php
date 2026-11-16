@@ -6,19 +6,29 @@ namespace App\Listeners;
 
 use App\Events\UserAccountStatusChanged;
 use App\Notifications\HomeownerAccountStatusChanged;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Services\WorkflowMail;
+use Illuminate\Queue\InteractsWithQueue;
 
-final class SendAccountStatusChangedNotification implements ShouldQueue
+final class SendAccountStatusChangedNotification
 {
+    use InteractsWithQueue;
+
     public function handle(UserAccountStatusChanged $event): void
     {
         if (! $event->user->hasRole('homeowner')) {
             return;
         }
 
-        $event->user->notify(new HomeownerAccountStatusChanged(
+        // Existing CallQueuedListener payloads predate eventId. Their stable job UUID
+        // identifies retries without creating a different delivery on each attempt.
+        $eventId = $event->eventId ?? ($this->job?->uuid() ? 'legacy-job:'.$this->job->uuid() : null);
+        if ($eventId === null) {
+            throw new \RuntimeException('Account notification has no stable event identity.');
+        }
+        app(WorkflowMail::class)->queue($event->user, new HomeownerAccountStatusChanged(
             $event->to->value,
             $event->reason,
-        ));
+            $event->from->value,
+        ), 'account-status:'.$eventId);
     }
 }

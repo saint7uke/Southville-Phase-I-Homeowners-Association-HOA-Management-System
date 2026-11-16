@@ -42,7 +42,7 @@ final class HomeownerProfileTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('homeowner'));
         Livewire::actingAs($resident->fresh(), 'homeowner')->test(MyProfile::class)
             ->fillForm($this->profilePayload(['email' => $resident->email]), 'profileForm')
-            ->call('saveProfile')->assertHasNoFormErrors()->assertNotified('Profile updated successfully!');
+            ->call('saveProfile')->assertHasNoFormErrors()->assertNotified('Homeowner Profile Updated Successfully!');
         $this->assertSame('A', $homeowner->fresh()->phase_suffix);
         $this->assertEmpty($homeowner->fresh()->house_number);
     }
@@ -55,12 +55,12 @@ final class HomeownerProfileTest extends TestCase
             ->test(MyProfile::class)
             ->fillForm($this->profilePayload([
                 'email' => $resident->email,
-                'contact_number' => '0917-123-4567',
+                'contact_number' => '09171234567',
                 'emergency_contact_number' => '0998 765 4321',
             ]), 'profileForm')
             ->call('saveProfile')
             ->assertHasNoFormErrors()
-            ->assertNotified('Profile updated successfully!');
+            ->assertNotified('Homeowner Profile Updated Successfully!');
 
         $this->assertSame('09171234567', $resident->fresh()->contact_number);
         $this->assertSame('09987654321', $resident->homeowner()->first()->emergency_contact_number);
@@ -92,7 +92,7 @@ final class HomeownerProfileTest extends TestCase
             ->fillForm(['contact_number' => '09171234567'], 'profileForm')
             ->call('saveProfile')
             ->assertHasNoFormErrors()
-            ->assertNotified('Profile updated successfully!');
+            ->assertNotified('Homeowner Profile Updated Successfully!');
         $this->assertNull($homeowner->fresh()->phase);
         $this->assertSame('09171234567', $resident->fresh()->contact_number);
     }
@@ -135,12 +135,12 @@ final class HomeownerProfileTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_profile_normalizes_formatted_phones_and_rejects_letters(): void
+    public function test_profile_requires_local_primary_phone_and_preserves_emergency_normalization(): void
     {
         [$resident] = $this->homeowner();
 
         app(UpdateOwnProfile::class)->handle($resident, $this->profilePayload([
-            'contact_number' => '0917-123-4567',
+            'contact_number' => '09171234567',
             'emergency_contact_number' => '0998 765 4321',
         ]));
 
@@ -155,6 +155,40 @@ final class HomeownerProfileTest extends TestCase
         } catch (ValidationException $exception) {
             $this->assertArrayHasKey('contact_number', $exception->errors());
         }
+    }
+
+    public function test_profile_rejects_raw_invalid_primary_numbers_in_both_entry_points(): void
+    {
+        [$resident] = $this->homeowner();
+        $stored = $resident->contact_number;
+        foreach (['+639171234567', '0917-123-4567', ' 09171234567', "09171234567\n", ['09171234567']] as $number) {
+            try {
+                app(UpdateOwnProfile::class)->handle($resident, $this->profilePayload(['email' => $resident->email, 'contact_number' => $number]));
+                $this->fail('Invalid primary number accepted.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('contact_number', $exception->errors());
+            }
+            $this->assertSame($stored, $resident->fresh()->contact_number);
+        }
+        Filament::setCurrentPanel(Filament::getPanel('homeowner'));
+        Livewire::actingAs($resident, 'homeowner')->test(MyProfile::class)
+            ->fillForm(['contact_number' => '+639171234567'], 'profileForm')
+            ->call('saveProfile')->assertHasFormErrors(['contact_number'], 'profileForm');
+        $this->actingAs($resident, 'homeowner')->patchJson(route('portal.profile.update'), $this->profilePayload([
+            'email' => $resident->email, 'contact_number' => ' 09171234567',
+        ]))->assertUnprocessable()->assertJsonValidationErrors('contact_number');
+        $this->assertSame($stored, $resident->fresh()->contact_number);
+    }
+
+    public function test_local_profile_display_does_not_rewrite_legacy_international_contact(): void
+    {
+        [$resident] = $this->homeowner(['contact_number' => '+639171234567']);
+        Filament::setCurrentPanel(Filament::getPanel('homeowner'));
+        Livewire::actingAs($resident, 'homeowner')->test(MyProfile::class)
+            ->assertFormSet(['contact_number' => '09171234567'], 'profileForm')
+            ->fillForm(['first_name' => 'Updated'], 'profileForm')->call('saveProfile')->assertHasNoFormErrors();
+        $this->assertSame('+639171234567', $resident->fresh()->contact_number);
+        $this->assertSame('Updated', $resident->fresh()->first_name);
     }
 
     public function test_email_availability_allows_own_history_and_rejects_other_reservations_privately(): void
@@ -233,7 +267,6 @@ final class HomeownerProfileTest extends TestCase
         foreach ([
             ['phase' => 'Another Phase'],
             ['ownership_type' => 'Tenant'],
-            ['street' => 'Another Street'],
             ['block' => '99'],
             ['lot' => '99'],
         ] as $override) {
@@ -250,14 +283,13 @@ final class HomeownerProfileTest extends TestCase
     {
         [$resident, $homeowner] = $this->homeowner();
 
-        try {
+        $stored = $homeowner->house_number;
+        foreach (['99', ['forged']] as $value) {
             app(UpdateOwnProfile::class)->handle($resident, [
-                ...$this->profilePayload(),
-                'house_number' => '99',
+                ...$this->profilePayload(['email' => $resident->email]),
+                'house_number' => $value,
             ]);
-            $this->fail('The removed house-number field must not remain writable.');
-        } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('house_number', $exception->errors());
+            $this->assertSame($stored, $homeowner->fresh()->house_number);
         }
 
         $this->assertNotSame('99', $homeowner->fresh()->house_number);
@@ -349,7 +381,7 @@ final class HomeownerProfileTest extends TestCase
             ]));
             $this->fail('A duplicate normalized property address should be rejected.');
         } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('street', $exception->errors());
+            $this->assertArrayHasKey('block', $exception->errors());
         }
     }
 
@@ -465,7 +497,7 @@ final class HomeownerProfileTest extends TestCase
             'current_password' => 'password',
             'password' => 'New-secure-password!2026',
             'password_confirmation' => 'New-secure-password!2026',
-        ])->assertRedirect('/portal/login');
+        ])->assertRedirect('/login')->assertSessionHas('success_title', 'Password Changed Successfully!');
 
         $this->assertGuest('web');
         $this->assertTrue(Hash::check('New-secure-password!2026', $resident->refresh()->password));

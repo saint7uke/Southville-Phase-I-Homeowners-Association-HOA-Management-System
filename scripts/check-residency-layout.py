@@ -47,4 +47,13 @@ populated_spans = [span for block in filled[0].get_text("dict")["blocks"] if "li
                    for line in block["lines"] for span in line["spans"] if span["text"] == "José Dela Cruz"]
 assert populated_spans and all("TimesNewRoman" in span["font"] and "Bold" in span["font"]
                                and abs(span["size"] - 12) < 0.01 for span in populated_spans)
-print("Unicode populated text, Letter size, unchanged background and draft watermark verified.")
+bold_fonts = [font for page in filled for font in page.get_fonts(full=True)
+              if "TimesNewRoman" in font[3] and "Bold" in font[3] and font[6] == 0]
+# FPDI preserves background resources unchanged, including any original unembedded fonts.
+# The populated overlay is a direct page resource (referrer 0), not an imported Form font.
+assert bold_fonts, "The populated bold face must be present in the PDF."
+for font in bold_fonts:
+    name, extension, kind, embedded_bytes = filled.extract_font(font[0])
+    assert embedded_bytes and extension == "ttf", "The real bold TrueType font must be embedded."
+print("Unicode populated text, embedded Times New Roman Bold at 12pt, Letter size, "
+      "unchanged background and draft watermark verified.")

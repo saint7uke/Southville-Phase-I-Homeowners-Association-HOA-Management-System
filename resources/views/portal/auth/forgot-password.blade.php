@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ __('Forgot password | Southville Phase I HOA') }}</title>
     <x-favicon />
-    @vite(['resources/css/landing.css'])
+    @vite(['resources/css/landing.css', 'resources/js/app.js'])
 </head>
 <body class="hoa-landing">
     <main class="hoa-portal-auth" aria-labelledby="forgot-title">
@@ -26,15 +26,14 @@
                 <h2 id="forgot-title" data-i18n="Forgot your password?">{{ __('Forgot your password?') }}</h2>
                 <p><span data-i18n="Enter your email address and we’ll send a secure reset link.">{{ __('Enter your email address and we’ll send a secure reset link.') }}</span></p>
             </div>
-            @if(session('status'))<div class="hoa-contact-success" role="status">{{ session('status') }}</div>@endif
-            @if($errors->any())<div class="hoa-contact-error" role="alert">{{ $errors->first() }}</div>@endif
+            <x-alert-feedback />
             <form method="POST" action="{{ route('homeowner.password.email') }}" class="hoa-portal-auth-fields">
                 @csrf
                 <div class="hoa-field">
                     <label for="email" data-i18n="Email address">{{ __('Email address') }}</label>
                     <input id="email" name="email" type="email" value="{{ old('email') }}" required autocomplete="email" autofocus>
                 </div>
-                <button class="hoa-button hoa-button-primary hoa-portal-auth-submit" type="submit" data-i18n="Email reset link">{{ __('Email reset link') }}</button>
+                <button class="hoa-button hoa-button-primary hoa-portal-auth-submit" type="submit">@svg('heroicon-o-paper-airplane', 'hoa-action-icon', ['aria-hidden' => 'true'])<span data-i18n="Email reset link">{{ __('Email reset link') }}</span></button>
             </form>
             <nav class="hoa-portal-auth-links" aria-label="Account recovery navigation"><a href="{{ route('homeowner.login') }}">← Back to login</a><a href="{{ route('homeowner.register') }}" data-i18n="Create an account">{{ __('Create an account') }}</a></nav>
         </section>

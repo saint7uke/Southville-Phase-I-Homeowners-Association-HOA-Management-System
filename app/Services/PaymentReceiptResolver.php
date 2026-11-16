@@ -8,6 +8,7 @@ use App\Filament\Resources\Certificates\CertificateResource;
 use App\Models\Payment;
 use App\Models\PaymentDocument;
 use App\Models\User;
+use App\Support\AuthenticatedActor;
 use App\Support\OperationalAccess;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Facades\Filament;
@@ -27,6 +28,8 @@ final class PaymentReceiptResolver
 
     private ?bool $documentsReady = null;
 
+    private ?bool $settlementsReady = null;
+
     public function schemaReady(): bool
     {
         // Scoped to one application request, never a cross-request availability cache.
@@ -35,8 +38,15 @@ final class PaymentReceiptResolver
 
     public function withReceipts(Builder $query): Builder
     {
-        return $query->with(['homeowner.user', 'payer.user', 'duesObligation.duesSetting', 'duesSetting', 'recorder'])
+        return $query->with(['homeowner.user', 'payer.user', 'duesObligation.homeowner.user', 'duesObligation.duesSetting', 'duesSetting', 'recorder',
+            'duesObligation.payments.homeowner.user', 'duesObligation.payments.payer.user', 'duesObligation.payments.recorder'])
+            ->when($this->settlementsReady(), fn (Builder $q) => $q->with('duesObligation.settlementDocument.payment.homeowner', 'duesObligation.settlementDocument.payment.payer'))
             ->when($this->documentsReady(), fn (Builder $q) => $q->with('latestReceiptDocument'));
+    }
+
+    private function settlementsReady(): bool
+    {
+        return $this->settlementsReady ??= Schema::hasColumn('payment_documents', 'settlement_obligation_id');
     }
 
     private function documentsReady(): bool
@@ -57,14 +67,39 @@ final class PaymentReceiptResolver
             return 'setup';
         }
         try {
-            app(ButawReceiptEligibility::class)->snapshot($payment);
+            $eligibility = app(ButawReceiptEligibility::class);
+            if ($this->receiptDocument($payment)) {
+                $eligibility->installmentSnapshot($payment);
+
+                return 'saved';
+            }
+            $eligibility->snapshot($payment);
         } catch (ValidationException) {
             return 'detailed';
         }
 
         $payment->loadMissing('latestReceiptDocument');
 
-        return $payment->latestReceiptDocument ? 'saved' : ($this->schemaReady() ? 'generate' : 'setup');
+        return $this->schemaReady() ? 'generate' : 'setup';
+    }
+
+    public function receiptDocument(Payment $payment): ?PaymentDocument
+    {
+        if (! $this->documentsReady()) {
+            return null;
+        }
+        if ($payment->dues_obligation_id && $this->settlementsReady()) {
+            $obligation = $payment->duesObligation;
+            $document = $obligation?->relationLoaded('settlementDocument') ? $obligation->settlementDocument
+                : PaymentDocument::with('payment')->where('settlement_obligation_id', $payment->dues_obligation_id)->first();
+            $actor = app(AuthenticatedActor::class)->user();
+            if ($document && (! $actor || Gate::forUser($actor)->allows('view', $document->payment))) {
+                return $document;
+            }
+        }
+        $payment->loadMissing('latestReceiptDocument');
+
+        return $payment->latestReceiptDocument;
     }
 
     public function generationUrl(Payment $payment, ?User $actor): ?string
@@ -72,25 +107,30 @@ final class PaymentReceiptResolver
         if (! OperationalAccess::allows($actor, 'manage_payments')) {
             return null;
         }
+        try {
+            $settlement = app(ButawReceiptEligibility::class)->snapshot($payment);
+        } catch (ValidationException) {
+            return null;
+        }
         $panel = Filament::getCurrentPanel()?->getId() ?? Auth::getDefaultDriver();
         if (! in_array($panel, ['admin', 'staff'], true)) {
             $panel = $actor->hasRole('hoa_admin') ? 'admin' : 'staff';
         }
 
-        return CertificateResource::getUrl('create', ['document' => 'butaw', 'payment' => $payment->id], panel: $panel);
+        return CertificateResource::getUrl('create', ['document' => 'butaw', 'payment' => $settlement['payment_id']], panel: $panel);
     }
 
     public function documentUrl(Payment $payment, bool $inline = false): ?string
     {
         return $this->state($payment) === 'saved'
-            ? route('certificates.butaw.download', ['paymentDocument' => $payment->latestReceiptDocument->id, ...($inline ? ['view' => 1] : [])])
+            ? route('certificates.butaw.download', ['paymentDocument' => $this->receiptDocument($payment)->id, ...($inline ? ['view' => 1] : [])])
             : null;
     }
 
     public function historyQuery(): Builder
     {
         return PaymentDocument::query()->whereHas('payment', fn (Builder $query) => $query
-            ->whereIn('payments.id', app(ButawReceiptEligibility::class)->query()->select('payments.id')))
+            ->whereIn('review_status', ['Recorded', 'Approved'])->whereIn('status', ['Paid', 'Partial']))
             ->with(['payment' => fn ($payment) => $this->withReceipts($payment->getQuery())])
             ->orderByDesc('created_at')->orderByDesc('id');
     }
@@ -102,7 +142,7 @@ final class PaymentReceiptResolver
         $state = $this->state($payment);
         abort_if($state === 'unavailable', 404);
         if ($state === 'saved') {
-            return $this->forDocument($payment->latestReceiptDocument, $actor, $inline);
+            return $this->forDocument($this->receiptDocument($payment), $actor, $inline);
         }
         if ($state === 'detailed') {
             $payment->loadMissing('reviewer');

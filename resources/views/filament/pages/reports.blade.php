@@ -19,19 +19,7 @@
             </div>
 
             <div class="hoa-reports__controls" role="search" aria-label="Search and filter report catalog">
-                <label class="hoa-reports__control" for="reports-search"><span data-i18n="Search reports">{{ __('Search reports') }}</span>
-                    <input id="reports-search" type="search" wire:model.live.debounce.300ms="catalogSearch" data-i18n-placeholder="Search report names" placeholder="{{ __('Search report names') }}">
-                </label>
-                <label class="hoa-reports__control" for="reports-category"><span data-i18n="Category">{{ __('Category') }}</span>
-                    <select id="reports-category" wire:model.live="selectedCategory">
-                        @foreach($categories as $value => $label)<option value="{{ $value }}">{{ __($label) }}</option>@endforeach
-                    </select>
-                </label>
-                <label class="hoa-reports__control" for="reports-per-page"><span data-i18n="Rows per page">{{ __('Rows per page') }}</span>
-                    <select id="reports-per-page" wire:model.live="perPage">
-                        @foreach([5, 10, 25, 50] as $size)<option value="{{ $size }}">{{ $size }}</option>@endforeach
-                    </select>
-                </label>
+                <label class="hoa-reports__control" for="report-type"><span>{{ __('Report type') }}</span><select id="report-type" wire:model.live="selectedReport"><option value="">{{ __('Select a report') }}</option>@foreach($reportOptions as $slug => $label)<option value="{{ $slug }}">{{ __($label) }}</option>@endforeach</select></label>
             </div>
         </header>
 
@@ -102,13 +90,13 @@
                             <td>
                                 <div class="hoa-reports__actions">
                                     @foreach($report['formats'] as $format)
-                                        <button type="button" wire:click="downloadReport('{{ $report['slug'] }}', '{{ $format }}')" wire:loading.attr="disabled" wire:target="downloadReport('{{ $report['slug'] }}', '{{ $format }}')" class="hoa-reports__button hoa-reports__button--{{ $format }}">{{ strtoupper($format) }}</button>
+                                        <button type="button" wire:click="downloadReport('{{ $report['slug'] }}', '{{ $format }}')" wire:loading.attr="disabled" wire:target="downloadReport('{{ $report['slug'] }}', '{{ $format }}')" class="hoa-reports__button hoa-reports__button--{{ $format }}">@svg('heroicon-o-arrow-down-tray', '', ['aria-hidden' => 'true', 'style' => 'width:1.1rem;height:1.1rem'])<span>{{ strtoupper($format) }}</span></button>
                                     @endforeach
                                     <button id="report-preview-{{ $report['slug'] }}" type="button" wire:click="previewReport('{{ $report['slug'] }}')" wire:loading.attr="disabled" wire:target="previewReport('{{ $report['slug'] }}')" class="hoa-reports__button hoa-reports__button--preview">
-                                        <span wire:loading.remove wire:target="previewReport('{{ $report['slug'] }}')" data-i18n="Preview">{{ __('Preview') }}</span><span wire:loading wire:target="previewReport('{{ $report['slug'] }}')" data-i18n="Loading…">{{ __('Loading…') }}</span>
+                                        @svg('heroicon-o-eye', '', ['aria-hidden' => 'true', 'style' => 'width:1.1rem;height:1.1rem'])<span wire:loading.remove wire:target="previewReport('{{ $report['slug'] }}')" data-i18n="Preview">{{ __('Preview') }}</span><span wire:loading wire:target="previewReport('{{ $report['slug'] }}')" data-i18n="Loading…">{{ __('Loading…') }}</span>
                                     </button>
-                                    <button type="button" wire:click="queueReport('{{ $report['slug'] }}', 'csv')" wire:loading.attr="disabled" class="hoa-reports__button hoa-reports__button--queue" data-i18n="Queue CSV">{{ __('Queue CSV') }}</button>
-                                    <button type="button" wire:click="queueReport('{{ $report['slug'] }}', 'xlsx')" wire:loading.attr="disabled" class="hoa-reports__button hoa-reports__button--queue" data-i18n="Queue XLSX">{{ __('Queue XLSX') }}</button>
+                                    <button type="button" wire:click="queueReport('{{ $report['slug'] }}', 'csv')" wire:loading.attr="disabled" class="hoa-reports__button hoa-reports__button--queue">@svg('heroicon-o-queue-list', '', ['aria-hidden' => 'true', 'style' => 'width:1.1rem;height:1.1rem'])<span data-i18n="Queue CSV">{{ __('Queue CSV') }}</span></button>
+                                    <button type="button" wire:click="queueReport('{{ $report['slug'] }}', 'xlsx')" wire:loading.attr="disabled" class="hoa-reports__button hoa-reports__button--queue">@svg('heroicon-o-queue-list', '', ['aria-hidden' => 'true', 'style' => 'width:1.1rem;height:1.1rem'])<span data-i18n="Queue XLSX">{{ __('Queue XLSX') }}</span></button>
                                 </div>
                             </td>
                         </tr>
@@ -148,7 +136,7 @@
     @if($previewSlug)
         <div class="hoa-report-dialog" role="dialog" aria-modal="true" aria-labelledby="report-preview-title" wire:keydown.escape.window="closePreview" x-data x-trap.inert.noscroll="true">
             <div class="hoa-report-dialog__panel">
-                <div class="hoa-report-dialog__header"><h2 id="report-preview-title" class="hoa-report-dialog__title">{{ $previewTitle }} — Preview</h2><button type="button" wire:click="closePreview" data-close-preview aria-label="Close report preview" class="hoa-report-dialog__close">×</button></div>
+                <div class="hoa-report-dialog__header"><h2 id="report-preview-title" class="hoa-report-dialog__title">{{ $previewTitle }} — Preview</h2><button type="button" wire:click="closePreview" data-close-preview aria-label="{{ __('Close') }}" class="hoa-report-dialog__close">@svg('heroicon-o-x-mark', '', ['aria-hidden' => 'true', 'style' => 'width:1.1rem;height:1.1rem'])</button></div>
                 <div class="hoa-report-dialog__summary" aria-label="{{ __('Report summary') }}">@foreach($previewSummary as $label => $value)<div><span data-i18n="{{ $label }}">{{ __($label) }}</span><strong>{{ $value }}</strong></div>@endforeach</div>
                 <div class="hoa-report-dialog__body"><table class="hoa-report-dialog__table"><caption class="sr-only">{{ $previewTitle }} preview page {{ $previewPage }}</caption><thead><tr>@foreach($previewHeadings as $heading)<th scope="col">{{ $heading }}</th>@endforeach</tr></thead><tbody>
                     @forelse($previewRows as $row)<tr>@foreach($row as $value)<td>{{ $value ?? '—' }}</td>@endforeach</tr>@empty<tr><td colspan="{{ count($previewHeadings) }}" class="hoa-reports__empty"><span data-i18n="No records matched the selected filters.">{{ __('No records matched the selected filters.') }}</span></td></tr>@endforelse

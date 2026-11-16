@@ -115,7 +115,7 @@ final class ServiceRequestSubmissionValidator
         $validated = $validator->validate();
         unset($validated['attachments']);
         if (($validated['request_type'] ?? null) === 'Certificate of Cohabitation') {
-            $validated['address_snapshot'] = Arr::only($homeowner->getAttributes(), ['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix']);
+            $validated['address_snapshot'] = Arr::only($homeowner->getAttributes(), ['block', 'lot', 'phase', 'phase_suffix']);
         }
 
         return $validated;

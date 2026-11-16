@@ -5,7 +5,7 @@ const steps = [
     ['Register', 'Create your resident account with the household and contact details the HOA needs to verify.'],
     ['Verify', 'Wait for HOA approval and activation of your Southville Phase I record.'],
     ['Access your panel', 'Sign in securely to the dedicated homeowner panel from your phone, tablet, or computer.'],
-    ['Manage everything', 'Review dues, submit concerns and requests, follow updates, and download approved documents.'],
+    ['Manage everything', 'Review dues, submit concerns and certificate requests, and track office pickup.'],
 ];
 
 export default function HowItWorksSection() {

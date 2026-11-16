@@ -6,6 +6,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\Pages\RequestPasswordReset;
 use App\Filament\Auth\Pages\StaffLogin;
+use App\Filament\Pages\AnnualDues;
 use App\Filament\Pages\HouseholdMembers;
 use App\Filament\Pages\Households;
 use App\Filament\Pages\Reports;
@@ -81,6 +82,7 @@ final class StaffPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
                 Reports::class,
+                AnnualDues::class,
                 Households::class,
                 HouseholdMembers::class,
             ])

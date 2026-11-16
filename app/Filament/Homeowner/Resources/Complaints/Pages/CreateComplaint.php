@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Homeowner\Resources\Complaints\Pages;
 
 use App\Actions\Complaints\CreateComplaint as CreateComplaintAction;
+use App\Filament\Concerns\HasSpecificFeedback;
 use App\Filament\Homeowner\Resources\Complaints\ComplaintResource;
 use App\Models\User;
 use Filament\Actions\Action;
@@ -14,7 +15,11 @@ use Illuminate\Database\Eloquent\Model;
 
 final class CreateComplaint extends CreateRecord
 {
+    use HasSpecificFeedback;
+
     protected static string $resource = ComplaintResource::class;
+
+    protected static bool $canCreateAnother = false;
 
     protected function getCreateFormAction(): Action
     {
@@ -31,6 +36,8 @@ final class CreateComplaint extends CreateRecord
         $homeowner = $actor->homeowner()->firstOrFail();
         $attachments = $data['attachments'] ?? [];
         unset($data['attachments']);
+        $data['subject'] = ($data['category'] ?? '') === 'Others' ? trim($data['category_other'] ?? '') : ($data['category'] ?? '');
+        $data['priority'] = 'Medium';
 
         return app(CreateComplaintAction::class)->handle($homeowner, $data, $attachments, $actor);
     }

@@ -123,6 +123,7 @@ final class DuesAndPaymentManagementTest extends TestCase
 
     public function test_cash_form_and_confirmed_recovery_action_are_available_without_terminal_instructions(): void
     {
+        $this->travelTo(CarbonImmutable::create(2026, 10, 15, 12));
         $admin = $this->staff('hoa_admin');
         $this->actingAs($admin, 'admin');
         Filament::setCurrentPanel(Filament::getPanel('admin'));
@@ -134,7 +135,7 @@ final class DuesAndPaymentManagementTest extends TestCase
             ->assertFormFieldExists('payment_method', fn (TextInput $field): bool => $field->isReadOnly())
             ->assertDontSee('php artisan')
             ->callAction('generateCurrentDues')
-            ->assertNotified('No new dues were needed.');
+            ->assertNotified('No New Dues Obligations Required');
         $this->assertDatabaseHas('audit_logs', ['action' => 'Dues.current_month_generated', 'user_id' => $admin->id]);
     }
 
@@ -250,7 +251,7 @@ final class DuesAndPaymentManagementTest extends TestCase
             ->fillForm($this->schedule(['name' => 'Livewire Dues', 'starts_on' => today()->startOfMonth()->toDateString()]))
             ->call('create')
             ->assertHasNoFormErrors()
-            ->assertNotified('Dues schedule created successfully');
+            ->assertNotified('Dues Settings Created Successfully!');
 
         $setting = DuesSetting::query()->where('normalized_name', 'livewire dues')->sole();
         $obligation = DuesObligation::query()->firstOrCreate([
@@ -277,7 +278,7 @@ final class DuesAndPaymentManagementTest extends TestCase
             ])
             ->call('create')
             ->assertHasNoFormErrors()
-            ->assertNotified('Payment recorded successfully');
+            ->assertNotified('Payment Record Created Successfully!');
 
         $this->assertDatabaseHas('payments', [
             'homeowner_id' => $owner->id,

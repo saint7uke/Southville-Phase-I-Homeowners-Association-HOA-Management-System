@@ -1,0 +1,99 @@
+/* Shared HOA action-button language: preserve visible labels and Filament behavior. */
+[data-hoa-record-action] {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    flex-shrink: 0;
+    gap: .5rem;
+    border-radius: .75rem !important;
+    font-weight: 600;
+}
+[data-hoa-record-action]:focus-visible {
+    outline: 3px solid #0879ad;
+    outline-offset: 3px;
+}
+.fi-btn[data-hoa-record-action] {
+    padding-inline: .85rem;
+    box-shadow: none;
+}
+.fi-btn.fi-color-gray[data-hoa-record-action] {
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #263746;
+}
+.fi-btn.fi-color-gray[data-hoa-record-action]:hover {
+    border-color: #8fa3b7;
+    background: #f1f7fb;
+}
+.fi-btn.fi-color-primary[data-hoa-record-action] {
+    border: 1px solid #1769cc;
+    background: #1769cc;
+    color: #fff;
+}
+.fi-btn.fi-color-primary[data-hoa-record-action]:hover {
+    border-color: #125bb4;
+    background: #125bb4;
+}
+.fi-btn.fi-color-danger[data-hoa-record-action] {
+    border: 1px solid #f2b7b7;
+    background: #fff0f0;
+    color: #a61b1b;
+}
+.fi-btn.fi-color-success[data-hoa-record-action] {
+    border: 1px solid #a8dfbd;
+    background: #eaf8ef;
+    color: #176b3a;
+}
+.fi-btn.fi-color-warning[data-hoa-record-action] {
+    border: 1px solid #ead19a;
+    background: #fff8e6;
+    color: #805900;
+}
+.hoa-record-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    min-height: 44px;
+    padding: .6rem .85rem;
+    border: 1px solid #cbd5e1;
+    border-radius: .75rem;
+    color: #075985;
+    background: #fff;
+    vertical-align: middle;
+    text-decoration: none;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+.hoa-record-icon svg { width: 18px; height: 18px; flex: none; }
+.hoa-record-icon:hover { border-color: #8fa3b7; background: #f1f7fb; }
+.hoa-record-icon:disabled { opacity: .5; cursor: not-allowed; }
+.hoa-record-icon:active { transform: translateY(1px); }
+.dark .fi-btn.fi-color-gray[data-hoa-record-action],
+.dark .hoa-record-icon {
+    border-color: #526575;
+    background: #172b37;
+    color: #e5f2f7;
+}
+.dark .fi-btn.fi-color-gray[data-hoa-record-action]:hover,
+.dark .hoa-record-icon:hover { background: #233d4b; }
+.dark .fi-btn.fi-color-primary[data-hoa-record-action] { border-color: #3485e7; background: #3485e7; color: #fff; }
+.dark .fi-btn.fi-color-danger[data-hoa-record-action] { border-color: #8d4348; background: #492b31; color: #ffd8d8; }
+.dark .fi-btn.fi-color-success[data-hoa-record-action] { border-color: #39754f; background: #193d2a; color: #c9f3d7; }
+.dark .fi-btn.fi-color-warning[data-hoa-record-action] { border-color: #836d3e; background: #40371f; color: #ffedbf; }
+.fi-modal-footer-actions > .fi-btn,
+.fi-header-actions-ctn > .fi-btn {
+    min-height: 44px;
+    border-radius: .75rem;
+    font-weight: 600;
+}
+.hoa-record-file { display: inline-flex; align-items: center; gap: .5rem; max-width: 100%; overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+    .fi-ta-actions { flex-wrap: wrap; gap: .4rem; }
+    .fi-ta-actions [data-hoa-record-action] { min-height: 44px; }
+    .hoa-record-icon { white-space: normal; }
+}

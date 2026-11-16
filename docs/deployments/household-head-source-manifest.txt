@@ -1,0 +1,23 @@
+# Reviewed household head release scope; deployed 9 November 2026.
+# Deployment evidence: household-head-2026-11-09.md.
+# Back up and compare against the deployed baseline before transferring complete files.
+# Include the matching complete public/build with manifest.json separately.
+# Do not transfer .env, .htaccess, tests, test databases, private documents or fonts.
+app/Actions/Households/ManageHouseholdHead.php
+app/Actions/Households/ManageHousehold.php
+app/Actions/Homeowners/ConfirmPropertyPhase.php
+app/Console/Commands/AuditHouseholdHeads.php
+app/Models/Household.php
+app/Services/HouseholdDirectory.php
+app/Services/OwnHouseholdSummary.php
+app/Services/Exports/HouseholdExportData.php
+app/Exports/HouseholdSummaryExport.php
+app/Filament/Schemas/HouseholdHeadReview.php
+app/Filament/Pages/Households.php
+app/Filament/Pages/HouseholdMembers.php
+app/Filament/Homeowner/Pages/MyHousehold.php
+resources/views/filament/pages/household-members.blade.php
+resources/views/filament/homeowner/pages/my-household.blade.php
+resources/views/pdf/household.blade.php
+lang/en.json
+lang/fil.json

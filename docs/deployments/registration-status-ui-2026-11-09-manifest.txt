@@ -1,0 +1,6 @@
+# Registration-status page only; deploy complete matching public/build alongside.
+resources/views/portal/auth/submitted.blade.php
+resources/css/landing.css
+lang/en.json
+lang/fil.json
+public/images/hoa-hero.webp

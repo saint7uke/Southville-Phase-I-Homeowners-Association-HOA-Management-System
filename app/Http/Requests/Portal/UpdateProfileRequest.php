@@ -50,7 +50,7 @@ final class UpdateProfileRequest extends FormRequest
 
         if ($this->user()?->homeowner instanceof Homeowner) {
             foreach (['house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix'] as $field) {
-                if (! array_key_exists($field, $input)) {
+                if (in_array($field, ['street', 'house_number'], true) || ! array_key_exists($field, $input)) {
                     $normalized[$field] = $this->user()->homeowner->{$field};
                 }
             }

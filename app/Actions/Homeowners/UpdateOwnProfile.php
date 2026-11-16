@@ -8,6 +8,7 @@ use App\Models\Homeowner;
 use App\Models\User;
 use App\Services\Media\StorePrivateProfilePhoto;
 use App\Services\PropertyAddressAvailability;
+use App\Support\PhilippineMobile;
 use App\Validation\HomeownerProfileValidator;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
@@ -15,6 +16,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -63,7 +65,7 @@ final class UpdateOwnProfile
 
                 $finalValidated = $this->validator->validate($lockedUser, $lockedHomeowner, $validated);
 
-                $lockedUser->update(Arr::only($finalValidated, [
+                $userData = Arr::only($finalValidated, [
                     'first_name',
                     'middle_name',
                     'last_name',
@@ -72,7 +74,13 @@ final class UpdateOwnProfile
                     'date_of_birth',
                     'contact_number',
                     'email',
-                ]));
+                ]);
+                // Local display must not rewrite an equivalent historical contact value.
+                if (PhilippineMobile::normalize($lockedUser->contact_number)
+                    === PhilippineMobile::normalize($userData['contact_number'])) {
+                    $userData['contact_number'] = $lockedUser->contact_number;
+                }
+                $lockedUser->update($userData);
 
                 $lockedHomeowner->update([
                     ...Arr::only($finalValidated, [
@@ -96,7 +104,7 @@ final class UpdateOwnProfile
                         try {
                             $lockedUser->sendEmailVerificationNotification();
                         } catch (Throwable $exception) {
-                            report($exception);
+                            Log::warning('Profile verification email failed.', ['user_id' => $lockedUser->id, 'failure_code' => 'verification_transport_failure']);
                         }
                     }
                 });

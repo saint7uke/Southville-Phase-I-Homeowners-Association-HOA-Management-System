@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Filament\Homeowner\Resources\ServiceRequests\Pages;
 
 use App\Actions\ServiceRequests\CreateServiceRequest as CreateServiceRequestAction;
+use App\Filament\Concerns\HasSpecificFeedback;
+use App\Filament\Concerns\MapsDomainValidation;
 use App\Filament\Homeowner\Resources\ServiceRequests\ServiceRequestResource;
 use App\Models\User;
 use Filament\Actions\Action;
@@ -14,7 +16,12 @@ use Illuminate\Database\Eloquent\Model;
 
 final class CreateServiceRequest extends CreateRecord
 {
+    use HasSpecificFeedback;
+    use MapsDomainValidation;
+
     protected static string $resource = ServiceRequestResource::class;
+
+    protected static bool $canCreateAnother = false;
 
     protected function getCreateFormAction(): Action
     {
@@ -32,6 +39,6 @@ final class CreateServiceRequest extends CreateRecord
         $attachments = $data['attachments'] ?? [];
         unset($data['attachments']);
 
-        return app(CreateServiceRequestAction::class)->handle($homeowner, $data, $attachments, $actor);
+        return $this->runValidatedDomainAction(fn () => app(CreateServiceRequestAction::class)->handle($homeowner, $data, $attachments, $actor), 'data');
     }
 }

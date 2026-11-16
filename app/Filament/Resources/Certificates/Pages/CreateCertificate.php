@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Certificates\Pages;
 
 use App\Actions\Certificates\IssueCertificate;
+use App\Exceptions\CertificateDuesBlocked;
+use App\Filament\Concerns\HasSpecificFeedback;
 use App\Filament\Concerns\MapsDomainValidation;
 use App\Filament\Resources\Certificates\CertificateResource;
 use App\Models\Homeowner;
@@ -28,6 +30,7 @@ use Livewire\Attributes\Locked;
 
 class CreateCertificate extends CreateRecord
 {
+    use HasSpecificFeedback;
     use MapsDomainValidation;
 
     #[Locked]
@@ -113,7 +116,7 @@ class CreateCertificate extends CreateRecord
 
         $owner = filled($this->data['homeowner_id'] ?? null) ? Homeowner::whereHas('user')->with('user')->find($this->data['homeowner_id']) : null;
         // Livewire public helper return values are callable by clients: expose only document data.
-        $owner?->setVisible(['id', 'user_id', 'house_number', 'street', 'block', 'lot', 'phase', 'phase_suffix', 'property_key', 'full_address', 'user']);
+        $owner?->setVisible(['id', 'user_id', 'block', 'lot', 'phase', 'phase_suffix', 'property_key', 'full_address', 'user']);
         $owner?->user?->setVisible(['id', 'first_name', 'middle_name', 'last_name', 'suffix', 'date_of_birth', 'full_name']);
 
         return $owner;
@@ -205,7 +208,8 @@ class CreateCertificate extends CreateRecord
             ->disabled(fn (): bool => ($this->data['document_kind'] ?? null) === 'butaw' && (blank($this->data['receipt_homeowner_id'] ?? null) || blank($this->data['payment_id'] ?? null)))
             ->action(fn () => $this->preparePreview()),
             $this->getCreateFormAction()->label(__('Issue certificate'))
-                ->extraAttributes(['class' => 'hoa-receipt-primary-action'])
+                ->requiresConfirmation()->modalHeading(__('Issue this certificate?'))
+                ->extraAttributes(['class' => 'hoa-receipt-primary-action'], merge: true)
                 ->visible(fn () => ($this->data['document_kind'] ?? null) !== 'butaw')
                 ->disabled(fn () => in_array($this->data['type'] ?? null, CertificateTypeCatalog::ALLOWED, true) && $this->previewToken === null),
             Action::make('generateReceipt')->label(__('Generate monthly dues receipt'))->requiresConfirmation()
@@ -224,7 +228,7 @@ class CreateCertificate extends CreateRecord
             $data = $this->form->getState();
             $document = $this->runValidatedDomainAction(fn () => app(ButawReceipts::class)->generate($this->previewToken ?? '', (int) ($data['payment_id'] ?? 0), app(AuthenticatedActor::class)->user(), (int) $data['receipt_homeowner_id']), 'data');
             $this->receiptDocumentId = $document->id;
-            Notification::make()->success()->title(__('Monthly dues receipt is ready.'))->send();
+            Notification::make()->success()->title(__('Monthly Dues Receipt Generated Successfully!'))->send();
         } catch (ValidationException $exception) {
             throw $this->receiptValidationException($exception);
         } catch (AuthorizationException $exception) {
@@ -269,6 +273,9 @@ class CreateCertificate extends CreateRecord
             $data['preview_token'] = $this->previewToken;
 
             return app(IssueCertificate::class)->handle($data, $actor);
+        } catch (CertificateDuesBlocked $exception) {
+            Notification::make()->danger()->title(__('Certificate Processing Blocked'))->body(collect($exception->errors())->flatten()->first())->send();
+            throw ValidationException::withMessages(collect($exception->errors())->mapWithKeys(fn ($messages, $field) => ['data.'.$field => $messages])->all());
         } catch (ValidationException $exception) {
             throw ValidationException::withMessages(collect($exception->errors())->mapWithKeys(fn ($messages, $field) => ['data.'.$field => $messages])->all());
         } catch (AuthorizationException $exception) {

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Actions\Users\ChangeAccountStatus;
 use App\Enums\UserAccountStatus;
+use App\Models\User;
 use App\Support\PersonName;
+use App\Support\PropertyPhase;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -33,15 +36,14 @@ final class UserForm
             Select::make('role')->options(fn (string $operation): array => $operation === 'create'
                 ? ['hoa_admin' => 'HOA Administrator', 'hoa_staff' => 'HOA Staff', 'homeowner' => 'Homeowner']
                 : ['hoa_admin' => 'HOA Administrator', 'hoa_staff' => 'HOA Staff', 'homeowner' => 'Homeowner'])->required()->live(),
-            TextInput::make('house_number')->maxLength(50)->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->visible(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->dehydrateStateUsing(fn (?string $state): ?string => self::collapseWhitespace($state)),
-            TextInput::make('street')->maxLength(100)->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->visible(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->dehydrateStateUsing(fn (?string $state): ?string => self::collapseWhitespace($state)),
+            Select::make('phase_suffix')->label(__('Phase'))->options(PropertyPhase::options())->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->visible(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner'),
             TextInput::make('block')->maxLength(20)->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->visible(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->dehydrateStateUsing(fn (?string $state): ?string => self::uppercase($state)),
             TextInput::make('lot')->maxLength(20)->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->visible(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->dehydrateStateUsing(fn (?string $state): ?string => self::uppercase($state)),
             DatePicker::make('residency_date')->label(__('Move-in date'))->maxDate(today())->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->visible(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner'),
             Select::make('ownership_type')->options(['Owner' => __('Owner'), 'Tenant' => __('Tenant'), 'Co-owner' => __('Co-owner')])->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->visible(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner'),
             TextInput::make('emergency_contact_name')->maxLength(100)->regex("/^[\pL\s'.-]+$/u")->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->visible(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->dehydrateStateUsing(fn (?string $state): ?string => PersonName::normalize($state)),
             TextInput::make('emergency_contact_number')->tel()->length(11)->regex('/^09\d{9}$/')->placeholder(__('09XXXXXXXXX'))->required(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner')->visible(fn (Get $get, string $operation): bool => $operation === 'create' && $get('role') === 'homeowner'),
-            Select::make('account_status')->options(UserAccountStatus::options())->required()->visible(fn (string $operation): bool => $operation === 'edit')->dehydrated(fn (string $operation): bool => $operation === 'edit'),
+            Select::make('account_status')->options(fn (?User $record) => $record ? ChangeAccountStatus::optionsFor($record) : UserAccountStatus::options())->helperText(__('Pending applications require approval or rejection. Deactivation blocks access; archiving retains a recoverable historical record.'))->required()->live()->visible(fn (string $operation): bool => $operation === 'edit')->dehydrated(fn (string $operation): bool => $operation === 'edit'),
             Textarea::make('rejection_reason')->maxLength(500)->columnSpanFull()->visible(fn (string $operation): bool => $operation === 'edit'),
             Textarea::make('suspension_reason')->maxLength(500)->columnSpanFull()->visible(fn (string $operation): bool => $operation === 'edit'),
         ])->columns(2);

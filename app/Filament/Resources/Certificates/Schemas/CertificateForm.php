@@ -10,6 +10,7 @@ use App\Models\Homeowner;
 use App\Models\Payment;
 use App\Services\ButawReceiptEligibility;
 use App\Services\ButawReceiptSource;
+use App\Services\CertificateDuesEligibility;
 use App\Services\CertificateTypeCatalog;
 use App\Services\CohabitationCertificateData;
 use App\Services\CohabitationCertificateSource;
@@ -87,6 +88,11 @@ final class CertificateForm
                     ->disabled(fn (string $operation, $livewire): bool => $operation === 'edit' || ($livewire->sourceRequestId ?? null) !== null)
                     ->dehydrated(fn (string $operation): bool => $operation !== 'edit')
                     ->required(),
+                Placeholder::make('dues_eligibility')->label('')->content(function (callable $get) {
+                    $resident = Homeowner::find($get('homeowner_id'));
+
+                    return view('filament.certificate-dues-notice', ['result' => $resident ? app(CertificateDuesEligibility::class)->inspect($resident) : null]);
+                })->columnSpanFull()->visible(fn (string $operation): bool => $operation !== 'edit'),
                 TextInput::make('custom_type')
                     ->label(__('Custom certificate type'))
                     ->helperText(__('Enter a distinct certificate type. Capitalization and spacing differences do not create a new type.'))
@@ -152,8 +158,8 @@ final class CertificateForm
         $query = app(ButawReceiptEligibility::class)->homeowners();
         foreach (preg_split('/\s+/u', trim($search), flags: PREG_SPLIT_NO_EMPTY) as $term) {
             $query->where(fn (Builder $q) => $q->where('block', 'like', '%'.$term.'%')->orWhere('lot', 'like', '%'.$term.'%')
-                ->orWhere('street', 'like', '%'.$term.'%')->orWhereHas('user', fn (Builder $user) => $user->where('first_name', 'like', '%'.$term.'%')
-                ->orWhere('middle_name', 'like', '%'.$term.'%')->orWhere('last_name', 'like', '%'.$term.'%')->orWhere('suffix', 'like', '%'.$term.'%')));
+                ->orWhereHas('user', fn (Builder $user) => $user->where('first_name', 'like', '%'.$term.'%')
+                    ->orWhere('middle_name', 'like', '%'.$term.'%')->orWhere('last_name', 'like', '%'.$term.'%')->orWhere('suffix', 'like', '%'.$term.'%')));
         }
 
         return $query->orderBy('id')->limit(30)->get()->mapWithKeys(fn (Homeowner $resident): array => [$resident->id => self::homeownerLabel($resident)])->all();

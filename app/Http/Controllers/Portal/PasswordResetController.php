@@ -8,10 +8,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\View\View;
+use Throwable;
 
 final class PasswordResetController extends Controller
 {
@@ -24,11 +26,16 @@ final class PasswordResetController extends Controller
     {
         $request->validate(['email' => ['required', 'email:rfc']]);
 
-        $status = Password::sendResetLink($request->only('email'));
+        try {
+            Password::broker('users')->sendResetLink($request->only('email'));
+        } catch (Throwable $exception) {
+            Log::warning('Password reset mail delivery failed.', [
+                'exception' => $exception::class,
+                'code' => 'password_reset_transport_failure',
+            ]);
+        }
 
-        return $status === Password::RESET_LINK_SENT
-            ? back()->with('status', __($status))
-            : back()->withErrors(['email' => __($status)]);
+        return back()->with('status', __('If an eligible account matches that address, a password reset link will be sent shortly.'));
     }
 
     public function reset(Request $request, string $token): View
@@ -60,7 +67,7 @@ final class PasswordResetController extends Controller
         );
 
         return $status === Password::PASSWORD_RESET
-            ? redirect()->route('login')->with('success', __('Your password has been reset. Approved accounts can now sign in.'))
+            ? redirect()->route('login')->with('success_title', __('Password Reset Successfully!'))->with('success', __('Your password has been reset. Approved accounts can now sign in.'))
             : back()->withErrors(['email' => __($status)]);
     }
 }

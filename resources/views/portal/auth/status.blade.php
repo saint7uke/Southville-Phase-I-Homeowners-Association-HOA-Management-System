@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ __('Account status | Southville Phase I HOA') }}</title>
     <x-favicon />
-    @vite(['resources/css/app.css'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
     <a class="skip-link" href="#main-content" data-i18n="Skip to main content">{{ __('Skip to main content') }}</a>
@@ -15,13 +15,13 @@
             <x-locale-toolbar />
             <a class="auth-brand" href="{{ route('home') }}"><span class="brand-mark" aria-hidden="true">S1</span>Southville Phase I</a>
             <h1 id="status-heading" data-i18n="Account status">{{ __('Account status') }}</h1>
-            @if (session('success'))<div class="alert alert-success" role="status">{{ session('success') }}</div>@endif
+            <x-alert-feedback />
 
             @if (auth()->user()->account_status === 'Active' && ! auth()->user()->hasVerifiedEmail())
                 <p><span data-i18n="Verify your email address before continuing. Use the verification link sent to">{{ __('Verify your email address before continuing. Use the verification link sent to') }}</span> <strong>{{ auth()->user()->email }}</strong>.</p>
                 <form method="POST" action="{{ route('portal.verification.resend') }}">
                     @csrf
-                    <button class="button button-secondary" type="submit" data-i18n="Resend verification email">{{ __('Resend verification email') }}</button>
+                    <button class="button button-secondary" type="submit">@svg('heroicon-o-arrow-path', '', ['aria-hidden' => 'true', 'style' => 'width:1.1rem;height:1.1rem'])<span data-i18n="Resend verification email">{{ __('Resend verification email') }}</span></button>
                 </form>
             @else
                 @switch(auth()->user()->account_status)
@@ -37,7 +37,7 @@
                 @endswitch
             @endif
 
-            <form method="POST" action="{{ route('portal.logout') }}">@csrf<button class="button button-primary" type="submit" data-i18n="Log out">{{ __('Log out') }}</button></form>
+            <form method="POST" action="{{ route('portal.logout') }}">@csrf<button class="button button-primary" type="submit">@svg('heroicon-o-arrow-left-start-on-rectangle', '', ['aria-hidden' => 'true', 'style' => 'width:1.1rem;height:1.1rem'])<span data-i18n="Log out">{{ __('Log out') }}</span></button></form>
         </section>
     </main>
 </body>

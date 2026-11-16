@@ -5,21 +5,25 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Actions\Announcements\SendAnnouncementBlast;
+use App\Jobs\DeliverWorkflowMail;
+use App\Jobs\SendAnnouncementEmail;
 use App\Models\Announcement;
 use App\Models\Certificate;
 use App\Models\Complaint;
 use App\Models\ContactMessage;
+use App\Models\EmailDelivery;
 use App\Models\Homeowner;
 use App\Models\ServiceRequest;
 use App\Models\SystemSetting;
 use App\Models\User;
-use App\Notifications\AnnouncementPublished;
 use App\Notifications\CertificateIssued;
 use App\Notifications\OperationalAlert;
 use App\Notifications\WorkflowStatusChanged;
+use App\Services\WorkflowMail;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Tests\Support\UsesUploadedResidency;
 use Tests\TestCase;
 
@@ -53,14 +57,18 @@ final class WorkflowNotificationTest extends TestCase
 
     public function test_certificate_and_explicit_announcement_blast_are_queued_for_homeowner(): void
     {
+        Queue::fake();
         $admin = $this->user('hoa_admin');
         $homeowner = $this->homeowner();
         $this->issueCertificate(['homeowner_id' => $homeowner->id, 'type' => 'Certificate of Residency'], $admin);
+        $delivery = EmailDelivery::where('type', 'CertificateIssued')->sole();
+        $this->assertSame('Queued', $delivery->status);
+        (new DeliverWorkflowMail($delivery->id))->handle(app(WorkflowMail::class));
         Notification::assertSentTo($homeowner->user, CertificateIssued::class);
 
         $announcement = Announcement::query()->create(['title' => 'Community assembly', 'content' => 'Please attend the monthly assembly.', 'category' => 'Event', 'audience' => 'Residents', 'status' => 'Published', 'published_at' => now(), 'created_by' => $admin->id]);
         $this->assertSame(1, app(SendAnnouncementBlast::class)->handle($announcement, $admin));
-        Notification::assertSentTo($homeowner->user, AnnouncementPublished::class);
+        Queue::assertPushed(SendAnnouncementEmail::class, 1);
         $this->assertDatabaseHas('audit_logs', ['user_id' => $admin->id, 'action' => 'Announcement.email_blast', 'auditable_id' => $announcement->id]);
     }
 

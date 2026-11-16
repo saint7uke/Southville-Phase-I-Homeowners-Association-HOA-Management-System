@@ -127,15 +127,13 @@ final class CohabitationRequestGuidanceTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_homeowners_get_guidance_for_every_status_and_no_management_link(): void
+    public function test_homeowners_cannot_access_draft_endpoint_for_any_status(): void
     {
         $this->login($this->resident, 'homeowner');
         foreach (['Pending' => 'awaiting HOA review', 'Processing' => 'The HOA is reviewing', 'Approved' => 'is approved', 'Rejected' => 'was rejected', 'Completed' => 'is completed'] as $status => $message) {
             $request = $this->serviceRequest($status);
-            $this->get(route('service-requests.draft', $request))->assertOk()->assertSee($message)
-                ->assertViewHas('returnUrl', route('filament.homeowner.resources.service-requests.view', $request))
-                ->assertDontSee('/admin/certificates/create')->assertDontSee('/staff/certificates/create')
-                ->assertHeader('Cache-Control', 'no-store, private');
+            $this->get(route('service-requests.draft', $request))->assertForbidden()
+                ->assertDontSee('/admin/certificates/create')->assertDontSee('/staff/certificates/create');
             Notification::assertNothingSent();
         }
         $this->assertDatabaseCount('certificates', 0);
@@ -171,10 +169,10 @@ final class CohabitationRequestGuidanceTest extends TestCase
         $this->assertDatabaseCount('certificates', 0);
     }
 
-    public function test_manager_table_only_offers_preparation_after_approval_and_keeps_residency_drafts(): void
+    public function test_manager_table_only_offers_preparation_after_approval_and_keeps_approved_residency_drafts(): void
     {
         $requests = collect(['Pending', 'Processing', 'Approved', 'Rejected', 'Completed'])->mapWithKeys(fn (string $status) => [$status => $this->serviceRequest($status)]);
-        $residency = $this->serviceRequest('Pending', 'Certificate of Residency');
+        $residency = $this->serviceRequest('Approved', 'Certificate of Residency');
         foreach ([[$this->admin, 'admin'], [$this->staff, 'staff']] as [$actor, $panel]) {
             $this->login($actor, $panel);
             Filament::setCurrentPanel($panel);
@@ -194,20 +192,20 @@ final class CohabitationRequestGuidanceTest extends TestCase
         }
     }
 
-    public function test_homeowner_table_hides_cohabitation_drafts_but_keeps_residency_previews(): void
+    public function test_homeowner_table_hides_cohabitation_drafts_but_keeps_approved_residency_previews(): void
     {
         $requests = collect(['Pending', 'Processing', 'Approved', 'Rejected', 'Completed'])->map(fn (string $status) => $this->serviceRequest($status));
-        $residency = $this->serviceRequest('Pending', 'Certificate of Residency');
+        $residency = $this->serviceRequest('Approved', 'Certificate of Residency');
         $this->login($this->resident, 'homeowner');
         Filament::setCurrentPanel('homeowner');
         $page = Livewire::test(HomeownerRequests::class);
         foreach ($requests as $request) {
             $page->assertTableActionHidden('draftPreview', $request);
         }
-        $page->assertTableActionVisible('draftPreview', $residency);
+        $page->assertTableActionHidden('draftPreview', $residency);
     }
 
-    public function test_homeowner_request_details_show_guidance_and_keep_the_saved_certificate_action(): void
+    public function test_homeowner_request_details_show_guidance_without_certificate_file_actions(): void
     {
         $request = $this->serviceRequest('Completed');
         $certificate = Certificate::create(['homeowner_id' => $this->owner->id, 'service_request_id' => $request->id,
@@ -217,8 +215,7 @@ final class CohabitationRequestGuidanceTest extends TestCase
         Filament::setCurrentPanel('homeowner');
         Livewire::test(ViewServiceRequest::class, ['record' => $request->id])
             ->assertSee('This Cohabitation request is completed.')
-            ->assertActionVisible('download_certificate')
-            ->assertActionHasUrl('download_certificate', URL::temporarySignedRoute('certificates.download', now()->addMinutes(30), $certificate));
+            ->assertActionDoesNotExist('download_certificate')->assertSee('Awaiting preparation');
     }
 
     public function test_filipino_guidance_translates_presentation_without_changing_request_data(): void
@@ -226,10 +223,8 @@ final class CohabitationRequestGuidanceTest extends TestCase
         $request = $this->serviceRequest('Approved');
         $this->resident->forceFill(['preferred_locale' => 'fil'])->save();
         $this->login($this->resident, 'homeowner');
-        $this->get(route('service-requests.draft', $request))->assertOk()
-            ->assertSee('Paghahanda ng sertipiko ng Cohabitation')
-            ->assertSee('Aprubado na ang iyong kahilingan para sa Cohabitation.')
-            ->assertSee('Bumalik sa mga kahilingan')->assertSee('lang="fil"', false);
+        $this->getJson(route('service-requests.draft', $request))->assertForbidden()
+            ->assertJsonPath('message', __('Certificates must be collected at the HOA office with the required signature and dry seal.', [], 'fil'));
         $this->assertSame('Approved', $request->fresh()->status);
         $this->assertSame('Preserve the original request details.', $request->fresh()->details);
     }
@@ -239,10 +234,10 @@ final class CohabitationRequestGuidanceTest extends TestCase
         if (getenv('HOA_BROWSER_EXPORT_REQUEST_GUIDANCE_FIXTURES') === 'true') {
             URL::forceRootUrl('http://certificate-guidance.test');
         }
-        $this->login($this->resident, 'homeowner');
+        $this->login($this->admin, 'admin');
         foreach (['en', 'fil'] as $locale) {
-            $this->resident->forceFill(['preferred_locale' => $locale])->save();
-            foreach (['Pending', 'Approved', 'Rejected', 'Completed'] as $status) {
+            $this->admin->forceFill(['preferred_locale' => $locale])->save();
+            foreach (['Pending', 'Processing', 'Rejected', 'Completed'] as $status) {
                 $request = $this->serviceRequest($status);
                 $response = $this->get(route('service-requests.draft', $request))->assertOk()
                     ->assertSee('aria-labelledby="request-guidance-heading"', false)
@@ -275,14 +270,14 @@ final class CohabitationRequestGuidanceTest extends TestCase
     public function test_residency_draft_still_returns_a_private_pdf_without_issuing(): void
     {
         $this->confirmUploadedSource();
-        $request = $this->serviceRequest('Pending', 'Certificate of Residency');
-        $this->login($this->resident, 'homeowner');
+        $request = $this->serviceRequest('Approved', 'Certificate of Residency');
+        $this->login($this->admin, 'admin');
         $response = $this->get(route('service-requests.draft', $request))->assertOk()
             ->assertHeader('Content-Type', 'application/pdf')->assertHeader('Cache-Control', 'no-store, private');
         $this->assertStringStartsWith('%PDF-', $response->getContent());
         $this->assertDatabaseCount('certificates', 0);
         $this->assertDatabaseCount('certificate_previews', 0);
-        $this->assertSame('Pending', $request->fresh()->status);
+        $this->assertSame('Approved', $request->fresh()->status);
         Notification::assertNothingSent();
     }
 }

@@ -28,6 +28,17 @@ function applyLocale(locale) {
     document.documentElement.lang = locale;
     const { en, fil } = dictionaries;
     const reverse = Object.fromEntries(Object.entries(fil).map(([key, value]) => [value, key]));
+    // Only the application-owned concern modal; never translate resident prose.
+    document.querySelectorAll('[data-concern-detail]').forEach(detail => {
+        detail.querySelectorAll('[data-concern-image-name]').forEach(image => {
+            image.setAttribute('alt', `${translate('Attached picture', locale)}: ${image.dataset.concernImageName}`);
+        });
+        const close = detail.closest('.fi-modal-window')?.querySelector('.fi-modal-close-btn');
+        if (close) {
+            close.setAttribute('aria-label', translate('Close', locale));
+            close.setAttribute('title', translate('Close', locale));
+        }
+    });
     document.querySelectorAll('[data-i18n-section]').forEach(section => {
         const heading = section.querySelector('.fi-section-header-heading');
         if (heading) heading.dataset.i18n = section.dataset.i18nSection;
@@ -35,6 +46,8 @@ function applyLocale(locale) {
     // Only exact, static list/page routes; record-detail headings can contain resident content.
     const pageTitles = {
         '/homeowner/my-profile': 'My Profile', '/homeowner/my-household': 'My Household',
+        '/homeowner/my-concerns': 'My Concerns', '/homeowner/annual-dues': 'Annual Dues',
+        '/admin/annual-dues': 'Annual Dues', '/staff/annual-dues': 'Annual Dues',
         '/admin/reports': 'Reports', '/staff/reports': 'Reports',
         '/admin/projects': 'Projects',
     };
@@ -61,6 +74,20 @@ function applyLocale(locale) {
     });
     document.querySelectorAll('[data-i18n-placeholder]').forEach(node => { node.placeholder = translate(node.dataset.i18nPlaceholder, locale); });
     document.querySelectorAll('[data-i18n-aria-label]').forEach(node => { node.setAttribute('aria-label', translate(node.dataset.i18nAriaLabel, locale)); });
+    document.querySelectorAll('[data-hoa-record-action]').forEach(node => {
+        // Only known application labels, never arbitrary attachment names.
+        const label = node.getAttribute('aria-label') || '';
+        const key = node.dataset.i18nAriaLabel || reverse[label] || label;
+        if (!Object.hasOwn(en, key) && !Object.hasOwn(fil, key)) return;
+        const translated = translate(key, locale);
+        node.setAttribute('aria-label', translated);
+        node.setAttribute('title', translated);
+        const tooltip = node.dataset.hoaRecordTooltip || label;
+        const tooltipKey = reverse[tooltip] || tooltip;
+        if (Object.hasOwn(en, tooltipKey) || Object.hasOwn(fil, tooltipKey)) {
+            node._tippy?.setContent(translate(tooltipKey, locale));
+        }
+    });
     // This read-only table opts in explicitly; never translate arbitrary member names.
     document.querySelectorAll('[data-household-members]').forEach(section => {
         const pagination = section.querySelector('.fi-pagination');

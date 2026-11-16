@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Events\UserAccountStatusChanged;
+use App\Http\Responses\PanelLogoutResponse;
 use App\Listeners\RecordAuthenticationActivity;
 use App\Listeners\RecordSuccessfulLogin;
 use App\Listeners\SendAccountStatusChangedNotification;
@@ -26,13 +27,19 @@ use App\Models\ServiceRequest;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Observers\AuditObserver;
+use App\Observers\SmsWorkflowObserver;
 use App\Observers\WorkflowNotificationObserver;
 use App\Services\HouseholdDirectory;
 use App\Services\PaymentReceiptResolver;
+use App\Support\ActionConfirmation;
+use App\Support\ActionFeedback;
+use App\Support\RecordActionIcons;
 use Filament\Actions\Action;
+use Filament\Auth\Http\Responses\Contracts\LogoutResponse;
 use Filament\Forms\Components\Field;
 use Filament\Support\Facades\FilamentView;
 use Filament\Tables\Columns\Column;
+use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
@@ -56,6 +63,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(LogoutResponse::class, PanelLogoutResponse::class);
         $this->app->singleton(HouseholdDirectory::class);
         $this->app->scoped(PaymentReceiptResolver::class);
     }
@@ -65,12 +73,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->loadViewsFrom(base_path('vendor/filament/actions/resources/views'), 'hoa-filament-actions');
+        FilamentView::registerRenderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.hooks.alerts'));
         FilamentView::registerRenderHook(PanelsRenderHook::USER_MENU_BEFORE, fn (): View => view('components.locale-switcher'));
         FilamentView::registerRenderHook(PanelsRenderHook::SIMPLE_LAYOUT_START, fn (): ?View => filament()->auth()->check() ? null : view('components.locale-toolbar'));
         FilamentView::registerRenderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.hooks.locale-meta'));
         Field::configureUsing(fn ($field) => $field->translateLabel());
         Column::configureUsing(fn ($column) => $column->translateLabel());
-        Action::configureUsing(fn ($action) => $action->translateLabel());
+        Action::configureUsing(function (Action $action): Action {
+            $action->translateLabel();
+
+            return RecordActionIcons::action($action);
+        });
+        Table::configureUsing(fn (Table $table) => $table->modifyUngroupedRecordActionsUsing(
+            fn (Action $action) => RecordActionIcons::action($action),
+        ));
+        Action::configureUsing(fn (Action $action) => ActionFeedback::configureAction($action), isImportant: true);
+        Action::configureUsing(fn (Action $action) => $action->extraAttributes(fn (): array => ActionConfirmation::attributes($action), merge: true));
         FilamentView::registerRenderHook(
             PanelsRenderHook::BODY_END,
             fn (): View => view('filament.hooks.accessible-table-scroll-regions'),
@@ -119,5 +138,7 @@ class AppServiceProvider extends ServiceProvider
         foreach ([Complaint::class, ServiceRequest::class, Certificate::class, ContactMessage::class] as $model) {
             $model::observe(WorkflowNotificationObserver::class);
         }
+        User::observe(SmsWorkflowObserver::class);
+        Complaint::observe(SmsWorkflowObserver::class);
     }
 }

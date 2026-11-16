@@ -11,6 +11,10 @@ use App\Filament\Homeowner\Resources\Dues\Pages\ListDuesObligations;
 use App\Filament\Homeowner\Resources\Payments\Pages\ListPayments;
 use App\Filament\Homeowner\Widgets\HomeownerOverview;
 use App\Filament\Resources\Payments\Pages\CreatePayment;
+use App\Filament\Resources\Payments\Pages\EditPayment;
+use App\Filament\Resources\Payments\Pages\ListPayments as AdminListPayments;
+use App\Filament\Resources\Payments\Schemas\PaymentForm;
+use App\Filament\Resources\Payments\Schemas\PaymentPayerSelect;
 use App\Models\DuesObligation;
 use App\Models\DuesSetting;
 use App\Models\Homeowner;
@@ -19,10 +23,12 @@ use App\Models\PaymentDocument;
 use App\Models\PaymentDocumentSource;
 use App\Models\User;
 use App\Services\ButawReceiptEligibility;
+use App\Services\PaymentDuesAvailability;
 use App\Services\PropertyDuesAccounts;
 use App\Support\PropertyIdentity;
 use Carbon\CarbonImmutable;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -213,9 +219,141 @@ final class TenantPropertyPaymentsTest extends TestCase
         $due = $this->obligation($this->owner);
         $this->login($this->staff, 'staff');
         Livewire::test(CreatePayment::class)->fillForm($this->payload($due))->call('create')
-            ->assertHasNoFormErrors()->assertNotified('Payment recorded successfully');
+            ->assertHasNoFormErrors()->assertNotified('Payment Record Created Successfully!');
         $this->assertDatabaseHas('payments', ['homeowner_id' => $this->owner->id, 'payer_homeowner_id' => $this->tenant->id, 'review_status' => 'Recorded']);
         $this->assertDatabaseCount('dues_obligations', 1);
+    }
+
+    public function test_payer_control_is_disabled_until_dues_and_switching_resets_only_payer_and_period(): void
+    {
+        $due = $this->obligation($this->owner);
+        $other = $this->resident('Owner', ['block' => '77']);
+        $otherDue = $this->obligation($other);
+        $this->login($this->staff, 'staff');
+        $page = Livewire::test(CreatePayment::class)->assertFormFieldIsDisabled('payer_homeowner_id')
+            ->fillForm(['amount_paid' => '100.25', 'notes' => 'Keep this note', 'payment_date' => '2026-10-22'])
+            ->set('data.dues_obligation_id', $due->id)
+            ->assertFormSet(['payer_homeowner_id' => $this->owner->id])
+            ->assertFormFieldIsEnabled('payer_homeowner_id')
+            ->set('data.payer_homeowner_id', $this->tenant->id)
+            ->set('data.dues_obligation_id', $otherDue->id)
+            ->assertFormSet(['payer_homeowner_id' => $other->id, 'amount_paid' => '100.25', 'notes' => 'Keep this note', 'payment_date' => '2026-10-22']);
+        $page->assertFormFieldExists('payer_homeowner_id', fn (Select $field): bool => $field->getOptions() === [$other->id => $other->user->full_name.' — Owner']);
+        $this->assertInstanceOf(PaymentPayerSelect::class, $page->instance()->form->getFlatFields()['payer_homeowner_id']);
+        $page->set('data.dues_obligation_id', null)->assertFormSet(['payer_homeowner_id' => null])->assertFormFieldIsDisabled('payer_homeowner_id');
+        $this->assertDatabaseCount('payments', 0);
+    }
+
+    public function test_ineligible_liable_account_is_not_defaulted_and_an_eligible_co_owner_can_be_chosen(): void
+    {
+        $due = $this->obligation($this->owner);
+        $this->owner->user->forceFill(['account_status' => 'Inactive'])->save();
+        $this->login($this->staff, 'staff');
+        Livewire::test(CreatePayment::class)->set('data.dues_obligation_id', $due->id)
+            ->assertFormSet(['payer_homeowner_id' => null])
+            ->assertFormFieldExists('payer_homeowner_id', fn (Select $field): bool => ! array_key_exists($this->owner->id, $field->getOptions()) && array_key_exists($this->landlord->id, $field->getOptions()))
+            ->fillForm([...$this->payload($due), 'payer_homeowner_id' => $this->landlord->id])
+            ->call('create')->assertHasNoFormErrors();
+        $this->assertDatabaseHas('payments', ['homeowner_id' => $this->owner->id, 'payer_homeowner_id' => $this->landlord->id]);
+    }
+
+    public function test_no_eligible_payers_show_review_guidance_and_block_creation_without_side_effects(): void
+    {
+        $due = $this->obligation($this->owner);
+        foreach ([$this->owner, $this->landlord, $this->tenant] as $resident) {
+            $resident->user->forceFill(['account_status' => 'Inactive'])->save();
+        }
+        $this->login($this->staff, 'staff');
+        $before = DB::table('audit_logs')->count();
+        Livewire::test(CreatePayment::class)->set('data.dues_obligation_id', $due->id)
+            ->assertSee(PaymentPayerSelect::NONE)
+            ->fillForm($this->payload($due))->call('create')->assertHasFormErrors(['payer_homeowner_id'])
+            ->assertFormSet(['payer_homeowner_id' => null, 'amount_paid' => '100.25']);
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertSame($before, DB::table('audit_logs')->count());
+        $this->assertSame('0.00', $due->fresh()->amount_paid);
+        $this->assertDatabaseCount('email_deliveries', 0);
+        $this->assertDatabaseCount('sms_batches', 0);
+    }
+
+    public function test_stale_payer_selection_is_cleared_without_losing_other_input(): void
+    {
+        $due = $this->obligation($this->owner);
+        $this->login($this->staff, 'staff');
+        $page = Livewire::test(CreatePayment::class)->fillForm([...$this->payload($due), 'notes' => 'Keep my input']);
+        $this->tenant->update(['landlord_homeowner_id' => null]);
+        $before = DB::table('audit_logs')->count();
+        $page->call('create')->assertHasFormErrors(['payer_homeowner_id'])
+            ->assertFormSet(['payer_homeowner_id' => null, 'amount_paid' => '100.25', 'notes' => 'Keep my input'])
+            ->assertSee(PaymentPayerSelect::STALE);
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertSame($before, DB::table('audit_logs')->count());
+        $this->assertSame('0.00', $due->fresh()->amount_paid);
+    }
+
+    public function test_historical_inactive_archived_payer_remains_named_readonly_without_becoming_eligible(): void
+    {
+        $due = $this->obligation($this->owner);
+        $payment = app(RecordPayment::class)->handle($this->payload($due), $this->staff);
+        $name = $this->tenant->user->full_name;
+        $this->tenant->user->forceFill(['account_status' => 'Inactive'])->save();
+        $this->tenant->delete();
+        $this->login($this->staff, 'staff');
+        Livewire::test(EditPayment::class, ['record' => $payment->id])
+            ->assertFormFieldIsDisabled('payer_homeowner_id')
+            ->assertFormFieldExists('payer_homeowner_id', fn (Select $field): bool => $field->getOptionLabel() === $name.' — Tenant');
+        $this->assertFalse(app(PropertyDuesAccounts::class)->payerIsEligible($this->tenant, $this->owner));
+        $this->assertSame($this->tenant->id, $payment->fresh()->payer_homeowner_id);
+    }
+
+    public function test_installment_form_uses_eligible_default_and_clears_stale_selection(): void
+    {
+        $due = $this->obligation($this->owner);
+        $payment = app(RecordPayment::class)->handle($this->payload($due), $this->staff);
+        $this->owner->user->forceFill(['account_status' => 'Inactive'])->save();
+        $this->login($this->staff, 'staff');
+        $action = TestAction::make('recordAdditionalPayment')->table($payment);
+        $page = Livewire::test(AdminListPayments::class)->mountAction($action)
+            ->assertActionDataSet(['payer_homeowner_id' => null]);
+        $livewire = $page->instance();
+        $this->assertInstanceOf(PaymentPayerSelect::class, $livewire->getSchema($livewire->getMountedActionSchemaName())->getFlatFields()['payer_homeowner_id']);
+        $this->tenant->update(['landlord_homeowner_id' => null]);
+        $before = DB::table('audit_logs')->count();
+        $page->fillForm(['payer_homeowner_id' => $this->tenant->id, 'amount_paid' => '25.00', 'notes' => 'Retain installment note'])
+            ->callMountedAction()->assertHasActionErrors(['payer_homeowner_id'])
+            ->assertActionDataSet(['payer_homeowner_id' => null, 'amount_paid' => '25.00', 'notes' => 'Retain installment note'])
+            ->assertNotNotified('Additional Payment Recorded Successfully!');
+        $this->assertDatabaseCount('payments', 1);
+        $this->assertSame($before, DB::table('audit_logs')->count());
+        $this->assertSame('100.25', $due->fresh()->amount_paid);
+    }
+
+    public function test_unrelated_payer_id_is_cleared_and_no_financial_intent_is_created(): void
+    {
+        $due = $this->obligation($this->owner);
+        $other = $this->resident('Owner', ['block' => '77']);
+        $this->login($this->staff, 'staff');
+        $page = Livewire::test(CreatePayment::class)->fillForm([...$this->payload($due), 'payer_homeowner_id' => $other->id]);
+        $before = DB::table('audit_logs')->count();
+        $page->call('create')->assertHasFormErrors(['payer_homeowner_id'])
+            ->assertFormSet(['payer_homeowner_id' => null, 'dues_obligation_id' => $due->id]);
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertSame('0.00', $due->fresh()->amount_paid);
+        $this->assertSame($before, DB::table('audit_logs')->count());
+        $this->assertDatabaseCount('email_deliveries', 0);
+        $this->assertDatabaseCount('sms_batches', 0);
+    }
+
+    public function test_payer_guidance_is_translated_without_translating_resident_names(): void
+    {
+        $due = $this->obligation($this->owner);
+        $this->login($this->staff, 'staff');
+        app()->setLocale('fil');
+        Livewire::test(CreatePayment::class)->set('data.dues_obligation_id', $due->id)
+            ->assertSee(__('Choose the person who actually made this payment.'))
+            ->assertFormFieldExists('payer_homeowner_id', fn (Select $field): bool => $field->getOptionLabel() === $this->owner->user->full_name.' — '.__('Owner'));
+        $this->assertNotSame(PaymentPayerSelect::NONE, __(PaymentPayerSelect::NONE));
+        $this->assertNotSame(PaymentPayerSelect::STALE, __(PaymentPayerSelect::STALE));
     }
 
     public function test_eligible_tenant_sees_only_property_dues_and_not_other_residents_payment_history(): void
@@ -243,7 +381,7 @@ final class TenantPropertyPaymentsTest extends TestCase
         foreach ([$this->tenant->user, $this->owner->user, $this->staff] as $allowed) {
             $this->login($allowed);
             foreach ([route('payments.receipt.download', $payment), route('certificates.butaw.download', $document)] as $url) {
-                $this->assertSame(Storage::get($document->path), $this->get($url)->assertOk()->streamedContent());
+                $this->assertSame(Storage::disk('local')->get($document->path), $this->get($url)->assertOk()->streamedContent());
             }
         }
         foreach ([$this->landlord->user, $otherTenant->user] as $denied) {
@@ -301,6 +439,82 @@ final class TenantPropertyPaymentsTest extends TestCase
         $this->assertDatabaseCount('dues_obligations', 2);
     }
 
+    public function test_archived_liable_with_active_portal_is_disabled_but_not_restored(): void
+    {
+        $owner = $this->resident('Owner', ['block' => '77']);
+        $due = $this->obligation($owner);
+        $owner->delete();
+        $this->login($this->staff, 'staff');
+        $page = Livewire::test(CreatePayment::class);
+        $field = $page->instance()->form->getFlatFields()['dues_obligation_id'];
+        $this->assertTrue($field->isOptionDisabled($due->id, ''));
+        $this->assertStringContainsString(PaymentDuesAvailability::ARCHIVED, json_encode($field->getOptions(), JSON_UNESCAPED_UNICODE));
+        $this->assertStringNotContainsString('Review homeowner records</a>', $page->html());
+        $before = DB::table('audit_logs')->count();
+        $page->fillForm([...$this->payload($due), 'payer_homeowner_id' => $owner->id, 'notes' => 'Retain input'])
+            ->call('create')->assertHasFormErrors()
+            ->assertFormSet(['payer_homeowner_id' => null, 'amount_paid' => '100.25', 'notes' => 'Retain input'])
+            ->assertNotNotified('Payment Record Created Successfully!');
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertDatabaseCount('email_deliveries', 0);
+        $this->assertDatabaseCount('sms_batches', 0);
+        $this->assertSame($before, DB::table('audit_logs')->count());
+        $this->assertTrue($owner->fresh()->trashed());
+        $this->assertSame('Active', $owner->user->fresh()->account_status);
+        $this->assertSame('0.00', $due->fresh()->amount_paid);
+    }
+
+    public function test_archived_liable_does_not_disable_an_obligation_with_an_eligible_co_owner_or_tenant(): void
+    {
+        $due = $this->obligation($this->owner);
+        $this->owner->delete();
+        $this->assertNull(app(PaymentDuesAvailability::class)->reason($due->fresh()));
+        $this->login($this->staff, 'staff');
+        $page = Livewire::test(CreatePayment::class);
+        $this->assertFalse($page->instance()->form->getFlatFields()['dues_obligation_id']->isOptionDisabled($due->id, ''));
+        $page->fillForm($this->payload($due))->call('create')->assertHasNoFormErrors();
+        $this->assertDatabaseHas('payments', ['dues_obligation_id' => $due->id, 'payer_homeowner_id' => $this->tenant->id]);
+        $this->assertTrue($this->owner->fresh()->trashed());
+    }
+
+    public function test_review_link_is_admin_only_and_availability_reasons_are_translated(): void
+    {
+        $owner = $this->resident('Owner', ['block' => '77']);
+        $due = $this->obligation($owner);
+        $owner->user->forceFill(['account_status' => 'Inactive'])->save();
+        $this->assertSame(PaymentDuesAvailability::NO_PAYER, app(PaymentDuesAvailability::class)->reason($due->fresh()));
+        $admin = User::factory()->create(['account_status' => 'Active']);
+        $admin->assignRole('hoa_admin');
+        $this->login($admin, 'admin');
+        $guidance = PaymentForm::reviewGuidance($due->fresh())->toHtml();
+        $this->assertStringContainsString('/admin/homeowners/'.$owner->id, $guidance);
+        $this->assertStringContainsString('Review homeowner records', $guidance);
+        $this->login($this->staff, 'staff');
+        $this->assertStringNotContainsString('<a ', PaymentForm::reviewGuidance($due->fresh())->toHtml());
+        app()->setLocale('fil');
+        foreach ([PaymentDuesAvailability::ARCHIVED, PaymentDuesAvailability::NO_PAYER, PaymentDuesAvailability::PORTAL_NOTICE] as $key) {
+            $this->assertNotSame($key, __($key));
+        }
+    }
+
+    public function test_obligation_becoming_unavailable_after_opening_retains_input_and_clears_payer(): void
+    {
+        $owner = $this->resident('Owner', ['block' => '77']);
+        $due = $this->obligation($owner);
+        $this->login($this->staff, 'staff');
+        $page = Livewire::test(CreatePayment::class)->fillForm([...$this->payload($due), 'payer_homeowner_id' => $owner->id, 'notes' => 'Keep stale dialog input']);
+        $owner->delete();
+        $before = DB::table('audit_logs')->count();
+        $page->call('create')->assertHasFormErrors(['payer_homeowner_id'])
+            ->assertFormSet(['payer_homeowner_id' => null, 'amount_paid' => '100.25', 'notes' => 'Keep stale dialog input', 'payment_date' => '2026-10-23'])
+            ->assertNotNotified('Payment Record Created Successfully!');
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertSame('0.00', $due->fresh()->amount_paid);
+        $this->assertSame($before, DB::table('audit_logs')->count());
+        $this->assertDatabaseCount('email_deliveries', 0);
+        $this->assertDatabaseCount('sms_batches', 0);
+    }
+
     private function resident(string $type, array $overrides = []): Homeowner
     {
         $user = User::factory()->create(['account_status' => 'Active']);
@@ -353,8 +567,8 @@ final class TenantPropertyPaymentsTest extends TestCase
         $bytes = '%PDF-1.4 SYNTHETIC SC07 RECEIPT '.Str::uuid();
         $source = PaymentDocumentSource::create(['source_checksum' => hash('sha256', $bytes), 'manifest' => ['font_profile' => 'butaw'], 'approved_by' => $this->staff->id, 'approved_at' => now(), 'approval_note' => 'Synthetic test fixture only.']);
         $path = 'payment-documents/'.Str::uuid().'.pdf';
-        Storage::put($path, $bytes);
+        Storage::disk('local')->put($path, $bytes);
 
-        return PaymentDocument::create(['payment_id' => $payment->id, 'payment_document_source_id' => $source->id, 'source_checksum' => $source->source_checksum, 'snapshot' => app(ButawReceiptEligibility::class)->snapshot($payment), 'path' => $path, 'file_checksum' => hash('sha256', $bytes), 'generated_by' => $this->staff->id]);
+        return PaymentDocument::create(['payment_id' => $payment->id, 'payment_document_source_id' => $source->id, 'source_checksum' => $source->source_checksum, 'snapshot' => app(ButawReceiptEligibility::class)->installmentSnapshot($payment), 'path' => $path, 'file_checksum' => hash('sha256', $bytes), 'generated_by' => $this->staff->id]);
     }
 }

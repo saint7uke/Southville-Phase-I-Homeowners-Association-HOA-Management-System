@@ -89,7 +89,9 @@ final class ReportAndAuditTest extends TestCase
         $admin = $this->userWithRole('hoa_admin');
         $staff = $this->userWithRole('hoa_staff');
 
-        $this->actingAs($admin, 'admin')->get('/admin/reports')->assertOk()->assertSee('Full Payment Collection History')->assertSee('Queue CSV')->assertSee('All statuses');
+        $this->actingAs($admin, 'admin')->get('/admin/reports')->assertOk()->assertSee('Full Payment Collection History')->assertSee('report-type');
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Livewire::test(Reports::class)->set('selectedReport', 'payment-history')->assertSee('Queue CSV')->assertSee('All statuses');
         $this->actingAs($staff, 'staff')->get('/staff/reports')->assertOk()->assertDontSee('Full Payment Collection History');
         $this->actingAs($admin, 'admin')->get(route('admin.reports.download', ['report' => 'homeowners', 'format' => 'pdf']))->assertNotFound();
     }
@@ -105,9 +107,9 @@ final class ReportAndAuditTest extends TestCase
                 ->assertSee('aria-label="Reports"', false)
                 ->assertDontSee('reports-catalog-title', false)
                 ->assertSeeText('Preview live database records or export the same filtered dataset. Financial reports use the current property ledger.')
-                ->assertSee('reports-search', false)
-                ->assertSee('reports-category', false)
-                ->assertSee('reports-per-page', false);
+                ->assertSee('report-type', false)
+                ->assertDontSee('reports-search', false)
+                ->assertDontSee('reports-category', false);
         }
     }
 
@@ -140,16 +142,15 @@ final class ReportAndAuditTest extends TestCase
             ->assertDownload('homeowners-'.$export->created_at->toDateString().'.csv');
     }
 
-    public function test_report_pagination_sorting_and_page_size_work_through_livewire(): void
+    public function test_report_selection_shows_only_the_chosen_report_and_resets_pagination(): void
     {
         $this->actingAs($this->userWithRole('hoa_admin'), 'admin');
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
         $page = Livewire::test(Reports::class)
-            ->set('perPage', 5)
             ->call('setPage', 2)
-            ->assertSet('paginators.page', 2)
-            ->assertSee('Showing 6–10 of 13 reports')
+            ->set('selectedReport', 'homeowners')
+            ->assertSet('paginators.page', 1)
             ->call('sortBy', 'title')
             ->assertSet('sortDirection', 'desc')
             ->assertSet('paginators.page', 1)
@@ -158,6 +159,7 @@ final class ReportAndAuditTest extends TestCase
             ->assertSet('sortDirection', 'desc');
 
         $titles = $page->instance()->getReportsForCategory('all')->pluck('title')->all();
+        $this->assertCount(1, $titles);
         $expected = $titles;
         rsort($expected);
         $this->assertSame($expected, $titles);

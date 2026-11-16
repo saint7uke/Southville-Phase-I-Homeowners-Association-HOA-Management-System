@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\DuesObligation;
 use App\Models\Homeowner;
 use App\Models\Payment;
 use App\Support\Money;
@@ -22,9 +23,9 @@ final class ButawReceiptEligibility
         }
 
         return Payment::query()->where('payment_method', 'Cash')->whereIn('review_status', ['Recorded', 'Approved'])
-            ->whereIn('status', ['Paid', 'Partial'])->where('penalty', 0)->whereNotNull('recorded_by')->whereNotNull('property_snapshot')
+            ->where('status', 'Paid')->where('balance', 0)->where('penalty', 0)->whereNotNull('recorded_by')->whereNotNull('property_snapshot')
             ->where('property_snapshot->collector_authorized', true)->whereNotNull('property_snapshot->block')->whereNotNull('property_snapshot->lot')->whereNotNull('property_snapshot->collector_name')
-            ->whereHas('duesObligation', fn ($q) => $q->where('billing_year', 2026)->where('penalty_amount', 0)->where('status', '!=', 'Cancelled')->whereHas('duesSetting', fn ($s) => $s->where('frequency', 'Monthly')))
+            ->whereHas('duesObligation', fn ($q) => $q->where('billing_year', 2026)->where('penalty_amount', 0)->where('status', 'Paid')->whereColumn('amount_paid', 'amount_due')->whereHas('duesSetting', fn ($s) => $s->where('frequency', 'Monthly')))
             ->with(['homeowner.user', 'payer.user', 'duesObligation.duesSetting', 'recorder']);
     }
 
@@ -38,13 +39,65 @@ final class ButawReceiptEligibility
         });
     }
 
-    public function snapshot(Payment $payment, ?int $expectedHomeownerId = null): array
+    public function snapshot(Payment $payment, ?int $expectedHomeownerId = null, bool $lock = false): array
+    {
+        $this->installmentSnapshot($payment, $expectedHomeownerId);
+        $obligation = $payment->duesObligation;
+        $all = $obligation->relationLoaded('payments') && ! $lock
+            ? $obligation->payments : $obligation->payments()->orderBy('id')
+                ->with(['homeowner.user', 'payer.user', 'recorder'])
+                ->when($lock, fn ($query) => $query->lockForUpdate())->get();
+        $payments = $all->whereIn('review_status', ['Recorded', 'Approved'])->sortBy([
+            ['reviewed_at', 'asc'], ['id', 'asc'],
+        ])->values();
+        if ($payments->contains(fn (Payment $item): bool => (int) $item->homeowner_id !== (int) $obligation->homeowner_id
+            || (int) $item->dues_setting_id !== (int) $obligation->dues_setting_id)) {
+            throw ValidationException::withMessages(['payment_id' => __('The settlement history requires HOA review before a monthly receipt can be generated.')]);
+        }
+        $total = $payments->sum(fn (Payment $item): int => Money::toMinor((string) $item->amount_paid));
+        if ($obligation->status !== 'Paid' || Money::toMinor((string) $obligation->amount_paid) !== $total
+            || $total !== Money::toMinor((string) $obligation->amount_due)
+            || $all->contains('review_status', 'Pending')) {
+            throw ValidationException::withMessages(['payment_id' => __('Fully settle the monthly dues before generating a monthly receipt.')]);
+        }
+        $installments = $payments->map(fn (Payment $item): array => [
+            ...$this->installmentSnapshot($item, obligation: $obligation),
+            'balance' => (string) $item->balance, 'reviewed_at' => $item->reviewed_at?->toIso8601String(),
+            'reviewed_by' => $item->reviewed_by, 'transaction_reference' => $item->transaction_reference,
+        ])->all();
+        // A proof may settle last despite having an older ID; timestamps have second precision.
+        $settling = $payments->filter(fn (Payment $item): bool => $item->status === 'Paid' && Money::toMinor((string) $item->balance) === 0);
+        $final = $settling->first();
+        if ($settling->count() !== 1) {
+            throw ValidationException::withMessages(['payment_id' => __('The settlement history requires HOA review before a monthly receipt can be generated.')]);
+        }
+        $snapshot = $this->installmentSnapshot($final, $expectedHomeownerId, $obligation);
+        foreach ($installments as $item) {
+            foreach (['block', 'lot', 'phase', 'phase_suffix'] as $field) {
+                if (($item['property'][$field] ?? null) !== ($snapshot['property'][$field] ?? null)) {
+                    throw ValidationException::withMessages(['payment_id' => __('The settlement history requires HOA review before a monthly receipt can be generated.')]);
+                }
+            }
+        }
+        $snapshot['values']['amount'] = Money::fromMinor($total);
+        $snapshot['settlement_obligation_id'] = $obligation->id;
+        $snapshot['installments'] = $installments;
+        $snapshot['assessed_amount'] = (string) $obligation->amount_due;
+
+        return $snapshot;
+    }
+
+    /** Historical documents retain their original per-payment eligibility. */
+    public function installmentSnapshot(Payment $payment, ?int $expectedHomeownerId = null, ?DuesObligation $obligation = null): array
     {
         if ($expectedHomeownerId !== null && (int) $payment->homeowner_id !== $expectedHomeownerId) {
             throw ValidationException::withMessages(['payment_id' => __('Select a payment belonging to the selected homeowner / liable property account.')]);
         }
-        $payment->loadMissing(['homeowner.user', 'payer.user', 'duesObligation.duesSetting', 'recorder']);
-        $obligation = $payment->duesObligation;
+        $payment->loadMissing(['homeowner.user', 'payer.user', 'recorder']);
+        if ($obligation === null) {
+            $payment->loadMissing('duesObligation.duesSetting');
+            $obligation = $payment->duesObligation;
+        }
         $property = $payment->property_snapshot ?? [];
         if ($payment->trashed() || $payment->payment_method !== 'Cash' || ! in_array($payment->review_status, ['Recorded', 'Approved'], true)
             || ! in_array($payment->status, ['Paid', 'Partial'], true) || Money::toMinor((string) $payment->penalty) !== 0

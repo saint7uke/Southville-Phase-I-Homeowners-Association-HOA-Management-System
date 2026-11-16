@@ -25,9 +25,10 @@ final class ManageProject
         }
         $validated = Validator::make([...$data, 'images' => $images], [
             'title' => ['required', 'string', 'max:160', 'not_regex:/[\x00-\x1F\x7F]/u'],
-            'description' => ['required', 'string', 'max:10000'], 'project_date' => ['required', 'date', 'before_or_equal:today'],
+            'description' => ['required', 'string', 'max:10000'], 'project_date' => ['required', 'date', ...(($data['completion_status'] ?? null) === 'Planned' ? [] : ['before_or_equal:today'])],
             'completion_status' => ['required', Rule::in(['Planned', 'In Progress', 'Completed'])], 'publish' => ['required', 'boolean'],
-            'images' => ['array', 'max:5'], 'images.*' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'dimensions:min_width=100,min_height=100,max_width=6000,max_height=6000'],
+            'confirm_unpublish' => ['sometimes', 'boolean'],
+            'images' => ['array', 'max:5'], 'images.*' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:15360', 'dimensions:min_width=100,min_height=100,max_width=6000,max_height=6000'],
             'created_by' => ['prohibited'], 'published_at' => ['prohibited'],
         ])->validate();
         if ($validated['publish'] && $validated['completion_status'] !== 'Completed') {
@@ -37,6 +38,9 @@ final class ManageProject
         try {
             return DB::transaction(function () use ($id, $validated, $images, $actor, &$stored): Project {
                 $project = $id ? Project::query()->lockForUpdate()->findOrFail($id) : new Project;
+                if ($project->published_at !== null && $validated['completion_status'] !== 'Completed' && ! ($validated['confirm_unpublish'] ?? false)) {
+                    throw ValidationException::withMessages(['confirm_unpublish' => __('Confirm removal from the public website before saving an unfinished project.')]);
+                }
                 if ($project->images()->count() + count($images) > 5) {
                     throw ValidationException::withMessages(['images' => __('A project may contain at most five images.')]);
                 }

@@ -75,8 +75,8 @@
         }
     </style>
 </head>
-<body class="hoa-landing">
-    <main class="hoa-auth-shell hoa-portal-auth" aria-labelledby="register-title">
+<body class="hoa-landing hoa-registration-page">
+    <main class="hoa-auth-shell hoa-portal-auth hoa-registration-shell" aria-labelledby="register-title">
         <div class="hoa-auth-overlay"></div>
         <aside class="hoa-portal-auth-intro">
             <a class="hoa-portal-auth-brand" href="{{ route('home') }}" aria-label="Go to Southville Phase I HOA homepage">
@@ -95,16 +95,7 @@
                 <p><span data-i18n="Tell us how you use your home so we can verify your application.">{{ __('Tell us how you use your home so we can verify your application.') }}</span></p>
             </a>
             
-            @if($errors->any())
-                <div class="hoa-contact-error" role="alert" style="margin-top: 0; margin-bottom: 1.5rem;">
-                    <strong data-i18n="Please correct the following:">{{ __('Please correct the following:') }}</strong>
-                    <ul style="margin: .5rem 0 0; padding-left: 1.2rem; font-size: .8rem;">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
+            <x-alert-feedback />
 
             <form method="POST" action="{{ route('homeowner.register.store') }}" data-review-registration data-email-availability-url="{{ route('homeowner.register.email-availability') }}" data-address-availability-url="{{ route('homeowner.register.address-availability') }}" data-landlord-availability-url="{{ route('homeowner.register.landlord-availability') }}" enctype="multipart/form-data">
                 @csrf
@@ -142,9 +133,9 @@
                     
                     <div class="hoa-form-group">
                         <div class="hoa-form-grid-2">
-                            @php($fields = ['first_name' => 'First name', 'middle_name' => 'Middle name', 'last_name' => 'Last name', 'street' => 'Street', 'block' => 'Block', 'lot' => 'Lot'])
+                            @php($fields = ['first_name' => 'First name', 'middle_name' => 'Middle name', 'last_name' => 'Last name', 'block' => 'Block', 'lot' => 'Lot'])
                             @foreach($fields as $name => $label)
-                                @php($isAddressField = in_array($name, ['street', 'block', 'lot'], true))
+                                @php($isAddressField = in_array($name, ['block', 'lot'], true))
                                 @php($addressFieldHasError = $isAddressField && $errors->has('address'))
                                 <div class="hoa-field">
                                     <label for="{{ $name }}"><span data-i18n="{{ $label }}">{{ __($label) }}</span> @if($name !== 'middle_name')<span aria-hidden="true">*</span>@endif</label>
@@ -154,8 +145,8 @@
                             @endforeach
                             <div class="hoa-field">
                                 <label for="phase_suffix"><span data-i18n="Phase">{{ __('Phase') }}</span> <span aria-hidden="true">*</span></label>
-                                <div class="hoa-phase-input"><span id="phase-prefix">Phase 1 -</span><input id="phase_suffix" name="phase_suffix" value="{{ old('phase_suffix') }}" required maxlength="10" pattern="[A-Za-z0-9]{1,10}" autocomplete="off" aria-describedby="phase-prefix phase-help address-availability-message @error('phase_suffix') phase_suffix-error @enderror" @if($errors->has('phase_suffix')) aria-invalid="true" @endif></div>
-                                <p id="phase-help" class="hoa-hint" data-i18n="Enter the phase suffix using 1–10 letters or digits.">{{ __('Enter the phase suffix using 1–10 letters or digits.') }}</p>
+                                <div class="hoa-phase-input"><span id="phase-prefix">Phase 1 -</span><select id="phase_suffix" name="phase_suffix" required aria-describedby="phase-prefix phase-help"><option value="">{{ __('Select phase') }}</option>@foreach(\App\Support\PropertyPhase::options() as $value => $label)<option value="{{ $value }}" @selected(old('phase_suffix') === $value)>{{ $label }}</option>@endforeach</select></div>
+                                <p id="phase-help" class="hoa-hint" data-i18n="Select A, B or Expansion.">{{ __('Select A, B or Expansion.') }}</p>
                                 @error('phase_suffix')<p id="phase_suffix-error" class="hoa-error-text">{{ $message }}</p>@enderror
                             </div>
                             
@@ -193,7 +184,7 @@
                         <div class="hoa-form-grid-2">
                             <div class="hoa-field">
                                 <label for="contact_number"><span data-i18n="Contact number">{{ __('Contact number') }}</span> <span aria-hidden="true">*</span></label>
-                                <input id="contact_number" name="contact_number" inputmode="numeric" pattern="09[0-9]{9}" maxlength="11" value="{{ old('contact_number') }}" required autocomplete="tel" aria-describedby="contact-hint" placeholder="09XXXXXXXXX">
+                                <input id="contact_number" name="contact_number" type="tel" data-local-mobile inputmode="numeric" pattern="09[0-9]{9}" maxlength="11" value="{{ is_string(old('contact_number')) ? old('contact_number') : '' }}" required autocomplete="tel" aria-describedby="contact-hint" placeholder="09XXXXXXXXX">
                                 <p id="contact-hint" class="hoa-hint">11-digit mobile number beginning with 09.</p>
                                 @error('contact_number')<p class="hoa-error-text">{{ $message }}</p>@enderror
                             </div>
@@ -278,20 +269,25 @@
                         </div>
                         
                         <div class="hoa-field">
-                            <label for="verification_document" data-i18n="Verification document (ID / Lease / Title)">{{ __('Verification document (ID / Lease / Title)') }}</label>
-                            <input id="verification_document" name="verification_document" type="file" accept=".pdf,.jpg,.jpeg,.png">
-                            <p class="hoa-hint"><span data-i18n="Upload a PDF or image when requested by the HOA (max 10MB).">{{ __('Upload a PDF or image when requested by the HOA (max 10MB).') }}</span></p>
-                            @error('verification_document')<p class="hoa-error-text">{{ $message }}</p>@enderror
+                            <label for="verification_document"><span data-i18n="Verification document (ID / Lease / Title)">{{ __('Verification document (ID / Lease / Title)') }}</span> <span aria-hidden="true">*</span></label>
+                            <input id="verification_document" name="verification_document" type="file" required accept=".pdf,.jpg,.jpeg,.png" aria-describedby="verification-document-hint{{ $errors->has('verification_document') ? ' verification_document-error' : '' }}" @if($errors->has('verification_document')) aria-invalid="true" class="is-invalid" @endif>
+                            <p id="verification-document-hint" class="hoa-hint"><span data-i18n="Upload an ID, Lease or Title document (PDF, JPG, JPEG or PNG; maximum 10 MB).">{{ __('Upload an ID, Lease or Title document (PDF, JPG, JPEG or PNG; maximum 10 MB).') }}</span></p>
+                            @error('verification_document')<p id="verification_document-error" class="hoa-error-text" role="alert">{{ $message }}</p>@enderror
                         </div>
 
+                        <aside class="hoa-registration-reminder" aria-labelledby="registration-reminder-title">
+                            <h3 id="registration-reminder-title"><span class="hoa-reminder-icon" aria-hidden="true">i</span><span data-i18n="Important Reminder">{{ __('Important Reminder') }}</span></h3>
+                            <p data-i18n="The HOA Administrator will review the information and supporting documents submitted during registration. If your application requires additional information or corrections, the administrator may provide feedback and instructions through your registered email address. Please ensure that your email address is active and accessible.">{{ __('The HOA Administrator will review the information and supporting documents submitted during registration. If your application requires additional information or corrections, the administrator may provide feedback and instructions through your registered email address. Please ensure that your email address is active and accessible.') }}</p>
+                        </aside>
+                        <h3 class="hoa-consent-heading" data-i18n="Data Privacy and Consent">{{ __('Data Privacy and Consent') }}</h3>
                         <x-auth.checkbox name="privacy_consent" value="1" required :checked="(bool) old('privacy_consent')">
                             <span data-i18n="I consent to the HOA processing my information for resident verification and community services.">{{ __('I consent to the HOA processing my information for resident verification and community services.') }}</span> <span aria-hidden="true">*</span>
                         </x-auth.checkbox>
                     </div>
 
                     <div class="hoa-auth-actions">
-                        <button type="button" class="hoa-button hoa-button-ghost" onclick="goBack()" style="color: var(--hoa-ink); border-color: var(--hoa-line);">← Back</button>
-                        <button class="hoa-button hoa-button-primary" type="submit" data-i18n="Submit application">{{ __('Submit application') }}</button>
+                        <button type="button" class="hoa-button hoa-button-ghost" onclick="goBack()" style="color: var(--hoa-ink); border-color: var(--hoa-line);">@svg('heroicon-o-arrow-left', '', ['aria-hidden' => 'true', 'style' => 'width:1.1rem;height:1.1rem'])<span data-i18n="Back">{{ __('Back') }}</span></button>
+                        <button class="hoa-button hoa-button-primary" type="submit">@svg('heroicon-o-paper-airplane', '', ['aria-hidden' => 'true', 'style' => 'width:1.1rem;height:1.1rem'])<span data-i18n="Submit application">{{ __('Submit application') }}</span></button>
                     </div>
                 </div>
             </form>
@@ -318,6 +314,7 @@
             document.getElementById('auth-card').classList.add('is-wide');
             
             toggleDynamicFields(role);
+            resetRegistrationScroll();
         }
         
         function goBack() {
@@ -327,6 +324,15 @@
             
             // Narrow the card for role selection
             document.getElementById('auth-card').classList.remove('is-wide');
+            resetRegistrationScroll();
+        }
+
+        function resetRegistrationScroll() {
+            const panel = document.getElementById('auth-card');
+            panel.scrollTop = 0;
+            if (window.matchMedia('(max-width: 720px), (max-height: 640px)').matches) {
+                panel.querySelector('.hoa-step.is-active')?.scrollIntoView({ block: 'start', behavior: 'instant' });
+            }
         }
 
         function toggleDynamicFields(type) {

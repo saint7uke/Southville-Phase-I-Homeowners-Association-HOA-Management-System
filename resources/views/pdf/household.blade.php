@@ -5,6 +5,8 @@
 <h1>{{ __('Household summary') }}</h1><p><strong>{{ __('PROVISIONAL RBI — subject to HOA confirmation') }}</strong></p>
 <p>{{ $household->identifier }} — {{ $household->full_address }}</p>
 <p>{{ __('Current members') }}: {{ $members->count() }}</p>
+<p><strong>{{ __('Household head') }}:</strong> {{ $head_name ?? __('Not assigned') }}</p>
+@if(!empty($warning)) <p>{{ $warning }}</p> @endif
 <table><thead><tr><th>{{ __('Name') }}</th><th>{{ __('Relationship') }}</th><th>{{ __('Residency status') }}</th>@if($manager)<th>{{ __('Birth date') }}</th><th>{{ __('Sex') }}</th>@endif</tr></thead><tbody>
 @foreach($members as $member)<tr><td>{{ $member->full_name }}</td><td>{{ __($member->relationship) }}</td><td>{{ __($member->residency_status) }}</td>@if($manager)<td>{{ $member->date_of_birth?->toDateString() }}</td><td>{{ __($member->sex ?? '') }}</td>@endif</tr>@endforeach
 </tbody></table><p>{{ __('Generated') }} {{ now()->format('Y-m-d H:i') }}</p>

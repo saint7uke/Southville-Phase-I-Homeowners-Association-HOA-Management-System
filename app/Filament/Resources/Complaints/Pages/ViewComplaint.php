@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Complaints\Pages;
 
+use App\Filament\Concerns\HasIconOnlyRecordActions;
 use App\Filament\Resources\Complaints\Actions\ReopenComplaintAction;
 use App\Filament\Resources\Complaints\ComplaintResource;
 use Filament\Actions\Action;
@@ -11,6 +12,8 @@ use Filament\Resources\Pages\ViewRecord;
 
 final class ViewComplaint extends ViewRecord
 {
+    use HasIconOnlyRecordActions;
+
     protected static string $resource = ComplaintResource::class;
 
     protected function getHeaderActions(): array

@@ -25,6 +25,6 @@ final class ContactMessageReplyMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'mail.contact-message-reply');
+        return new Content(markdown: 'mail.contact-message-reply');
     }
 }

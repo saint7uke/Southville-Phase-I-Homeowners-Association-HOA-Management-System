@@ -1,0 +1,18 @@
+# Reviewed source only; ship the complete matching public/build separately.
+app/Actions/Households/ManageHousehold.php
+app/Filament/Pages/Households.php
+app/Filament/Resources/Homeowners/Tables/HomeownersTable.php
+app/Support/CurrentPropertyAddress.php
+app/Support/PropertySnapshot.php
+app/Services/Reporting/HoaReportCatalog.php
+app/Services/HouseholdDirectory.php
+app/Validation/ServiceRequestSubmissionValidator.php
+app/Services/CohabitationCertificateData.php
+app/Services/ResidencyCertificatePreviews.php
+app/Actions/Certificates/IssueCertificate.php
+app/Filament/Resources/Certificates/Pages/CreateCertificate.php
+app/Actions/Payments/RecordPayment.php
+app/Actions/Payments/ConfirmReceiptDetails.php
+app/Http/Controllers/CertificateDraftController.php
+app/Validation/HomeownerProfileValidator.php
+app/Http/Requests/Portal/UpdateProfileRequest.php

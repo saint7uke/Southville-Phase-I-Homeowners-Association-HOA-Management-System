@@ -15,8 +15,8 @@
                             <dd class="hoa-household__address">{{ $summary['address'] }}</dd>
                         </div>
                         <div>
-                            <dt data-i18n="Household ID">{{ __('Household ID') }}</dt>
-                            <dd>{{ $summary['identifier'] }}</dd>
+                            <dt data-i18n="Household head">{{ __('Household head') }}</dt>
+                            <dd>{{ $summary['head_name'] ?? __('Not assigned') }}</dd>
                         </div>
                     </dl>
                     <div class="hoa-household__count">
@@ -26,6 +26,7 @@
                     </div>
                 </div>
                 <div class="hoa-household__download">
+                    <details><summary>{{ __('Household reference') }}</summary><p>{{ $summary['identifier'] }}</p></details>
                     <x-filament::button tag="a" :href="route('households.pdf', $summary['id'])" icon="heroicon-o-arrow-down-tray" color="gray">
                         <span data-i18n="Download household summary">{{ __('Download household summary') }}</span>
                     </x-filament::button>
@@ -33,6 +34,7 @@
                 </div>
             </x-filament::section>
 
+            @if($summary['warning']) <p role="status">{{ $summary['warning'] }}</p> @endif
             @if ($summary['needs_review'])
                 <aside class="hoa-household__notice hoa-household__notice--review" role="status">
                     <x-filament::icon icon="heroicon-o-exclamation-triangle" class="size-5 shrink-0" aria-hidden="true" />

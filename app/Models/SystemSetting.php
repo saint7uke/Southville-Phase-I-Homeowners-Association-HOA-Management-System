@@ -15,6 +15,8 @@ final class SystemSetting extends Model
         'complaint_notifications', 'request_notifications', 'payment_notifications', 'announcement_notifications',
         'certificate_notifications', 'delinquency_notifications', 'contact_notifications',
         'staff_panel_enabled', 'homeowner_panel_enabled',
+        'sms_enabled', 'sms_approval_enabled', 'sms_due_enabled', 'sms_overdue_enabled', 'sms_payment_enabled', 'sms_complaint_enabled',
+        'sms_announcement_enabled', 'sms_incoming_enabled', 'sms_due_days', 'sms_overdue_days', 'sms_daily_segments',
     ];
 
     protected function casts(): array
@@ -30,6 +32,10 @@ final class SystemSetting extends Model
             'contact_notifications' => 'boolean',
             'staff_panel_enabled' => 'boolean',
             'homeowner_panel_enabled' => 'boolean',
+            'sms_enabled' => 'boolean', 'sms_approval_enabled' => 'boolean', 'sms_due_enabled' => 'boolean',
+            'sms_overdue_enabled' => 'boolean', 'sms_payment_enabled' => 'boolean', 'sms_complaint_enabled' => 'boolean',
+            'sms_announcement_enabled' => 'boolean', 'sms_incoming_enabled' => 'boolean',
+            'sms_due_days' => 'integer', 'sms_overdue_days' => 'integer', 'sms_daily_segments' => 'integer',
         ];
     }
 

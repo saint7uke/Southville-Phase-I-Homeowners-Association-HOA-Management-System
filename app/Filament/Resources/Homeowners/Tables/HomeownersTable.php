@@ -8,6 +8,8 @@ use App\Actions\Users\ChangeAccountStatus;
 use App\Enums\UserAccountStatus;
 use App\Models\AuditLog;
 use App\Models\Homeowner;
+use App\Support\ActionFeedback;
+use App\Support\CurrentPropertyAddress;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -19,6 +21,7 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -35,8 +38,8 @@ final class HomeownersTable
     {
         return $table->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['user', 'landlord.user']))->columns([
             TextColumn::make('user.full_name')->label(__('Resident'))->searchable(['first_name', 'last_name'])->sortable(['last_name']),
-            TextColumn::make('full_address')->label(__('Property address'))->searchable(['house_number', 'street', 'block', 'lot'])->wrap(),
-            TextColumn::make('user.email')->label(__('Email'))->searchable()->toggleable(),
+            TextColumn::make('full_address')->label(__('Property address'))->state(fn (Homeowner $record) => CurrentPropertyAddress::concise($record))->searchable(['block', 'lot'])->wrap(),
+            TextColumn::make('user.email')->label(__('Email'))->searchable()->toggleable(isToggledHiddenByDefault: true),
             TextColumn::make('ownership_type')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
             TextColumn::make('landlord_display')
                 ->label(__('Landlord / relationship'))
@@ -47,9 +50,9 @@ final class HomeownersTable
                 })
                 ->badge()
                 ->color(fn (string $state): string => $state === 'Needs landlord review' ? 'warning' : ($state === 'Not applicable' ? 'gray' : 'success'))
-                ->toggleable(),
+                ->toggleable(isToggledHiddenByDefault: true),
             TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
-            TextColumn::make('residency_date')->date()->sortable(),
+            TextColumn::make('residency_date')->date()->sortable()->toggleable(isToggledHiddenByDefault: true),
             TextColumn::make('user.contact_number')->label(__('Contact')),
         ])->defaultSort('created_at', 'desc')->filters([
             SelectFilter::make('status')->options(['Active' => __('Active'), 'Inactive' => __('Inactive'), 'Delinquent' => __('Delinquent')]),
@@ -68,17 +71,17 @@ final class HomeownersTable
                 ->when($data['to'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('residency_date', '<=', $date))),
             TrashedFilter::make()->visible(fn (): bool => Filament::getCurrentPanel()?->getId() === 'admin'),
         ])->recordActions([
-            ViewAction::make(),
-            EditAction::make(),
+            ViewAction::make()->button()->tooltip(__('View details')),
+            EditAction::make()->button()->tooltip(__('Edit')),
             Action::make('approve')
                 ->label(__('Approve Registration'))
                 ->color('success')
                 ->icon('heroicon-o-check-circle')
                 ->requiresConfirmation()
-                ->visible(fn (Homeowner $record): bool => Filament::getCurrentPanel()?->getId() === 'admin' && $record->status === 'Inactive')
+                ->visible(fn (Homeowner $record): bool => Filament::getCurrentPanel()?->getId() === 'admin' && $record->user?->account_status === 'Pending')
                 ->action(function (Homeowner $record) {
-                    $record->update(['status' => 'Active']);
                     app(ChangeAccountStatus::class)->handle($record->user, UserAccountStatus::Active, Filament::auth()->user());
+                    ActionFeedback::success('Homeowner Approved Successfully!');
                 }),
             Action::make('viewDocument')
                 ->label(__('View Document'))
@@ -92,8 +95,8 @@ final class HomeownersTable
                 ->color('warning')
                 ->visible(fn (Homeowner $record): bool => Filament::getCurrentPanel()?->getId() === 'admin' && $record->user?->account_status === UserAccountStatus::Active->value)
                 ->action(function (Homeowner $record) {
-                    $record->update(['status' => 'Inactive']);
                     app(ChangeAccountStatus::class)->handle($record->user, UserAccountStatus::Inactive, Filament::auth()->user());
+                    ActionFeedback::success('Homeowner Deactivated Successfully!');
                 }),
             DeleteAction::make()->visible(fn (): bool => Filament::getCurrentPanel()?->getId() === 'admin'),
             RestoreAction::make()->visible(fn (): bool => Filament::getCurrentPanel()?->getId() === 'admin'),
@@ -138,12 +141,16 @@ final class HomeownersTable
                     ->color('warning')
                     ->action(function (Collection $records): void {
                         $actor = Filament::auth()->user();
+                        $changed = 0;
                         foreach ($records->load('user') as $record) {
                             Gate::forUser($actor)->authorize('update', $record);
                             if ($record->user->account_status === UserAccountStatus::Active->value) {
                                 app(ChangeAccountStatus::class)->handle($record->user, UserAccountStatus::Inactive, $actor);
+                                $changed++;
                             }
                         }
+                        Notification::make()->status($changed > 0 ? 'success' : 'info')->title(__($changed > 0 ? 'Homeowner Accounts Deactivated Successfully!' : 'No Homeowner Accounts Required Deactivation'))
+                            ->body(__(':count accounts deactivated.', ['count' => $changed]))->send();
                     }),
                 DeleteBulkAction::make(),
                 RestoreBulkAction::make(),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Homeowner\Pages;
 
 use App\Actions\Households\ManageHousehold;
+use App\Actions\Households\ManageHouseholdHead;
 use App\Models\Household;
 use App\Services\OwnHouseholdSummary;
 use BackedEnum;
@@ -58,6 +59,7 @@ final class MyHousehold extends Page implements HasTable
         return ['summary' => $household ? [
             'id' => $household->id, 'identifier' => $household->identifier,
             'address' => $household->full_address, 'needs_review' => $household->needs_review,
+            ...app(ManageHouseholdHead::class)->status($household),
             'members_count' => $this->memberCount(),
         ] : null];
     }

@@ -5,9 +5,12 @@ namespace App\Filament\Resources\Users\Pages;
 use App\Actions\Users\ChangeAccountStatus;
 use App\Actions\Users\ChangeUserRole;
 use App\Enums\UserAccountStatus;
+use App\Filament\Concerns\HasIconOnlyRecordActions;
+use App\Filament\Concerns\HasSpecificFeedback;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
 use App\Support\AuthenticatedActor;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
@@ -17,7 +20,19 @@ use Illuminate\Support\Facades\DB;
 
 class EditUser extends EditRecord
 {
+    use HasIconOnlyRecordActions;
+    use HasSpecificFeedback;
+
     protected static string $resource = UserResource::class;
+
+    protected function getSaveFormAction(): Action
+    {
+        return parent::getSaveFormAction()->requiresConfirmation()
+            ->modalHeading(__('Confirm account access changes'))
+            ->extraAttributes(['data-hoa-access-baseline' => e(json_encode([
+                'role' => $this->record->roles()->value('name'), 'status' => $this->record->account_status,
+            ], JSON_THROW_ON_ERROR))], merge: true);
+    }
 
     /** @param array<string, mixed> $data */
     protected function handleRecordUpdate(Model $record, array $data): Model

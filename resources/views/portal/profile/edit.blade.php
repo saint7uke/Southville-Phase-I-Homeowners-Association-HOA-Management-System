@@ -3,6 +3,7 @@
 @section('title', 'Profile')
 
 @section('content')
+    <details class="hoa-notification-preferences"><summary>{{ __('Notification preferences') }}</summary><x-sms-enrollment scope="profile" :user="auth()->user()" /></details>
     <header class="page-header">
         <h1 data-i18n="Your profile">{{ __('Your profile') }}</h1>
         <p><span data-i18n="Keep your identity, contact, property, and emergency information current.">{{ __('Keep your identity, contact, property, and emergency information current.') }}</span></p>
@@ -28,7 +29,7 @@
 
         @if ($user->homeowner->profile_photo)
             <figure class="profile-photo-preview">
-                <img src="{{ route('homeowner.profile-photo', $user->homeowner) }}" alt="Profile photo of {{ $user->full_name }}" width="160" height="160">
+                <button type="button" class="hoa-avatar-edit" aria-label="{{ __('Edit profile photo') }}" onclick="document.getElementById('profile_photo_upload').click()"><img src="{{ route('homeowner.profile-photo', $user->homeowner) }}" alt="Profile photo of {{ $user->full_name }}" width="160" height="160"></button>
                 <figcaption><span data-i18n="Current private profile photo">{{ __('Current private profile photo') }}</span></figcaption>
             </figure>
         @endif
@@ -54,9 +55,9 @@
                 <div class="field">
                     <label for="suffix"><span data-i18n="Suffix">{{ __('Suffix') }}</span> <span class="hint" data-i18n="(optional)">{{ __('(optional)') }}</span></label>
                     <select id="suffix" name="suffix" @error('suffix') aria-invalid="true" aria-describedby="suffix-error" @enderror>
-                        <option value="" data-i18n="Select an option">{{ __('Select an option') }}</option>
+                        <option value="" data-i18n="None">{{ __('None') }}</option>
                         @foreach (['Jr.', 'Sr.', 'II', 'III', 'IV', 'N/A'] as $suffix)
-                            <option value="{{ $suffix }}" @selected(old('suffix', $user->suffix) === $suffix)>{{ $suffix }}</option>
+                            <option value="{{ $suffix }}" @selected(old('suffix', $user->suffix) === $suffix)>{{ $suffix === 'N/A' ? __('None') : $suffix }}</option>
                         @endforeach
                     </select>
                     @error('suffix')<p id="suffix-error" class="error">{{ $message }}</p>@enderror
@@ -85,7 +86,8 @@
                 </div>
                 <div class="field">
                     <label for="contact_number" data-i18n="Contact number">{{ __('Contact number') }}</label>
-                    <input id="contact_number" name="contact_number" value="{{ old('contact_number', $user->contact_number) }}" inputmode="numeric" pattern="09[0-9]{9}" maxlength="11" required autocomplete="tel" aria-describedby="contact_number-hint @error('contact_number') contact_number-error @enderror" @error('contact_number') aria-invalid="true" @enderror>
+                    @php($displayContact = old('contact_number', \App\Support\PhilippineMobile::local($user->contact_number)))
+                    <input id="contact_number" name="contact_number" type="tel" data-local-mobile value="{{ is_string($displayContact) ? $displayContact : '' }}" inputmode="numeric" pattern="09[0-9]{9}" maxlength="11" required autocomplete="tel" aria-describedby="contact_number-hint @error('contact_number') contact_number-error @enderror" @error('contact_number') aria-invalid="true" @enderror>
                     <p id="contact_number-hint" class="hint">11 digits beginning with 09.</p>
                     @error('contact_number')<p id="contact_number-error" class="error">{{ $message }}</p>@enderror
                 </div>
@@ -96,7 +98,6 @@
             <legend><span data-i18n="Property and emergency contact">{{ __('Property and emergency contact') }}</span></legend>
             <div class="form-grid two">
                 @foreach ([
-                    'street' => ['Street', $user->homeowner->street],
                     'block' => ['Block', $user->homeowner->block],
                     'lot' => ['Lot', $user->homeowner->lot],
                     'phase' => ['Registered phase', \App\Support\PropertyIdentity::phase($user->homeowner)],
@@ -148,7 +149,7 @@
                 <span data-i18n="I confirm that these profile details are accurate.">{{ __('I confirm that these profile details are accurate.') }}</span>
             </x-auth.checkbox>
         </div>
-        <div class="form-actions"><button class="button button-primary" type="submit" data-i18n="Save profile">{{ __('Save profile') }}</button></div>
+        <div class="form-actions"><button class="button button-primary" type="submit">@svg('heroicon-o-check', '', ['aria-hidden' => 'true', 'style' => 'width:1.1rem;height:1.1rem'])<span data-i18n="Save profile">{{ __('Save profile') }}</span></button></div>
     </form>
 
     <form class="form-card password-form" method="POST" action="{{ route('portal.profile.password') }}" aria-labelledby="password-form-heading">
@@ -182,6 +183,6 @@
                 </div>
             </div>
         </div>
-        <div class="form-actions"><button class="button button-primary" type="submit" data-i18n="Change password and sign out">{{ __('Change password and sign out') }}</button></div>
+        <div class="form-actions"><button class="button button-primary" type="submit">@svg('heroicon-o-key', '', ['aria-hidden' => 'true', 'style' => 'width:1.1rem;height:1.1rem'])<span data-i18n="Change password and sign out">{{ __('Change password and sign out') }}</span></button></div>
     </form>
 @endsection

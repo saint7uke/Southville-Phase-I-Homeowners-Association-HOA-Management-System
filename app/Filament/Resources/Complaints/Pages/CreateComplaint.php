@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Complaints\Pages;
 
 use App\Actions\Complaints\CreateComplaint as CreateComplaintAction;
+use App\Filament\Concerns\HasSpecificFeedback;
 use App\Filament\Resources\Complaints\ComplaintResource;
 use App\Models\Homeowner;
 use App\Models\User;
@@ -19,6 +20,8 @@ use Throwable;
 
 class CreateComplaint extends CreateRecord
 {
+    use HasSpecificFeedback;
+
     protected static string $resource = ComplaintResource::class;
 
     protected function getCreateFormAction(): Action
@@ -58,10 +61,5 @@ class CreateComplaint extends CreateRecord
                 ->send();
             $this->halt(shouldRollbackDatabaseTransaction: true);
         }
-    }
-
-    protected function getCreatedNotificationTitle(): ?string
-    {
-        return 'Complaint created successfully';
     }
 }

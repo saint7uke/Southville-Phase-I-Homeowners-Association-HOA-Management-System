@@ -13,7 +13,7 @@ final class HomeownerAccountStatusChanged extends Notification implements Should
 {
     use Queueable;
 
-    public function __construct(private readonly string $status, private readonly ?string $reason = null) {}
+    public function __construct(private readonly string $status, private readonly ?string $reason = null, private readonly ?string $from = null) {}
 
     public function via(object $notifiable): array
     {
@@ -24,7 +24,7 @@ final class HomeownerAccountStatusChanged extends Notification implements Should
     {
         $message = (new MailMessage)->subject(__('Southville resident account update'))->greeting(__('Hello :name.', ['name' => $notifiable->first_name]));
         if ($this->status === 'Active') {
-            return $message->line(__('Your resident application has been approved.'))->action(__('Open homeowner panel'), url('/homeowner/login'));
+            return $message->line(__($this->from === 'Pending' ? 'Your resident application has been approved.' : 'Your resident account has been activated.'))->action(__('Open homeowner panel'), url('/homeowner/login'));
         }
         if ($this->status === 'Rejected') {
             return $message->line(__('Your resident application was not approved.'))->line($this->reason ? __('Reason:').' '.$this->reason : __('Contact the HOA office if you need assistance.'));

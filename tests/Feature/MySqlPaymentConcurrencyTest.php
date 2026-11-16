@@ -9,21 +9,25 @@ use App\Models\DuesSetting;
 use App\Models\Payment;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 final class MySqlPaymentConcurrencyTest extends TestCase
 {
-    use DatabaseMigrations {
-        runDatabaseMigrations as private runDisposableMigrations;
+    use DatabaseTruncation {
+        truncateDatabaseTables as private truncateDisposableTables;
     }
 
-    public function runDatabaseMigrations(): void
+    protected function truncateDatabaseTables(): void
     {
         $this->requireMySql();
-        $this->runDisposableMigrations();
+        $this->truncateDisposableTables();
+        $this->beforeApplicationDestroyed(static function (): void {
+            RefreshDatabaseState::$migrated = false;
+        });
     }
 
     public function test_concurrent_payments_cannot_overallocate_an_obligation(): void

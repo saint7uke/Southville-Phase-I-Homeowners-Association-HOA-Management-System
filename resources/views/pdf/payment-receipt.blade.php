@@ -24,7 +24,8 @@
         <div class="sub">Brgy. Inocencio - Official payment receipt</div>
     </div>
 
-    <h1>Monthly Dues Receipt</h1>
+    <h1>{{ __('Detailed payment receipt') }}</h1>
+    <p>{{ __('This receipt records one payment only. It does not certify that the monthly dues are fully settled.') }}</p>
     <p class="receipt-number">Official receipt: {{ $payment->or_number }}</p>
 
     <table>

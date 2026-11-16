@@ -19,7 +19,7 @@ final class PaymentProofController extends Controller
     {
         $submit->handle($request->user(), $duesObligation, $request->validated(), $request->file('proof'));
 
-        return back()->with('success', __('Payment proof submitted for staff review. Your balance changes only after approval.'));
+        return back()->with('success_title', __('Payment Proof Submitted Successfully!'))->with('success', __('Payment proof submitted for staff review. Your balance changes only after approval.'));
     }
 
     public function download(Payment $payment): StreamedResponse

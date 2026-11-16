@@ -15,8 +15,8 @@
             <a class="brand" href="{{ route('portal.dashboard') }}"><span class="brand-mark" aria-hidden="true">S1</span><span data-i18n="Resident Portal">{{ __('Resident Portal') }}</span></a>
             <div class="portal-links">
                 <a href="{{ route('portal.dashboard') }}" @if(request()->routeIs('portal.dashboard')) aria-current="page" @endif><span data-i18n="Dashboard">{{ __('Dashboard') }}</span></a>
-                <a href="{{ route('portal.complaints.index') }}" @if(request()->routeIs('portal.complaints.*')) aria-current="page" @endif><span data-i18n="Complaints">{{ __('Complaints') }}</span></a>
-                <a href="{{ route('portal.requests.index') }}" @if(request()->routeIs('portal.requests.*')) aria-current="page" @endif><span data-i18n="Requests">{{ __('Requests') }}</span></a>
+                <a href="{{ route('portal.concerns.index') }}" @if(request()->routeIs('portal.concerns.*')) aria-current="page" @endif>{{ __('My Concerns') }}</a>
+                <a href="{{ route('portal.requests.index') }}" @if(request()->routeIs('portal.requests.*')) aria-current="page" @endif>{{ __('Certificates') }}</a>
                 <a href="{{ route('portal.announcements.index') }}" @if(request()->routeIs('portal.announcements.*')) aria-current="page" @endif><span data-i18n="Announcements">{{ __('Announcements') }}</span></a>
                 <a href="{{ route('portal.profile.edit') }}" @if(request()->routeIs('portal.profile.*')) aria-current="page" @endif><span data-i18n="Profile">{{ __('Profile') }}</span></a>
                 <form method="POST" action="{{ route('portal.logout') }}">@csrf<button class="link-button" type="submit" data-i18n="Log out">{{ __('Log out') }}</button></form>
@@ -25,7 +25,7 @@
         </nav>
     </header>
     <main id="main-content" class="portal-main" tabindex="-1">
-        @if(session('success'))<div class="alert alert-success" role="status">{{ session('success') }}</div>@endif
+        <x-alert-feedback />
         @yield('content')
     </main>
 </body>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Exports;
 
+use App\Actions\Households\ManageHouseholdHead;
 use App\Models\Household;
 
 /** Data preparation only; each entry point must retain its own authorization. */
@@ -15,6 +16,6 @@ final class HouseholdExportData
             ? ['full_name', 'relationship', 'date_of_birth', 'sex', 'residency_status']
             : ['full_name', 'relationship', 'residency_status']);
 
-        return compact('household', 'members', 'manager');
+        return [...compact('household', 'members', 'manager'), ...app(ManageHouseholdHead::class)->status($household)];
     }
 }

@@ -16,6 +16,11 @@ final class PortalWelcome extends Widget
 
     protected int|string|array $columnSpan = 'full';
 
+    public static function canView(): bool
+    {
+        return Filament::getCurrentPanel()?->getId() !== 'admin';
+    }
+
     /** @return array<string, string|null> */
     protected function getViewData(): array
     {

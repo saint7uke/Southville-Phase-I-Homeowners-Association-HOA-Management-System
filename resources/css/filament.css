@@ -1,4 +1,6 @@
 @import '../../vendor/filament/filament/resources/css/theme.css';
+@import './workflow-revisions.css';
+@import './record-actions.css';
 
 @source '../../app/Filament/**/*.php';
 @source '../../resources/views/filament/**/*.blade.php';

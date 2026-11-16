@@ -1,0 +1,34 @@
+.hoa-registration-reminder{padding:1rem 1.25rem;margin:1.5rem 0;background:#e5effc;border:1px solid #bdd0eb;border-radius:.6rem;color:#163b64}
+.hoa-registration-reminder h3,.hoa-consent-heading{font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.025em}
+.hoa-registration-reminder p{margin:.5rem 0 0;font-size:.925rem;line-height:1.65}
+.hoa-registration-reminder h3{display:flex;align-items:center;gap:.7rem}
+.hoa-reminder-icon{display:inline-grid;place-items:center;width:1.4rem;height:1.4rem;flex:none;border-radius:50%;background:#163b64;color:#fff;text-transform:none}
+.hoa-consent-heading{margin:1.5rem 0 1rem;color:#163b64}
+.hoa-concern-filters{display:flex;flex-wrap:wrap;gap:1rem;align-items:end}
+.hoa-concern-filters label{display:grid;gap:.4rem;min-width:12rem;max-width:100%}
+.hoa-concern-filters select{background:var(--hoa-card,#fff);color:#163b64;border:1px solid #b8c8d2;border-radius:.5rem;padding:.7rem;max-width:100%}
+.hoa-concern-list{display:grid;gap:.75rem}
+.hoa-concern-list article{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;border:1px solid #b8c8d2;border-radius:.75rem;padding:1rem}
+.hoa-concern-list article>div{min-width:0;overflow-wrap:anywhere}
+.hoa-concern-list p{font-size:.875rem;margin-top:.3rem}
+.hoa-concern-body{white-space:pre-wrap;overflow-wrap:anywhere;margin:1rem 0;line-height:1.7}
+.hoa-concern-detail{min-width:0;overflow-wrap:anywhere;display:grid;gap:1rem}
+.hoa-concern-detail dl{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr))}
+.hoa-concern-detail dt{font-weight:600}
+.hoa-concern-detail .hoa-concern-body{margin:0}
+.hoa-concern-attachment{min-width:0;display:grid;gap:.75rem}
+.hoa-concern-picture{display:block;max-width:100%;height:auto;max-height:60vh;object-fit:contain;margin:.75rem auto;border-radius:.5rem}
+.hoa-notification-preferences{border:1px solid #b8c8d2;border-radius:.75rem;padding:1rem}
+.hoa-notification-preferences summary{cursor:pointer;font-weight:600}
+.hoa-notification-preferences[open] summary{margin-bottom:1rem}
+.hoa-annual-scroll{overflow-x:auto;max-width:100%}
+.hoa-annual-table{border-collapse:collapse;width:100%;font-size:.9rem}
+.hoa-annual-table th,.hoa-annual-table td{padding:.8rem;text-align:left;border-bottom:1px solid #c9d5df;white-space:nowrap}
+.hoa-audit-details{display:grid;gap:.5rem}
+.hoa-audit-details dt{font-weight:600}.hoa-audit-details pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.8rem}
+[data-resident-concern],[data-concern-complaint]{display:grid;gap:1rem}
+[data-resident-concern] label{display:grid;gap:.4rem}
+[data-resident-concern] [hidden]{display:none!important}
+.hoa-avatar-edit:focus-visible{outline:3px solid #0879ad;outline-offset:4px;border-radius:50%}
+.dark .hoa-concern-filters select{background:#111827;color:#f3f4f6;border-color:#6b7280}
+@media(max-width:640px){.hoa-concern-filters label{width:100%}.hoa-concern-list article{align-items:start}.hoa-registration-reminder{padding:1rem}}

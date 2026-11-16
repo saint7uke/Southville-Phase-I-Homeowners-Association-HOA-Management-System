@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Announcements\Pages;
 
+use App\Filament\Concerns\HasIconOnlyRecordActions;
+use App\Filament\Concerns\HasSpecificFeedback;
 use App\Filament\Resources\Announcements\AnnouncementResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\RestoreAction;
@@ -10,6 +12,9 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditAnnouncement extends EditRecord
 {
+    use HasIconOnlyRecordActions;
+    use HasSpecificFeedback;
+
     protected static string $resource = AnnouncementResource::class;
 
     protected function getHeaderActions(): array

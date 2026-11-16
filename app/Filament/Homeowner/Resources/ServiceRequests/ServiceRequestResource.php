@@ -7,7 +7,9 @@ namespace App\Filament\Homeowner\Resources\ServiceRequests;
 use App\Filament\Homeowner\Resources\ServiceRequests\Pages\CreateServiceRequest;
 use App\Filament\Homeowner\Resources\ServiceRequests\Pages\ListServiceRequests;
 use App\Filament\Homeowner\Resources\ServiceRequests\Pages\ViewServiceRequest;
+use App\Models\Certificate;
 use App\Models\ServiceRequest;
+use App\Services\CertificateDuesEligibility;
 use App\Services\CertificateTypeCatalog;
 use App\Services\CohabitationCertificateData;
 use App\Validation\CaseAttachmentRules;
@@ -34,13 +36,22 @@ final class ServiceRequestResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
 
-    protected static ?string $navigationLabel = 'My Requests';
+    protected static ?string $navigationLabel = 'Certificates';
+
+    protected static ?string $modelLabel = 'Certificate request';
+
+    protected static ?string $pluralModelLabel = 'Certificates';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Requests & Concerns';
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
+            Placeholder::make('dues_eligibility')->label('')->content(function () {
+                $resident = Filament::auth()->user()?->homeowner;
+
+                return view('filament.certificate-dues-notice', ['result' => $resident ? app(CertificateDuesEligibility::class)->inspect($resident) : null, 'homeownerView' => true]);
+            })->columnSpanFull(),
             Select::make('request_type')->options(fn (?ServiceRequest $record): array => $record ? [$record->request_type => $record->request_type] : app(CertificateTypeCatalog::class)->requestOptions())->live()->required(),
             TextInput::make('cohabitant_one')->label(__('First resident full name'))->maxLength(160)->required(fn (Get $get): bool => $get('request_type') === 'Certificate of Cohabitation')->visible(fn (Get $get): bool => $get('request_type') === 'Certificate of Cohabitation'),
             TextInput::make('cohabitant_two')->label(__('Second resident full name'))->maxLength(160)->required(fn (Get $get): bool => $get('request_type') === 'Certificate of Cohabitation')->visible(fn (Get $get): bool => $get('request_type') === 'Certificate of Cohabitation'),
@@ -48,6 +59,11 @@ final class ServiceRequestResource extends Resource
             Textarea::make('details')->label(__('Description'))->required()->maxLength(3000)->columnSpanFull(),
             FileUpload::make('attachments')->label(__('Supporting attachments'))->multiple()->maxFiles(3)->storeFiles(false)->acceptedFileTypes(CaseAttachmentRules::MIME_TYPES)->maxSize(5120)->columnSpanFull(),
             Placeholder::make('status_summary')->label(__('Current status'))->content(fn (?ServiceRequest $record): string => $record?->status ?? '-')->visible(fn (string $operation): bool => $operation === 'view'),
+            Placeholder::make('pickup_guidance')->label(__('Collection'))->content(function (?ServiceRequest $record): string {
+                $certificate = $record?->certificate;
+
+                return __($certificate?->collected_at ? 'Collected' : ($certificate?->ready_for_pickup_at ? 'Ready for pickup' : 'Awaiting preparation')).'. '.__('Certificates must be collected at the HOA office with the required signature and dry seal.');
+            })->columnSpanFull(),
             Placeholder::make('certificate_guidance')->label(__('Cohabitation certificate preparation'))
                 ->content(fn (?ServiceRequest $record) => $record ? view('filament.resources.service-requests.cohabitation-guidance', ['serviceRequest' => $record]) : null)
                 ->visible(fn (string $operation, ?ServiceRequest $record): bool => $operation === 'view' && $record?->request_type === CohabitationCertificateData::TYPE)
@@ -60,17 +76,22 @@ final class ServiceRequestResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table->columns([
+        return $table->description(fn () => view('filament.homeowner.certificate-pickup-notice', [
+            'standalone' => Certificate::whereNull('service_request_id')->whereHas('homeowner', fn ($query) => $query->where('user_id', Filament::auth()->id()))->latest('issued_at')->get(),
+        ]))->columns([
             TextColumn::make('ticket_number')->label(__('Ticket'))->searchable(),
             TextColumn::make('request_type')->searchable()->wrap(),
             TextColumn::make('subject')->searchable()->wrap(),
             TextColumn::make('status')->formatStateUsing(fn ($state) => $state === null ? null : __((string) $state))->badge(),
-            TextColumn::make('document_output')->label(__('Document'))->placeholder(__('Not yet issued')),
-            TextColumn::make('created_at')->dateTime()->sortable(),
-            TextColumn::make('completed_at')->label(__('Processed date'))->dateTime()->placeholder(__('Not completed'))->sortable(),
+            TextColumn::make('collection')->label(__('Collection'))->state(function (ServiceRequest $record): string {
+                $certificate = Certificate::where('service_request_id', $record->id)->where('status', 'Issued')->first();
+
+                return __($certificate?->collected_at ? 'Collected' : ($certificate?->ready_for_pickup_at ? 'Ready for pickup' : 'Awaiting preparation'));
+            })->badge(),
+            TextColumn::make('created_at')->dateTime('M d, Y g:i A')->sortable(),
         ])->defaultSort('created_at', 'desc')->recordActions([ViewAction::make(),
             Action::make('draftPreview')->label(__('Preview draft PDF'))->url(fn (ServiceRequest $record): string => route('service-requests.draft', $record))->openUrlInNewTab()
-                ->visible(fn (ServiceRequest $record): bool => $record->request_type === 'Certificate of Residency'),
+                ->visible(false),
         ]);
     }
 

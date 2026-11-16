@@ -1,0 +1,32 @@
+import { mkdtemp, readFile, readdir, writeFile, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import os from 'node:os';
+import path from 'node:path';
+
+// Presentation-only allowlist. No credentials, migration, data or fonts.
+const files = [
+    'resources/css/landing.css', 'resources/css/registration-scroll.css',
+    'resources/views/portal/auth/register.blade.php',
+];
+async function walk(directory) {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+        const file = `${directory}/${entry.name}`;
+        if (entry.isSymbolicLink()) throw new Error('Symlink in release');
+        if (entry.isDirectory()) await walk(file); else files.push(file);
+    }
+}
+await walk('public/build');
+const checksums = {};
+for (const file of files.sort()) {
+    if (!(await stat(file)).isFile()) throw new Error(`Missing ${file}`);
+    checksums[file] = createHash('sha256').update(await readFile(file)).digest('hex');
+}
+const directory = await mkdtemp(path.join(os.tmpdir(), 'hoa-registration-scroll-release-'));
+await writeFile(path.join(directory, 'files.txt'), files.join('\n') + '\n', { mode: 0o600 });
+const archive = path.join(directory, 'release.tar.gz');
+const result = spawnSync('tar', ['-czf', archive, '-T', path.join(directory, 'files.txt')], { stdio: 'inherit', windowsHide: true });
+if (result.error || result.status !== 0) throw new Error('Package failed');
+const sha256 = createHash('sha256').update(await readFile(archive)).digest('hex');
+await writeFile(path.join(directory, 'release-manifest.json'), JSON.stringify({ created: new Date().toISOString(), deployed: false, sha256, files: checksums }, null, 2) + '\n', { mode: 0o600 });
+console.log(JSON.stringify({ directory, archive, sha256, files: files.length, deployed: false }));

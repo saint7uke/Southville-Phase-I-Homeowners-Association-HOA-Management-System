@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Validate phone/code input as entered, not after whitespace is silently removed.
+        $middleware->trimStrings(except: ['contact_number', '*.contact_number', 'number', '*.number', 'code', '*.code']);
         $middleware->append(SecurityHeaders::class);
         $middleware->web(append: [SetLocale::class]);
         $middleware->alias([

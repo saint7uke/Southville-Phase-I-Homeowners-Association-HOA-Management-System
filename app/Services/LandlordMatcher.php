@@ -37,12 +37,12 @@ final class LandlordMatcher
             ->orderBy('id')
             ->get();
 
-        if ($eligible->pluck('street')->map(PropertyAddress::streetKey(...))->unique()->count() > 1) {
+        if (PropertyIdentity::confirmedKey($data) === null && $eligible->pluck('street')->map(PropertyAddress::streetKey(...))->unique()->count() > 1) {
             return new Collection;
         }
 
         return $eligible
-            ->filter(fn (Homeowner $homeowner): bool => PropertyAddress::sameStreet($homeowner->street, $data['street'] ?? null))
+            ->filter(fn (Homeowner $homeowner): bool => (PropertyIdentity::confirmedKey($data) !== null || PropertyAddress::sameStreet($homeowner->street, $data['street'] ?? null)))
             ->filter(fn (Homeowner $homeowner): bool => $searchKey === ''
                 || str_contains(PersonName::key($homeowner->user?->full_name), $searchKey))
             ->take(10)
@@ -72,10 +72,10 @@ final class LandlordMatcher
 
         /** @var Collection<int, Homeowner> $matches */
         $eligible = $query->get();
-        if ($eligible->pluck('street')->map(PropertyAddress::streetKey(...))->unique()->count() > 1) {
+        if (PropertyIdentity::confirmedKey($data) === null && $eligible->pluck('street')->map(PropertyAddress::streetKey(...))->unique()->count() > 1) {
             return ['valid' => false, 'message' => self::NOT_FOUND_MESSAGE, 'homeowner' => null];
         }
-        $matches = $eligible->filter(fn (Homeowner $homeowner): bool => PropertyAddress::sameStreet($homeowner->street, $data['street'] ?? null)
+        $matches = $eligible->filter(fn (Homeowner $homeowner): bool => (PropertyIdentity::confirmedKey($data) !== null || PropertyAddress::sameStreet($homeowner->street, $data['street'] ?? null))
             && PersonName::key($homeowner->user?->full_name) === $nameKey)->values();
 
         if ($matches->count() > 1) {

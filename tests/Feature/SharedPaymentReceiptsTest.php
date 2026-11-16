@@ -324,7 +324,7 @@ final class SharedPaymentReceiptsTest extends TestCase
             'lot' => '2', 'phase' => 'Southville Phase I', 'phase_suffix' => 'A', 'residency_date' => '2020-01-01', 'ownership_type' => 'Owner', 'status' => 'Active']);
         $schedule = DuesSetting::create(['name' => 'Shared receipts '.Str::random(8), 'amount' => '500.00', 'frequency' => 'Monthly', 'starts_on' => '2026-01-01', 'is_active' => true]);
         $due = DuesObligation::create(['homeowner_id' => $resident->id, 'dues_setting_id' => $schedule->id, 'billing_year' => 2026, 'billing_month' => 10,
-            'due_date' => '2026-10-31', 'amount_due' => '500.00', 'penalty_amount' => '0.00', 'amount_paid' => '0.00', 'status' => 'Pending']);
+            'due_date' => '2026-10-31', 'amount_due' => '100.00', 'penalty_amount' => '0.00', 'amount_paid' => '0.00', 'status' => 'Pending']);
 
         return app(RecordPayment::class)->handle(['dues_obligation_id' => $due->id, 'amount_paid' => '100.00', 'payment_method' => 'Cash', 'payment_date' => '2026-10-20'], $this->admin);
     }
@@ -348,7 +348,7 @@ final class SharedPaymentReceiptsTest extends TestCase
         Storage::disk('local')->put($path, $bytes);
 
         return PaymentDocument::create(['payment_id' => $payment->id, 'payment_document_source_id' => $source->id, 'source_checksum' => $source->source_checksum,
-            'snapshot' => app(ButawReceiptEligibility::class)->snapshot($payment), 'path' => $path, 'file_checksum' => hash('sha256', $bytes),
+            'snapshot' => app(ButawReceiptEligibility::class)->installmentSnapshot($payment), 'path' => $path, 'file_checksum' => hash('sha256', $bytes),
             'generated_by' => $this->admin->id, 'created_at' => $createdAt ?? now()]);
     }
 

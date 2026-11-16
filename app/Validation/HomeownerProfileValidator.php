@@ -8,6 +8,7 @@ use App\Models\Homeowner;
 use App\Models\User;
 use App\Services\PropertyAddressAvailability;
 use App\Support\PersonName;
+use App\Support\PhilippineMobile;
 use App\Support\PropertyAddress;
 use App\Support\PropertyIdentity;
 use Illuminate\Database\Query\Builder;
@@ -65,7 +66,7 @@ final class HomeownerProfileValidator
 
         $data['suffix'] = $this->collapseWhitespace($data['suffix'] ?? null);
         $data['email'] = mb_strtolower(trim((string) ($data['email'] ?? '')), 'UTF-8');
-        $data['contact_number'] = $this->normalizePhone($data['contact_number'] ?? '');
+        $data['contact_number'] = $data['contact_number'] ?? '';
         $data['emergency_contact_number'] = $this->normalizePhone($data['emergency_contact_number'] ?? '');
 
         return $data;
@@ -83,7 +84,7 @@ final class HomeownerProfileValidator
             'suffix' => ['nullable', Rule::in(['Jr.', 'Sr.', 'II', 'III', 'IV', 'N/A'])],
             'sex' => ['required', Rule::in(['Male', 'Female', 'Prefer not to say'])],
             'date_of_birth' => ['required', 'date', 'before:today'],
-            'contact_number' => ['required', 'regex:/^09\d{9}$/'],
+            'contact_number' => PhilippineMobile::inputRules(),
             'email' => [
                 'required',
                 'email:rfc',
@@ -98,7 +99,7 @@ final class HomeownerProfileValidator
                 ),
             ],
             'house_number' => ['nullable', 'string', 'max:50'],
-            'street' => ['required', 'string', 'max:100'],
+            'street' => ['nullable', 'string', 'max:100'],
             'block' => ['required', 'string', 'max:20'],
             'lot' => ['required', 'string', 'max:20'],
             'residency_date' => ['required', 'date', 'before_or_equal:today', 'after_or_equal:date_of_birth'],
@@ -122,12 +123,7 @@ final class HomeownerProfileValidator
     public function validate(User $user, Homeowner $homeowner, array $input): array
     {
         $protected = [];
-        if (array_key_exists('house_number', $input)
-            && PropertyAddress::normalizeForStorage(['house_number' => $input['house_number']])['house_number']
-                !== PropertyAddress::normalizeForStorage(['house_number' => $homeowner->house_number])['house_number']) {
-            $protected['house_number'] = [__('Only HOA staff can change the stored house number.')];
-        }
-        foreach (['street', 'block', 'lot'] as $field) {
+        foreach (['block', 'lot'] as $field) {
             if (array_key_exists($field, $input)
                 && PropertyAddress::normalizeForStorage([$field => $input[$field]])[$field]
                     !== PropertyAddress::normalizeForStorage([$field => $homeowner->{$field}])[$field]) {
@@ -156,6 +152,7 @@ final class HomeownerProfileValidator
             'phase' => $homeowner->phase,
             'phase_suffix' => $homeowner->phase_suffix,
         ]);
+        $normalized['street'] = $homeowner->street;
 
         $validator = Validator::make(
             $normalized,
@@ -170,7 +167,7 @@ final class HomeownerProfileValidator
 
             $message = $this->addressConflictMessage($homeowner, $normalized);
             if ($message !== null) {
-                $validator->errors()->add('street', __($message));
+                $validator->errors()->add('block', __($message));
             }
         });
 
@@ -246,7 +243,7 @@ final class HomeownerProfileValidator
             'phase_suffix' => $homeowner->phase_suffix,
         ]);
         $validator = Validator::make($normalized, [
-            'street' => ['required', 'string', 'max:100'],
+            'street' => ['nullable', 'string', 'max:100'],
             'block' => ['required', 'string', 'max:20'],
             'lot' => ['required', 'string', 'max:20'],
         ], [], $this->attributes());

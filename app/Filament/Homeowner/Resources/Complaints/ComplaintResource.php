@@ -19,6 +19,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -33,14 +35,20 @@ final class ComplaintResource extends Resource
 
     protected static ?string $navigationLabel = 'My Complaints';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static string|\UnitEnum|null $navigationGroup = 'Requests & Concerns';
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('subject')->required()->maxLength(160),
-            Select::make('category')->options(array_combine(ComplaintSubmissionValidator::CATEGORIES, ComplaintSubmissionValidator::CATEGORIES))->required(),
-            Select::make('priority')->options(array_combine(ComplaintSubmissionValidator::PRIORITIES, ComplaintSubmissionValidator::PRIORITIES))->required()->default('Medium'),
+            TextInput::make('subject')->required()->maxLength(160)->visible(fn (string $operation) => $operation === 'view'),
+            Select::make('category')->options(array_combine(ComplaintSubmissionValidator::CATEGORIES, ComplaintSubmissionValidator::CATEGORIES))->required()->live()->afterStateUpdated(fn (Set $set) => $set('category_other', null)),
+            TextInput::make('category_other')->label(__('Please Specify'))->maxLength(160)
+                ->visible(fn (Get $get): bool => $get('category') === 'Others')
+                ->required(fn (Get $get, string $operation): bool => $get('category') === 'Others' && $operation !== 'view')
+                ->dehydrateStateUsing(fn ($state) => is_string($state) ? trim($state) : $state),
+            Select::make('priority')->options(array_combine(ComplaintSubmissionValidator::PRIORITIES, ComplaintSubmissionValidator::PRIORITIES))->default('Medium')->visible(fn (string $operation) => $operation === 'view'),
             Textarea::make('description')->required()->minLength(20)->maxLength(5000)->columnSpanFull(),
             FileUpload::make('attachments')->label(__('Supporting attachments'))->multiple()->maxFiles(3)->storeFiles(false)->acceptedFileTypes(CaseAttachmentRules::MIME_TYPES)->maxSize(5120)->columnSpanFull(),
             Placeholder::make('status_summary')->label(__('Current status'))->content(fn (?Complaint $record): string => $record?->status ?? '-')->visible(fn (string $operation): bool => $operation === 'view'),
